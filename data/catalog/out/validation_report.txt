@@ -1,0 +1,45 @@
+====================================================================
+CATALOG VALIDATION
+====================================================================
+  [PASS] 100 frames (got 100)
+  [PASS] type mix 45/25/15/15 (got {'sunglasses': 25, 'eyeglasses': 45, 'reading': 15, 'computer': 15})
+  [PASS] price bands within tolerance of 25/30/28/17 (got {1: 25, 2: 30, 3: 28, 4: 17})
+  [PASS] all prices within INR 1,000-10,000
+  [PASS] all 100 images byte-unique (100 distinct)
+  [PASS] all image_seeds unique
+  [PASS] purpose 'everyday': 68 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'computer': 37 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'reading': 24 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'driving_day': 14 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'driving_night': 13 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'outdoor': 25 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'sports': 7 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'dust_travel': 6 frames across 4 price bands (need >=4, >=3)
+  [PASS] purpose 'formal_work': 34 frames across 4 price bands (need >=4, >=3)
+  [PASS] physical invariants evaluated
+  [PASS] titanium priced above acetate (avg INR 6947 vs 3831)
+  [PASS] titanium lighter than acetate (avg 14.3g vs 26.7g)
+
+INTENTIONAL GAPS (drive the relaxation-ladder demo)
+  [OK — empty] polarised sports sunglasses under INR 2,500
+  [OK — empty] progressive-ready rimless frames
+  [OK — empty] titanium frames under INR 4,500
+
+in stock: 90/100
+shapes:   {'rectangle': 25, 'oval': 17, 'round': 15, 'cat_eye': 14, 'square': 14, 'geometric': 6, 'aviator': 9}
+materials:{'titanium': 19, 'acetate': 33, 'metal': 27, 'tr90': 21}
+rim types:{'full': 68, 'semi': 24, 'rimless': 8}
+rx-compatible: 80  progressive-ready: 72
+
+PURPOSE COVERAGE (frames per price band 1-4)
+  everyday       total 68  b1:18  b2:18  b3:19  b4:13 
+  computer       total 37  b1:11  b2:11  b3:8   b4:7  
+  reading        total 24  b1:8   b2:11  b3:4   b4:1  
+  driving_day    total 14  b1:3   b2:2   b3:6   b4:3  
+  driving_night  total 13  b1:6   b2:2   b3:4   b4:1  
+  outdoor        total 25  b1:6   b2:4   b3:10  b4:5  
+  sports         total 7   b1:1   b2:2   b3:2   b4:2  
+  dust_travel    total 6   b1:1   b2:2   b3:1   b4:2  
+  formal_work    total 34  b1:9   b2:8   b3:9   b4:8  
+
+RESULT: 0 failures
