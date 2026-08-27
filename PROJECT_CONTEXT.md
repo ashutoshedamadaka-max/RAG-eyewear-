@@ -7,7 +7,8 @@ so that work continues from the same premises rather than restarting them.
 Two deliverables, both required: an interactive demo, and a written case study
 covering the eval harness, golden sets, latency, and knowledge-base freshness.
 
-**Status:** Phase 0 (data) complete. Nothing else built yet.
+**Status:** Phase 0 (data) and Phase 1 (naive baseline) complete — see
+`docs/phase1-baseline-failures.md`. Phase 2 (eval harness) is next.
 
 ---
 
