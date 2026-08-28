@@ -1,0 +1,73 @@
+{
+  "_comment": "Phase 2, seeded before the full ~40-case physical golden set (PROJECT_CONTEXT.md §6). Two case types: 'query' cases run a pipeline end-to-end and check retrieved + recommended frames against hard constraints (no LLM judge). 'catalog_composition' and 'derivation_function' cases check the contested thresholds in app/lib/config/thresholds.ts directly, independent of any pipeline.",
+
+  "query_cases": [
+    {
+      "id": "titanium-8000-instock",
+      "query": "Titanium frames under 8000 rupees, in stock",
+      "constraints": [
+        { "type": "max_price", "value": 8000 },
+        { "type": "material_equals", "value": "titanium" },
+        { "type": "requires_in_stock" }
+      ],
+      "note": "Control case -- a query where valid candidates are plentiful enough that naive retrieval can land on a correct answer by chance."
+    },
+    {
+      "id": "polarized-sports-under-2500",
+      "query": "Polarized sports sunglasses under 2500 rupees",
+      "constraints": [
+        { "type": "max_price", "value": 2500 },
+        { "type": "requires_purpose_tag", "value": "sports" },
+        { "type": "requires_polarized" }
+      ],
+      "note": "Targets catalog intentional gap #1 (validate.py asserts this combination is empty). Correct answer: name the violated constraint and offer the nearest alternative, not a bare refusal -- see decisions.md 2026-08-28, 'refusal framing correction'."
+    },
+    {
+      "id": "progressive-rimless",
+      "query": "Progressive-ready rimless frames",
+      "constraints": [
+        { "type": "requires_progressive_ready" },
+        { "type": "requires_rim_type", "value": "rimless" }
+      ],
+      "note": "Targets catalog intentional gap #2."
+    },
+    {
+      "id": "titanium-under-4500",
+      "query": "Titanium frames under 4500 rupees",
+      "constraints": [
+        { "type": "max_price", "value": 4500 },
+        { "type": "material_equals", "value": "titanium" }
+      ],
+      "note": "Targets catalog intentional gap #3. Ideal answer recommends Basalt Form 448 (the nearest miss, ₹4,800) but names the ₹300 overage explicitly rather than burying it."
+    },
+    {
+      "id": "sports-under-500",
+      "query": "sports sunglasses under 500 rupees",
+      "constraints": [
+        { "type": "max_price", "value": 500 },
+        { "type": "requires_purpose_tag", "value": "sports" }
+      ],
+      "note": "Not an intentional gap -- just far enough out of range (cheapest catalog frame is nowhere near ₹500) that even the naive baseline refuses correctly."
+    }
+  ],
+
+  "catalog_composition_cases": [
+    {
+      "id": "progressive-lens-height-threshold-sensitivity",
+      "description": "How many progressive_ready frames clear the lens-height floor at the old (30mm), current (32mm), and optician-cited (44mm) thresholds.",
+      "field": "lens_height_mm",
+      "filter": { "progressive_ready": true },
+      "thresholds_mm": [30, 32, 44]
+    }
+  ],
+
+  "derivation_function_cases": [
+    {
+      "id": "high-index-rim-type-threshold-sensitivity",
+      "description": "At rx_power = -3.5D, does app/lib/derivation.ts#deriveRimTypeConstraint require non-rimless construction under the old (-4.00D), current (-3.00D), and optician-cited (-2.00D) thresholds?",
+      "function": "deriveRimTypeConstraint",
+      "rx_power_test_d": -3.5,
+      "thresholds_d": [-4.0, -3.0, -2.0]
+    }
+  ]
+}

@@ -56,6 +56,14 @@ export function getEmbeddingModel(): string {
   return loadStore().model;
 }
 
+export function getAllFrames(): CatalogFrame[] {
+  return Array.from(loadStore().catalog.values());
+}
+
+export function getFrameBySku(sku: string): CatalogFrame | undefined {
+  return getAllFrames().find((f) => f.sku === sku);
+}
+
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   let normA = 0;

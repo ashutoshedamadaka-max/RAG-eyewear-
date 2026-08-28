@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "blurbs": "tsx scripts/build-blurbs.ts",
-    "embed": "tsx scripts/embed-catalog.ts"
+    "embed": "tsx scripts/embed-catalog.ts",
+    "eval": "tsx scripts/run-eval.ts"
   },
   "dependencies": {
     "next": "16.3.3",

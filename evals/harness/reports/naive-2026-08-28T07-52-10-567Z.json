@@ -1,0 +1,427 @@
+{
+  "pipeline": "naive",
+  "generatedAt": "2026-08-28T07:52:10.568Z",
+  "queryResults": [
+    {
+      "id": "titanium-8000-instock",
+      "query": "Titanium frames under 8000 rupees, in stock",
+      "note": "Control case -- a query where valid candidates are plentiful enough that naive retrieval can land on a correct answer by chance.",
+      "constraints": [
+        "price <= 8000",
+        "material == titanium",
+        "in_stock == true"
+      ],
+      "chatModel": "gpt-5.6-luna",
+      "temperature": 1,
+      "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+      "answer": "- **[3] Basalt Form 448** — INR 4,800, in stock. Lightweight rimless titanium frame with a minimal, professional oval style; ideal for narrow faces and everyday/formal use.\n- **[4] Terra Optics Mark 282** — INR 6,000, in stock. Full-rim titanium sunglasses with UV400 protection and polarized grey lenses; suits wide faces and outdoor/day driving.\n- **[5] Sable Edition 852** — INR 6,850, in stock. Lightweight titanium computer frame with blue-light readiness, progressive compatibility, and a playful retro round shape; best for narrow faces.",
+      "retrieved": [
+        {
+          "frame_id": "FR035",
+          "sku": "VAY-035",
+          "score": 0.537083365077521,
+          "violations": [
+            "price <= 8000 (actual: 8250)",
+            "in_stock == true (actual: false)"
+          ]
+        },
+        {
+          "frame_id": "FR023",
+          "sku": "TRU-023",
+          "score": 0.5294291982565863,
+          "violations": [
+            "price <= 8000 (actual: 9650)"
+          ]
+        },
+        {
+          "frame_id": "FR092",
+          "sku": "BAS-092",
+          "score": 0.527245781768448,
+          "violations": []
+        },
+        {
+          "frame_id": "FR078",
+          "sku": "TER-078",
+          "score": 0.5231921482282482,
+          "violations": []
+        },
+        {
+          "frame_id": "FR082",
+          "sku": "SAB-082",
+          "score": 0.5174156288377612,
+          "violations": []
+        }
+      ],
+      "retrievedPassRate": "3/5",
+      "recommended": [
+        {
+          "frame_id": "FR092",
+          "sku": "BAS-092",
+          "violations": []
+        },
+        {
+          "frame_id": "FR078",
+          "sku": "TER-078",
+          "violations": []
+        },
+        {
+          "frame_id": "FR082",
+          "sku": "SAB-082",
+          "violations": []
+        }
+      ],
+      "recommendedPassRate": "3/3"
+    },
+    {
+      "id": "polarized-sports-under-2500",
+      "query": "Polarized sports sunglasses under 2500 rupees",
+      "note": "Targets catalog intentional gap #1 (validate.py asserts this combination is empty). Correct answer: name the violated constraint and offer the nearest alternative, not a bare refusal -- see decisions.md 2026-08-28, 'refusal framing correction'.",
+      "constraints": [
+        "price <= 2500",
+        "purpose_tags includes sports",
+        "polarized == true"
+      ],
+      "chatModel": "gpt-5.6-luna",
+      "temperature": 1,
+      "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+      "answer": "Only one retrieved frame meets all your requirements—**polarized, suitable for sports, and under ₹2,500**:\n\n- **[3] Kestrel Edition 850** — ₹1,350, in stock. Matte-black TR90 oval frame with polarized amber-tint lenses, UV400 protection, and a lightweight 21.3 g build. Suitable for outdoor use and sports.\n\nThe other polarized sports options are priced above ₹2,500.",
+      "retrieved": [
+        {
+          "frame_id": "FR005",
+          "sku": "COR-005",
+          "score": 0.5236146779590535,
+          "violations": [
+            "price <= 2500 (actual: 7900)"
+          ]
+        },
+        {
+          "frame_id": "FR063",
+          "sku": "SAB-063",
+          "score": 0.5155572811573951,
+          "violations": [
+            "price <= 2500 (actual: 5800)",
+            "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+          ]
+        },
+        {
+          "frame_id": "FR040",
+          "sku": "KES-040",
+          "score": 0.5103128314420453,
+          "violations": [
+            "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+          ]
+        },
+        {
+          "frame_id": "FR089",
+          "sku": "AER-089",
+          "score": 0.5025930564530988,
+          "violations": [
+            "price <= 2500 (actual: 3800)",
+            "polarized == true (actual: false)"
+          ]
+        },
+        {
+          "frame_id": "FR012",
+          "sku": "SUN-012",
+          "score": 0.49977056282488735,
+          "violations": [
+            "purpose_tags includes sports (actual: [\"computer\",\"everyday\"])",
+            "polarized == true (actual: false)"
+          ]
+        }
+      ],
+      "retrievedPassRate": "0/5",
+      "recommended": [
+        {
+          "frame_id": "FR040",
+          "sku": "KES-040",
+          "violations": [
+            "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+          ]
+        }
+      ],
+      "recommendedPassRate": "0/1"
+    },
+    {
+      "id": "progressive-rimless",
+      "query": "Progressive-ready rimless frames",
+      "note": "Targets catalog intentional gap #2.",
+      "constraints": [
+        "progressive_ready == true",
+        "rim_type == rimless"
+      ],
+      "chatModel": "gpt-5.6-luna",
+      "temperature": 1,
+      "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+      "answer": "No frame fully matches **both progressive-ready and rimless**. The closest options are:\n\n- **[5] Orbit&Co Series 396** — **Progressive-ready** and Rx-compatible up to 6D, with a lightweight **semi-rim** design. In stock and the best practical match, though it is not fully rimless.\n- **[3] Fathom Series 616** — **Progressive-ready**, Rx-compatible up to 8D, and lightweight with adjustable nose pads. However, it has a full rim and is currently out of stock.\n\nThe only fully rimless option, **[4]**, is not progressive-ready.",
+      "retrieved": [
+        {
+          "frame_id": "FR077",
+          "sku": "BAS-077",
+          "score": 0.5265883320249958,
+          "violations": [
+            "progressive_ready == true (actual: false)",
+            "rim_type == rimless (actual: \"full\")"
+          ]
+        },
+        {
+          "frame_id": "FR041",
+          "sku": "FAT-041",
+          "score": 0.5152097590775192,
+          "violations": [
+            "progressive_ready == true (actual: false)",
+            "rim_type == rimless (actual: \"full\")"
+          ]
+        },
+        {
+          "frame_id": "FR036",
+          "sku": "FAT-036",
+          "score": 0.5096665391346304,
+          "violations": [
+            "rim_type == rimless (actual: \"full\")"
+          ]
+        },
+        {
+          "frame_id": "FR081",
+          "sku": "COR-081",
+          "score": 0.5076541522269911,
+          "violations": [
+            "progressive_ready == true (actual: false)"
+          ]
+        },
+        {
+          "frame_id": "FR015",
+          "sku": "ORB-015",
+          "score": 0.5073908083535733,
+          "violations": [
+            "rim_type == rimless (actual: \"semi\")"
+          ]
+        }
+      ],
+      "retrievedPassRate": "0/5",
+      "recommended": [
+        {
+          "frame_id": "FR015",
+          "sku": "ORB-015",
+          "violations": [
+            "rim_type == rimless (actual: \"semi\")"
+          ]
+        },
+        {
+          "frame_id": "FR036",
+          "sku": "FAT-036",
+          "violations": [
+            "rim_type == rimless (actual: \"full\")"
+          ]
+        },
+        {
+          "frame_id": "FR081",
+          "sku": "COR-081",
+          "violations": [
+            "progressive_ready == true (actual: false)"
+          ]
+        }
+      ],
+      "recommendedPassRate": "0/3"
+    },
+    {
+      "id": "titanium-under-4500",
+      "query": "Titanium frames under 4500 rupees",
+      "note": "Targets catalog intentional gap #3. Ideal answer recommends Basalt Form 448 (the nearest miss, ₹4,800) but names the ₹300 overage explicitly rather than burying it.",
+      "constraints": [
+        "price <= 4500",
+        "material == titanium"
+      ],
+      "chatModel": "gpt-5.6-luna",
+      "temperature": 1,
+      "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+      "answer": "No retrieved frames meet the requirement of **titanium and under ₹4,500**.\n\nClosest options if you can stretch the budget:\n- **[2] Basalt Form 448** — Titanium, ₹4,800; lightweight 11g and minimal/professional.\n- **[3] Sundial Series 103** — Titanium, ₹5,400; lightweight 11g with a bold square design.",
+      "retrieved": [
+        {
+          "frame_id": "FR047",
+          "sku": "VAY-047",
+          "score": 0.5396678089352802,
+          "violations": [
+            "price <= 4500 (actual: 6150)"
+          ]
+        },
+        {
+          "frame_id": "FR092",
+          "sku": "BAS-092",
+          "score": 0.5390830145588923,
+          "violations": [
+            "price <= 4500 (actual: 4800)"
+          ]
+        },
+        {
+          "frame_id": "FR019",
+          "sku": "SUN-019",
+          "score": 0.5376632966617823,
+          "violations": [
+            "price <= 4500 (actual: 5400)"
+          ]
+        },
+        {
+          "frame_id": "FR023",
+          "sku": "TRU-023",
+          "score": 0.5341358213028199,
+          "violations": [
+            "price <= 4500 (actual: 9650)"
+          ]
+        },
+        {
+          "frame_id": "FR078",
+          "sku": "TER-078",
+          "score": 0.5324078822037323,
+          "violations": [
+            "price <= 4500 (actual: 6000)"
+          ]
+        }
+      ],
+      "retrievedPassRate": "0/5",
+      "recommended": [
+        {
+          "frame_id": "FR092",
+          "sku": "BAS-092",
+          "violations": [
+            "price <= 4500 (actual: 4800)"
+          ]
+        },
+        {
+          "frame_id": "FR019",
+          "sku": "SUN-019",
+          "violations": [
+            "price <= 4500 (actual: 5400)"
+          ]
+        }
+      ],
+      "recommendedPassRate": "0/2"
+    },
+    {
+      "id": "sports-under-500",
+      "query": "sports sunglasses under 500 rupees",
+      "note": "Not an intentional gap -- just far enough out of range (cheapest catalog frame is nowhere near ₹500) that even the naive baseline refuses correctly.",
+      "constraints": [
+        "price <= 500",
+        "purpose_tags includes sports"
+      ],
+      "chatModel": "gpt-5.6-luna",
+      "temperature": 1,
+      "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+      "answer": "No frames meet the **under ₹500** budget. The closest sports-suitable options are:\n\n- **[4] Sable Series 805** — ₹5,800, in stock; polarized lenses, UV400 protection, and a light wrap suitable for outdoor use.\n- **[2] Corvin Edition 683** — ₹7,900, currently out of stock; polarized, UV400-protected, sporty design with a 14° wrap.\n\nBoth are far above the ₹500 budget.",
+      "retrieved": [
+        {
+          "frame_id": "FR012",
+          "sku": "SUN-012",
+          "score": 0.5239200709411114,
+          "violations": [
+            "price <= 500 (actual: 1250)",
+            "purpose_tags includes sports (actual: [\"computer\",\"everyday\"])"
+          ]
+        },
+        {
+          "frame_id": "FR005",
+          "sku": "COR-005",
+          "score": 0.5169664973096024,
+          "violations": [
+            "price <= 500 (actual: 7900)"
+          ]
+        },
+        {
+          "frame_id": "FR056",
+          "sku": "SUN-056",
+          "score": 0.5129308637144513,
+          "violations": [
+            "price <= 500 (actual: 4900)",
+            "purpose_tags includes sports (actual: [\"computer\",\"driving_night\",\"everyday\"])"
+          ]
+        },
+        {
+          "frame_id": "FR063",
+          "sku": "SAB-063",
+          "score": 0.5044576514832715,
+          "violations": [
+            "price <= 500 (actual: 5800)",
+            "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+          ]
+        },
+        {
+          "frame_id": "FR072",
+          "sku": "SUN-072",
+          "score": 0.5026260020797504,
+          "violations": [
+            "price <= 500 (actual: 3500)",
+            "purpose_tags includes sports (actual: [\"reading\"])"
+          ]
+        }
+      ],
+      "retrievedPassRate": "0/5",
+      "recommended": [
+        {
+          "frame_id": "FR063",
+          "sku": "SAB-063",
+          "violations": [
+            "price <= 500 (actual: 5800)",
+            "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+          ]
+        },
+        {
+          "frame_id": "FR005",
+          "sku": "COR-005",
+          "violations": [
+            "price <= 500 (actual: 7900)"
+          ]
+        }
+      ],
+      "recommendedPassRate": "0/2"
+    }
+  ],
+  "compositionResults": [
+    {
+      "id": "progressive-lens-height-threshold-sensitivity",
+      "description": "How many progressive_ready frames clear the lens-height floor at the old (30mm), current (32mm), and optician-cited (44mm) thresholds.",
+      "base_count": 72,
+      "rows": [
+        {
+          "threshold_mm": 30,
+          "total_clearing": 72,
+          "non_sunglasses_clearing": 52
+        },
+        {
+          "threshold_mm": 32,
+          "total_clearing": 67,
+          "non_sunglasses_clearing": 47
+        },
+        {
+          "threshold_mm": 44,
+          "total_clearing": 26,
+          "non_sunglasses_clearing": 16
+        }
+      ]
+    }
+  ],
+  "derivationResults": [
+    {
+      "id": "high-index-rim-type-threshold-sensitivity",
+      "description": "At rx_power = -3.5D, does app/lib/derivation.ts#deriveRimTypeConstraint require non-rimless construction under the old (-4.00D), current (-3.00D), and optician-cited (-2.00D) thresholds?",
+      "rx_power_test_d": -3.5,
+      "rows": [
+        {
+          "threshold_d": -4,
+          "requires_non_rimless": false,
+          "reason": "rx -3.5D above -4D threshold: rimless still permitted"
+        },
+        {
+          "threshold_d": -3,
+          "requires_non_rimless": true,
+          "reason": "rx -3.5D <= -3D threshold: rimless construction unreliable at this edge thickness"
+        },
+        {
+          "threshold_d": -2,
+          "requires_non_rimless": true,
+          "reason": "rx -3.5D <= -2D threshold: rimless construction unreliable at this edge thickness"
+        }
+      ]
+    }
+  ]
+}

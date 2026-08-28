@@ -8,7 +8,9 @@ Two deliverables, both required: an interactive demo, and a written case study
 covering the eval harness, golden sets, latency, and knowledge-base freshness.
 
 **Status:** Phase 0 (data) and Phase 1 (naive baseline) complete — see
-`docs/phase1-baseline-failures.md`. Phase 2 (eval harness) is next.
+`docs/phase1-baseline-failures.md`. Phase 2 (eval harness) started —
+constraint-violation checks are in (`evals/`, `app/lib/constraints.ts`);
+the full ~40/20/15 golden sets are not yet built.
 
 ---
 
@@ -27,9 +29,10 @@ numeric constraint. Embedding product blurbs and hoping is the failure mode of
 most "AI recommender" demos and the first thing a technical interviewer probes.
 
 The genuinely retrievable knowledge is the *optician's advice*: how frame width
-relates to face width, why high-index lenses matter beyond about -4.00D, why
-progressives need a minimum lens height, what "my glasses keep sliding" actually
-indicates. That is unstructured, citable, and it's what a good salesperson knows.
+relates to face width, why high-index lenses matter beyond about -3.00D
+(provisional — see §3 derivation rules), why progressives need a minimum lens
+height, what "my glasses keep sliding" actually indicates. That is unstructured,
+citable, and it's what a good salesperson knows.
 
 So:
 
@@ -95,7 +98,7 @@ predicate. Every rule traces to a document, which is what lets the assistant say
 | `rx_power` | float | derives rim type and lens index |
 | `lens_type` | single \| progressive \| bifocal \| reading | hard |
 | `reading_power` | float | hard (reading only) |
-| `fit_issues[]` | slipping \| pinching \| marks \| heavy \| slides_sport | derives fit constraints |
+| `fit_issues[]` | slipping \| splaying \| pressing \| cheekbone_contact \| pinching \| marks \| heavy \| slides_sport | derives fit constraints |
 | `budget_min` / `budget_max` | int | hard |
 | `face_shape` | oval \| round \| square \| heart \| rectangle \| unsure | **soft ranking only — never a filter** |
 | `style_prefs[]` | minimal \| bold \| retro \| professional \| sporty \| playful | soft |
@@ -117,24 +120,48 @@ Each row is a citation opportunity. This table belongs in the case study.
 
 | Trigger | Constraint | Kind |
 |---|---|---|
-| `rx_power ≤ -4.00` | `rim_type ∈ {full, semi}` | hard |
+| `rx_power ≤ HIGH_INDEX_RX_THRESHOLD_D` (-3.00, provisional — was -4.00, see decisions.md 2026-08-28) | `rim_type ∈ {full, semi}` | hard |
 | `rx_power ≤ -6.00` | + `lens_width ≤ 54` | hard |
-| `lens_type = progressive` | `lens_height ≥ 30` | **hard, never relax** |
+| `rx_power ≤ HIGH_INDEX_RX_THRESHOLD_D` | high-index lens + anti-reflective coating advice (AR coating is critical specifically at high index — no dedicated catalog column, advice-copy only) | soft + advice |
+| `lens_type = progressive` | `lens_height ≥ PROGRESSIVE_MIN_LENS_HEIGHT_MM` (32mm, provisional — was 30, see decisions.md 2026-08-28) | **hard, never relax** |
 | user wants rimless | `max_power_supported ≥ \|rx\|` | hard |
-| `fit_issues ∋ slipping` | `nose_pad_type ∈ {adjustable, silicone}`, cap `face_width_fit` | hard |
+| `fit_issues ∋ splaying` (temple arms splay outward) | too small — `face_width_fit` one size wider | hard |
+| `fit_issues ∋ pressing` (temple arms press inward) | too wide — cap `face_width_fit` one size narrower | hard |
+| `fit_issues ∋ slipping` (sliding down the nose — vertical, not width) | `nose_pad_type ∈ {adjustable, silicone}`; check `weight_g`; pantoscopic tilt advice | hard |
+| `fit_issues ∋ cheekbone_contact` (lower rim rests on cheekbones, or frame "jumps" when speaking) | cap `face_width_fit` one size narrower | hard |
 | `fit_issues ∋ marks/heavy` | `weight_g ≤ 25` | hard |
 | `purpose ∋ outdoor/driving_day` | `uv400 = true` | **hard, never relax** |
 | `purpose ∋ driving_night` | `tint_color = none`, exclude polarized | hard |
 | `purpose ∋ sports` | `wrap_angle > 0`, `weight_g ≤ 22` | hard |
 | `purpose ∋ computer` ∧ `screen_hours ≥ 6` | `blue_light_ready`, AR coating advice | soft + advice |
+| user describes close-set eyes | boost `bridge_mm ∈ [14, 18]` | soft |
+| user describes wide-set eyes | boost `bridge_mm ∈ [19, 22]` | soft |
+| user reports flat nose profile | `nose_pad_type = adjustable` (prevents pad contact with eyelashes) | hard |
+| user reports prominent nose bridge | prefer `nose_pad_type = fixed_integrated` ∧ `material = acetate` | soft |
+| long face (`face_length ≥ 1.5 × face_width`, self-reported) | boost taller `lens_height_mm` | soft |
 | `face_shape` | boost `face_shape_suits ∋ value` | **soft, +0.15 max** |
+
+**Catalog invariant, verified 2026-08-28:** `frame_width_mm` ≈
+`2 × lens_width_mm + bridge_mm` + 4–8mm (hinge/endpiece allowance; mean +6.1mm,
+σ=1.34 across all 100 frames, never negative). Holds as a consistent lower-bound
+approximation, not an exact identity — use it as a sanity check on new catalog
+rows, not a hard constraint.
+
+**The generator's baked-in correlations (§4) are decoupled from the derivation
+thresholds above and were not regenerated when the thresholds changed.** The
+catalog was built assuming a 30mm progressive-lens-height floor and a -4.00D
+rimless cap; five `progressive_ready = true` frames in the catalog sit at
+30–31mm lens height and will now fail the tightened 32mm rule despite being
+tagged progressive-ready. That's a real, known tension between the data and
+the live rule, not a bug — see decisions.md 2026-08-28.
 
 Note the asymmetry: physical rules are hard and citable; face shape is a small
 nudge. **Face-shape-to-frame convention is the weakest claim in the knowledge
-base.** Tag every advice document `claim_type: physical | convention` at ingest,
-hedge convention claims in generated copy, and reserve confident language for
-physical constraints. That distinction is a product decision about user trust and
-should be written up as one.
+base.** Tag every advice document `claim_type: physical | convention | opinion`
+at ingest (opinion is excluded from the corpus at ingest time — see decisions.md
+2026-08-28), hedge convention claims in generated copy, and reserve confident
+language for physical constraints. That distinction is a product decision about
+user trust and should be written up as one.
 
 ### Sufficiency and stopping
 
@@ -257,7 +284,12 @@ and bifocal height requirements; material properties and skin sensitivity; sport
 and occupational needs; common fit complaints and causes; face-shape convention;
 when to refer to a professional.
 
-Tag every document `claim_type: physical | convention` at ingest.
+Tag every document `claim_type: physical | convention | opinion` at ingest.
+**Exclude `opinion` documents from the corpus at ingest, not at retrieval** —
+see decisions.md 2026-08-28 for why (the practising-optician source is ~40%
+advocacy for independent opticians over volume retail, which is real content
+but the author's commercial interest, and it would surface in recommendations
+as unearned editorializing if it reached the corpus at all).
 
 ---
 
@@ -266,14 +298,25 @@ Tag every document `claim_type: physical | convention` at ingest.
 They fail differently and need different graders. Track per-category scores; an
 overall average hides everything that matters.
 
-1. **Physical correctness (~40)** — high-index above -4.00D, minimum lens height
-   for progressives, frame width vs PD. Objectively gradeable, some
-   programmatically.
+1. **Physical correctness (~40)** — high-index above -3.00D (provisional), minimum
+   lens height for progressives, frame width vs PD. Objectively gradeable, some
+   programmatically — see `evals/harness` and `app/lib/constraints.ts` for the
+   no-LLM-judge constraint checks this category runs on.
 2. **Style fit (~20)** — needs the optician. This human dependency is the reason
    to line that up early.
 3. **Refusal and safety (~15)** — "will these fix my astigmatism", "I'm seeing
-   floaters", "recommend something under ₹500" when nothing qualifies. Correct
-   behaviour is declining to recommend.
+   floaters", "recommend something under ₹500" when nothing qualifies.
+
+   **Bare refusal is not the target.** Per the relaxation ladder (§3), correct
+   behaviour on a constraint-violating-but-answerable query is to *name the
+   violated constraint, then offer the nearest alternative and say what was
+   dropped* — not to decline outright. For "titanium under ₹4,500," the ideal
+   answer still recommends Basalt Form 448 (the nearest miss, ₹4,800) but says
+   so explicitly: "₹300 over your ceiling — want to see it, or shall I show
+   non-titanium in budget?" Scoring bare refusal as correct would optimize
+   toward a system that's honest but useless. Reserve actual refusal
+   (declining to recommend at all) for the safety-interrupt cases, where it's
+   genuinely the correct behaviour.
 
 Deliberately include: unanswerable questions, multi-hop, negations, near-miss
 vocabulary, identifiers, temporal cases, comparatives.
@@ -334,3 +377,21 @@ eyewear-rag/
 A `rag-agent-builder` skill was produced alongside this project covering RAG
 foundations, chunking, hybrid search, reranking, evaluation, and production
 concerns. Install it so this architecture doesn't need re-explaining.
+
+## 11. Deferred and future work
+
+**Deferred (not scheduled): complexion/undertone styling advice** — e.g. light
+tortoise reading better against dark skin, the wrist-vein test for gold vs
+silver metal tone. Real content in the optician source, and it's
+`claim_type: opinion`, but adopting it means introducing a skin-tone question
+into the conversation flow, and that's a product decision that hasn't been
+made deliberately yet. Do not add it opportunistically because the source
+material happens to cover it — see decisions.md 2026-08-28.
+
+**Future work (not scheduled): the "eyewear wardrobe" framing.** The
+optician's observation that one pair for everything is itself a common failure
+mode maps cleanly onto the existing `purpose_tags[]` slot. Possible feature:
+recommend a primary pair, then explicitly name the second use case it *won't*
+cover ("great for everyday and formal work — for actual sports use you'd want
+a wrap frame with polarized lenses, which this isn't"). Not built; flagging so
+it isn't lost. See decisions.md 2026-08-28.
