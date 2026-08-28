@@ -13,8 +13,31 @@ pre-filtering, no reranking.
 Three of the five queries deliberately target the catalog's intentional
 gaps (§4 of `PROJECT_CONTEXT.md`), which `validate.py` asserts stay empty:
 no polarized sports sunglasses under ₹2,500, no progressive-ready rimless
-frames, no titanium under ₹4,500. Correct behavior on those three is an
-honest "nothing qualifies" — none of them got it.
+frames, no titanium under ₹4,500. Per the relaxation ladder
+(`PROJECT_CONTEXT.md` §3, §6), correct behavior on those three is not a bare
+"nothing qualifies" either — it's naming the violated constraint, offering
+the nearest alternative, and stating explicitly what was dropped. None of
+the five runs below (two models, five queries) do this consistently; see
+"Better prose, worse compliance" for how the two models fail differently.
+
+## Summary: pass rates across both models
+
+Retrieval is model-independent (same embeddings, same catalog, same query
+text) — both models see byte-identical top-5 sets, so "retrieved" pass rate
+is a single column. "Recommended" checks only the frames each model actually
+surfaced in its answer, against the constraints in
+`evals/golden/physical.json`, via `app/lib/constraints.ts` (no LLM judge).
+
+| # | Query | Retrieved pass (both models) | gpt-4o-mini recommended | gpt-5.6-luna recommended |
+|---|---|---|---|---|
+| 1 | Titanium ≤₹8,000, in stock | 3/5 | 2/2 | 3/3 |
+| 2 | Polarized sports ≤₹2,500 | 0/5 | 0/1 | 0/1 |
+| 3 | Progressive-ready rimless | 0/5 | 0/1 | 0/3 |
+| 4 | Titanium ≤₹4,500 | 0/5 | 0/1 | 0/2 |
+| 5 | Sports ≤₹500 | 0/5 | refused (0 recommended) | 0/2 |
+
+Full per-query detail, including scores and verbatim answers, below (original
+gpt-4o-mini run) and in the re-run section (gpt-5.6-luna).
 
 ---
 
@@ -76,7 +99,7 @@ recommendation implies everything *except* the pick is over budget. Cosine
 similarity put a near-miss item at the top of the ranking and the model
 narrated around the mismatch rather than surfacing it.
 
-## 5. "Sports sunglasses under 500 rupees" — correct refusal
+## 5. "Sports sunglasses under 500 rupees" — gpt-4o-mini refused
 
 > "It seems there are no suitable options available in the retrieved
 > frames, as all of them exceed the budget... I can't recommend a frame
@@ -84,10 +107,15 @@ narrated around the mismatch rather than surfacing it.
 
 Not one of the three intentional gaps — just an extreme, obviously-empty
 request (cheapest frame in the catalog is nowhere near ₹500). Included
-because it shows the baseline *can* refuse when the mismatch is large
-enough to be unambiguous in the retrieved text. The failures above are the
-dangerous case: near-miss items that read as plausible enough for the
-model to paper over the gap instead of naming it.
+because gpt-4o-mini refuses when the mismatch is large enough to be
+unambiguous in the retrieved text — **but this turns out to be a property
+of this specific model's response on this run, not of the naive pipeline.**
+The gpt-5.6-luna re-run below hits this same query and does not refuse; see
+"Better prose, worse compliance" for what it does instead. Don't read this
+section as "the baseline can refuse" — read it as one data point that the
+re-run complicates. The near-miss queries above (#2–#4) remain the
+dangerous case either way: items plausible enough for a model to paper over
+the gap instead of naming it.
 
 ---
 
@@ -260,6 +288,59 @@ a reason (`PROJECT_CONTEXT.md` §6).
 
 ---
 
+## Better prose, worse compliance
+
+This is the direct answer to "why not just use a stronger model." Across
+the model swap, prose quality and constraint compliance moved in *opposite*
+directions on the three failing queries:
+
+| Query | gpt-4o-mini framing | gpt-4o-mini compliance | gpt-5.6-luna framing | gpt-5.6-luna compliance |
+|---|---|---|---|---|
+| #3 progressive-rimless | Asserts false match ("fits your request perfectly") | 1 recommended, 0 pass | States explicitly that no frame matches both criteria, names which constraint each pick fails | 3 recommended, 0 pass |
+| #4 titanium ≤₹4,500 | Asserts false budget compliance, doesn't name the overage | 1 recommended, 0 pass | States explicitly that nothing meets the requirement, offers two labeled "stretch" options | 2 recommended, 0 pass |
+| #5 sports ≤₹500 | Refuses outright, no alternative offered | 0 recommended (refused) | States the budget explicitly, offers two labeled alternatives, states they're over budget | 2 recommended, 0 pass |
+
+The newer, cheaper model is *better* at the thing that's easy to read —
+plain-language honesty about what it's doing — and *no better, or worse*,
+at the thing that's hard to read — whether what it recommends actually
+satisfies the constraint. It went from citing 1–2 non-compliant frames to
+2–3 in every case where gpt-4o-mini's answer was terse or evasive. A more
+fluent model doesn't hit the wall that made the weaker one refuse on query
+#5; it narrates smoothly around the same violated constraint instead. This
+is why the harness checks recommended frames against the catalog directly
+rather than trusting how confident or well-organized the answer sounds —
+prose quality is not evidence of correctness, and here it actively moves
+opposite to it.
+
+## Defect class: `outdoor` ↔ `sports` purpose-tag substitution
+
+Both models, on two different queries, treat `purpose_tags` values as
+interchangeable when they aren't:
+
+- **Query #2, both models:** Kestrel Edition 850 (`purpose_tags:
+  ["driving_day", "outdoor"]`) is recommended and described as "a great
+  choice for sports" / "suitable for outdoor use and sports." It has no
+  `sports` tag at all.
+- **Query #5, gpt-5.6-luna only:** of the two frames recommended as
+  "sports-suitable options," Sable Series 805 (`purpose_tags:
+  ["driving_day", "outdoor"]`) has the same defect. (Corvin Edition 683,
+  the other pick, actually is `sports`-tagged — its only violation is
+  price, so it's not an instance of this defect. Worth being precise about
+  that: the mislabeling is specifically the `outdoor` → `sports`
+  substitution, not "everything in query #5 is wrong.")
+
+This is one defect class, not two unrelated incidents: the model treats
+semantically adjacent purpose tags — outdoor and sports genuinely overlap
+in ordinary language — as equivalent for a categorical field where the
+catalog and `validate.py` treat them as distinct. It appears identically on
+both chat models, which is the tell that it isn't a model-quality problem:
+`purpose_tags includes 'sports'` is a one-line equality check against an
+array field, already implemented in `app/lib/constraints.ts`. No model
+upgrade fixes a defect that a `WHERE 'sports' = ANY(purpose_tags)` clause
+eliminates outright.
+
+---
+
 ## Natural experiment: Basalt Form 448 across two budget ceilings
 
 Queries #1 and #4 both surface the same frame, Basalt Form 448 (₹4,800,
@@ -273,15 +354,30 @@ from valid to invalid.
 | #1 | ₹8,000 | 0.52725 | 3rd | Yes (₹4,800 ≤ ₹8,000) | Yes |
 | #4 | ₹4,500 | 0.53908 | 2nd | **No** (₹4,800 > ₹4,500) | Yes |
 
-The score barely moves (0.527 → 0.539, a 0.012 shift — smaller than the gap
-between adjacent ranks in either list) even though the budget number in the
-query text changed by ₹3,500 and the frame's actual validity flipped
-entirely. That's the mechanistic proof, not just the qualitative pattern:
-cosine similarity is responding to "titanium... frame..." matching the
-blurb text, and is essentially blind to which number follows "under ₹."
-The embedding has no representation of "4,800 > 4,500" — it can't, a
-sentence embedding doesn't parse arithmetic — so the ranking is nearly
-identical for two queries with opposite correct answers.
+Basalt Form 448's score didn't just fail to track validity — it moved
+**against** it. The score *rose* from 0.527 to 0.539 (+0.012) and its rank
+*improved* from 3rd to 2nd, at the exact query where it stopped qualifying.
+The embedding scored it as a *better* match at the moment it became an
+invalid answer. That +0.012 shift is bigger than every adjacent-rank gap in
+both retrieved lists (query #1's gaps: 0.0077, 0.0022, 0.0041, 0.0058;
+query #4's: 0.0006, 0.0014, 0.0035, 0.0017 — largest of either list is
+0.0077), so it isn't noise inside a flat ranking; it's a real, if small,
+directional signal — and the direction is backwards.
+
+**The price signal isn't absent either — it's weak, non-monotonic, and
+uncorrelated with validity, which is worse than blindness.** The average
+retrieved price across query #1's top-5 (₹8,000 ceiling) is ₹7,110; across
+query #4's top-5 (₹4,500 ceiling) it's ₹6,400 — a ₹710 response to a
+₹3,500 change in the stated budget. Cosine similarity clearly picks up
+*some* correlation between the query text and price (retrieval isn't
+literally price-blind), but not nearly enough to track a specific numeric
+ceiling, and not reliably in the correct direction (see Basalt, above). A
+retriever that ignored price entirely would fail consistently and be easy
+to distrust. This one is right often enough — query #1 passed outright
+because enough of its top-5 also happened to clear the ₹8,000 bar — to look
+like it's tracking budget, which is more dangerous than an obvious miss:
+it's the reason a near-miss query reads as a small, plausible error instead
+of an obviously broken one.
 
 ---
 

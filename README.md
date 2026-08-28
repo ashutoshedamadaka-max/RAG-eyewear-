@@ -47,5 +47,6 @@ thresholds in `app/lib/config/thresholds.ts` against the catalog directly.
 ## Status
 
 Phase 0 (data) and Phase 1 (naive baseline) complete. Phase 2 (eval
-harness) started — constraint-violation checks are in; the full ~40/20/15
-golden sets are not yet built — see PROJECT_CONTEXT §2 and §6.
+harness) started — constraint-violation checks are in; refusal-and-safety
+golden set seeded at ~15 cases (`evals/golden/refusal.json`); physical.json
+has 7 of ~40; style.json not started — see PROJECT_CONTEXT §2 and §6.

@@ -295,5 +295,54 @@ it names the constraint and offers alternatives correctly, but still fails
 the harness on a different axis (mislabeling purpose tags) — a reminder that
 "good framing" and "constraint-compliant" are separate things to grade.
 
+## 2026-08-28 · Corrected two errors in the Phase 1 evidence write-up
+`docs/phase1-baseline-failures.md`'s natural-experiment section claimed the
+Basalt Form 448 score shift (0.527 → 0.539) was "smaller than the gap
+between adjacent ranks in either list." Checked against the report JSON:
+false — it's larger than every adjacent gap in both lists (max gap 0.0077,
+shift 0.012). Corrected to the stronger true claim: the score *rose* and
+the rank *improved* (3rd → 2nd) at the exact query where the frame stopped
+being valid — a real, if small, directional signal, and the direction is
+backwards.
+
+Also corrected "essentially blind to which number follows under ₹" — the
+retrieved-set average price does move with the stated ceiling (₹7,110 at
+₹8,000 vs. ₹6,400 at ₹4,500), just weakly and not reliably in the right
+direction. Reframed as weak-and-uncorrelated rather than absent, and tied
+to why the control query passed: a retriever that's sometimes right on
+price is more dangerous than one that's never right, because it's the
+reason a near-miss answer reads as plausible.
+
+Added, not corrections but under-stated findings: a "Better prose, worse
+compliance" section tabling how prose framing and constraint compliance
+moved in opposite directions across the model swap (the direct answer to
+"why not just use a stronger model" — a more fluent model narrates more
+plausibly around a violated constraint instead of hitting the wall that
+made the weaker model refuse); and a named defect class for the
+`outdoor`/`sports` purpose-tag substitution that appears on both models
+across two queries, flagged as a one-line SQL fix no model upgrade
+addresses. Also cleaned two lines of stale framing that predated the
+refusal-correction entry above and contradicted it, and added a summary
+table (5 queries × 2 models × retrieved/recommended pass rate) at the top.
+
+## 2026-08-28 · Refusal-and-safety golden set started (15 cases)
+`evals/golden/refusal.json` — 7 safety-interrupt cases (astigmatism,
+floaters, lazy eye, sudden flashes, sudden monocular blur, double vision,
+detached retina) and 8 constraint-violation cases (the three intentional
+catalog gaps, sports-under-₹500, plus four new ones verified against the
+catalog: no frame under ₹1,000 catalog-wide, no rimless frame supports
+-6.00D, no sunglasses under ₹1,200, and a category-mismatch case —
+reading glasses here are fixed-power, not Rx carriers, so "progressive
+reading glasses for my -3.00 prescription" needs an explanation, not an
+inventory search).
+
+Not wired into `app/scripts/run-eval.ts` — unlike `physical.json`, this
+set's correct behavior is a property of the prose (did it name the
+violated constraint, offer an alternative, decline safely and refer out)
+that a field-comparison check can't grade. Needs human or rubric review,
+same as the style-fit set — PROJECT_CONTEXT.md §6 flags that human
+dependency deliberately, this is it arriving for a second golden-set
+category.
+
 ---
 <!-- next entry here -->

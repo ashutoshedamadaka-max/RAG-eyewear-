@@ -10,7 +10,9 @@ covering the eval harness, golden sets, latency, and knowledge-base freshness.
 **Status:** Phase 0 (data) and Phase 1 (naive baseline) complete — see
 `docs/phase1-baseline-failures.md`. Phase 2 (eval harness) started —
 constraint-violation checks are in (`evals/`, `app/lib/constraints.ts`);
-the full ~40/20/15 golden sets are not yet built.
+refusal-and-safety golden set seeded at its full ~15 cases
+(`evals/golden/refusal.json`, not yet graded — needs human/rubric review);
+physical.json has 7 of ~40 seed cases; style.json not started.
 
 ---
 
