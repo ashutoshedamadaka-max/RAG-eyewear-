@@ -9,7 +9,8 @@
     "lint": "eslint",
     "blurbs": "tsx scripts/build-blurbs.ts",
     "embed": "tsx scripts/embed-catalog.ts",
-    "eval": "tsx scripts/run-eval.ts"
+    "eval": "tsx scripts/run-eval.ts",
+    "nearest-miss": "tsx scripts/generate-nearest-miss.ts"
   },
   "dependencies": {
     "next": "16.3.3",

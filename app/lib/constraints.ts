@@ -7,6 +7,7 @@ import type { CatalogFrame } from "./retrieval";
 export type Constraint =
   | { type: "max_price"; value: number }
   | { type: "material_equals"; value: string }
+  | { type: "product_type_equals"; value: string }
   | { type: "requires_in_stock" }
   | { type: "requires_purpose_tag"; value: string }
   | { type: "requires_polarized" }
@@ -25,6 +26,8 @@ export function describeConstraint(c: Constraint): string {
       return `price <= ${c.value}`;
     case "material_equals":
       return `material == ${c.value}`;
+    case "product_type_equals":
+      return `product_type == ${c.value}`;
     case "requires_in_stock":
       return "in_stock == true";
     case "requires_purpose_tag":
@@ -48,6 +51,8 @@ function checkOne(frame: CatalogFrame, c: Constraint): Violation | null {
         : null;
     case "material_equals":
       return frame.material !== c.value ? { constraint: c, actual: frame.material } : null;
+    case "product_type_equals":
+      return frame.product_type !== c.value ? { constraint: c, actual: frame.product_type } : null;
     case "requires_in_stock":
       return frame.in_stock !== true ? { constraint: c, actual: frame.in_stock } : null;
     case "requires_purpose_tag": {

@@ -344,5 +344,88 @@ same as the style-fit set — PROJECT_CONTEXT.md §6 flags that human
 dependency deliberately, this is it arriving for a second golden-set
 category.
 
+## 2026-08-28 · Golden set ground truth was circular
+`evals/golden/refusal.json`'s `gap3-titanium-under-4500` case claimed the
+nearest miss to "titanium under ₹4,500" was Basalt Form 448 at ₹4,800 (a
+₹300 gap). Checked against the full catalog: wrong. The actual cheapest
+titanium frame is Nira Edition 292 at ₹4,600 (a ₹100 gap) — Basalt is tied
+for 2nd cheapest, not 1st. The file already stated "all titanium frames
+start at ₹4,600" two sentences above the ₹4,800 claim and contradicted
+itself; nobody had checked the two sentences against each other, because
+neither had been checked against the catalog. The same unverified pattern
+was present, more weakly, in `physical.json`'s copy of the same case.
+
+**Why this happened is the finding, not the fix.** Basalt Form 448 is the
+frame the naive Phase 1 baseline actually retrieved and discussed at length
+in `docs/phase1-baseline-failures.md` — it's the frame that was *visible*
+while writing these golden cases, so it became the frame the ground truth
+was written around. Nira Edition 292 never appeared in any top-5 (cosine
+similarity ranked it outside the retrieved set for that query), so it was
+never seen, so it was never considered. The golden set's "ground truth" was
+quietly inherited from the failing pipeline's output instead of computed
+independently from the catalog.
+
+**The consequence is concrete, not hypothetical.** Phase 3's hybrid system
+will query the catalog directly with SQL, will correctly surface Nira
+Edition 292 at ₹4,600, and would have been marked *wrong* by this rubric
+for finding the actually-correct answer that Phase 1's broken retrieval
+missed. An eval built this way doesn't just fail to catch the naive
+baseline's bug — it forbids the fix from scoring better than the bug. The
+general lesson: **eval ground truth derived from the system under test
+silently caps the ceiling of anything that outperforms it.** Ground truth
+has to come from an independent source of authority over the domain — here,
+a direct catalog computation; in other projects, a spec, a human expert, or
+a separate reference implementation — never from "what the system being
+graded happened to produce," even when that output looks plausible and even
+when it's the thing sitting right in front of you while you write the case.
+
+**Fix, made systematic rather than case-by-case:** added
+`app/lib/nearest-miss.ts` (`computeNearestMisses`) and
+`app/scripts/generate-nearest-miss.ts` (`npm run nearest-miss`). For every
+`constraint_violation_case` with 2+ constraints, it relaxes exactly one
+constraint at a time, holds the rest fixed, and takes the cheapest catalog
+frame that now qualifies — a `nearest_miss` field, generated from
+`data/catalog/out/catalog.json` directly, never hand-typed. Re-running it
+after any catalog change keeps every case's ground truth correct by
+construction instead of by memory. Audited every other
+`constraint_violation_case` in `refusal.json` against the same failure
+mode while fixing this one:
+
+- `sports-under-500`'s `expected_behavior` cited "the cheapest catalog
+  frame (₹1,150)" as the reference point — that frame isn't sports-tagged,
+  so it wasn't a real answer to a sports-sunglasses query. The correct
+  reference is the cheapest frame that *is* sports-tagged (Wren Edition
+  729, ₹2,150) — a materially different number now supplied by the
+  generator.
+- `sunglasses-under-1200` turned out to be a boundary artifact, not a real
+  gap (separate issue, same root cause: nobody checked the exact price
+  against the catalog before writing "under ₹1,200" — the cheapest
+  sunglasses is exactly ₹1,200, so the strict inequality manufactured a
+  fake empty result). Retargeted to `sunglasses-under-1100`, a genuine
+  ₹100 gap, and gave it the same generated treatment.
+- `any-frame-under-1000` and `rimless-strong-prescription` were already
+  correct (verified against a full catalog scan when written, not against
+  retrieval output) but only have one real constraint each, so "nearest
+  miss" degenerates to "cheapest frame in the catalog" — not a meaningful
+  answer to either query. Left hand-verified and explicitly excluded from
+  the generator, with the reasoning written into each case's `note` field
+  so a future auditor doesn't have to re-derive why they're missing a
+  `nearest_miss` array.
+- `reading-glasses-with-prescription` has no `violated_constraints` by
+  design — it's a category-mismatch case (reading frames are never
+  Rx-compatible here), not a filter-relaxation case, so the generator
+  doesn't apply.
+
+Also cleaned `physical.json`'s `sports-under-500` note, which still said
+"even the naive baseline refuses correctly" — disproven by the
+gpt-5.6-luna re-run and inconsistent with the refusal-framing correction
+already logged above. Both files now agree: this case checks hard-constraint
+compliance only, not refusal behavior, which is `refusal.json`'s job.
+
+This belongs in the case study as its own section, not folded into a
+methods footnote — it's a stronger demonstration of eval-design maturity
+than most of the harness work: catching your own eval before it caught (or
+rather, failed to catch) the system.
+
 ---
 <!-- next entry here -->

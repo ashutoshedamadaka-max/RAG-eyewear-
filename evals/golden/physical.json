@@ -38,7 +38,7 @@
         { "type": "max_price", "value": 4500 },
         { "type": "material_equals", "value": "titanium" }
       ],
-      "note": "Targets catalog intentional gap #3. Ideal answer recommends Basalt Form 448 (the nearest miss, ₹4,800) but names the ₹300 overage explicitly rather than burying it."
+      "note": "Targets catalog intentional gap #3. Ideal answer recommends Nira Edition 292 (the nearest miss, ₹4,600, a ₹100 overage -- see evals/golden/refusal.json's gap3-titanium-under-4500 case for the generated nearest_miss data) and names the overage explicitly rather than burying it. An earlier version of this note said Basalt Form 448 at ₹4,800 was the nearest miss -- that was inherited from what the naive baseline happened to retrieve, not computed from the catalog, and was wrong (Basalt is tied for 2nd cheapest at ₹4,800; Nira Edition 292 is the true cheapest at ₹4,600). See decisions.md 2026-08-28, 'golden set ground truth was circular.'"
     },
     {
       "id": "sports-under-500",
@@ -47,7 +47,7 @@
         { "type": "max_price", "value": 500 },
         { "type": "requires_purpose_tag", "value": "sports" }
       ],
-      "note": "Not an intentional gap -- just far enough out of range (cheapest catalog frame is nowhere near ₹500) that even the naive baseline refuses correctly."
+      "note": "Not an intentional gap -- just far out of range. Not a test of whether the pipeline refuses (the gpt-5.6-luna re-run showed it doesn't reliably -- docs/phase1-baseline-failures.md, 'Better prose, worse compliance'), and per PROJECT_CONTEXT.md §6 bare refusal isn't the target behavior anyway. This entry only checks hard-constraint compliance of whatever gets recommended, same as every other case here; the framing question (does it name the constraint and offer the real nearest sports-tagged frame, per evals/golden/refusal.json's sports-under-500 case) is graded there, not here."
     }
   ],
 
