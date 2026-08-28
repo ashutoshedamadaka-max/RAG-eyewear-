@@ -1,12 +1,15 @@
 // Phase 2 harness (step 1): runs the golden query cases through a pipeline,
 // checks retrieved + recommended frames against hard constraints (no LLM
 // judge), and separately checks the two contested thresholds in
-// lib/config/thresholds.ts against the catalog directly.
+// lib/config/thresholds.ts against the catalog directly. Phase 3 extended
+// this to run any registered pipeline (PIPELINES in lib/pipelines/index.ts)
+// behind the same flag, so the naive-vs-hybrid A/B runs through identical
+// checking logic -- `--pipeline=both` runs both and prints a comparison.
 //
-// Usage: npm run eval -- --pipeline=naive
+// Usage: npm run eval -- --pipeline=naive | --pipeline=hybrid | --pipeline=both
 import fs from "node:fs";
 import path from "node:path";
-import { runNaivePipeline } from "../lib/pipelines/naive";
+import { PIPELINES } from "../lib/pipelines";
 import { getAllFrames, type CatalogFrame } from "../lib/retrieval";
 import { checkFrame, describeConstraint, type Constraint, type Violation } from "../lib/constraints";
 import { deriveRimTypeConstraint } from "../lib/derivation";
@@ -85,14 +88,15 @@ function violationSummary(v: Violation): string {
 }
 
 async function runQueryCases(cases: QueryCase[], pipeline: string) {
+  const run = PIPELINES[pipeline];
+  if (!run) {
+    throw new Error(`Unknown pipeline '${pipeline}' -- registered: ${Object.keys(PIPELINES).join(", ")}`);
+  }
+
   const results = [];
 
   for (const c of cases) {
-    if (pipeline !== "naive") {
-      throw new Error(`Pipeline '${pipeline}' not implemented yet`);
-    }
-
-    const result = await runNaivePipeline(c.query);
+    const result = await run(c.query);
 
     const retrievedChecked = result.retrieved.map((hit) => ({
       frame_id: hit.frame_id,
@@ -115,9 +119,11 @@ async function runQueryCases(cases: QueryCase[], pipeline: string) {
       query: c.query,
       note: c.note,
       constraints: c.constraints.map(describeConstraint),
+      pipeline: result.pipeline,
       chatModel: result.chatModel,
       temperature: result.temperature,
       systemPrompt: result.systemPrompt,
+      meta: result.meta,
       answer: result.answer,
       retrieved: retrievedChecked,
       retrievedPassRate: `${retrievedPassCount}/${retrievedChecked.length}`,
@@ -167,23 +173,47 @@ function runDerivationFunctionCases(cases: DerivationFunctionCase[]) {
   });
 }
 
-async function main() {
-  const { pipeline } = parseArgs();
-  const golden: GoldenFile = JSON.parse(fs.readFileSync(GOLDEN_PATH, "utf-8"));
-
-  console.log(`\n=== Phase 2 harness -- pipeline: ${pipeline} ===\n`);
-
-  const queryResults = await runQueryCases(golden.query_cases, pipeline);
+function printQueryResults(queryResults: Awaited<ReturnType<typeof runQueryCases>>) {
   console.log("--- Query cases (constraint-violation check, no LLM judge) ---\n");
   for (const r of queryResults) {
     console.log(`[${r.id}] "${r.query}"`);
     console.log(`  constraints: ${r.constraints.join(", ")}`);
     console.log(`  retrieved top-${r.retrieved.length} constraint pass rate: ${r.retrievedPassRate}`);
     console.log(`  recommended-frame constraint pass rate: ${r.recommendedPassRate}`);
+    if (r.meta?.relaxed) {
+      console.log(`  relaxation ladder fired: ${JSON.stringify(r.meta.alternativesUsed)}`);
+    }
     for (const rec of r.recommended) {
       if (rec.violations.length > 0) {
         console.log(`    VIOLATION: ${rec.sku} -- ${rec.violations.join("; ")}`);
       }
+    }
+    console.log();
+  }
+}
+
+async function main() {
+  const { pipeline } = parseArgs();
+  const golden: GoldenFile = JSON.parse(fs.readFileSync(GOLDEN_PATH, "utf-8"));
+  const pipelinesToRun = pipeline === "both" ? Object.keys(PIPELINES) : [pipeline];
+
+  console.log(`\n=== Phase 2 harness -- pipeline: ${pipeline} ===\n`);
+
+  const byPipeline: Record<string, Awaited<ReturnType<typeof runQueryCases>>> = {};
+  for (const p of pipelinesToRun) {
+    console.log(`\n### ${p} ###\n`);
+    byPipeline[p] = await runQueryCases(golden.query_cases, p);
+    printQueryResults(byPipeline[p]);
+  }
+
+  if (pipeline === "both") {
+    console.log("--- Comparison: recommended-frame pass rate ---\n");
+    for (const c of golden.query_cases) {
+      const cells = pipelinesToRun.map((p) => {
+        const r = byPipeline[p].find((x) => x.id === c.id);
+        return `${p}=${r?.recommendedPassRate ?? "?"}`;
+      });
+      console.log(`  [${c.id}] ${cells.join("  vs  ")}`);
     }
     console.log();
   }
@@ -216,7 +246,7 @@ async function main() {
   fs.writeFileSync(
     reportPath,
     JSON.stringify(
-      { pipeline, generatedAt: new Date().toISOString(), queryResults, compositionResults, derivationResults },
+      { pipeline, generatedAt: new Date().toISOString(), byPipeline, compositionResults, derivationResults },
       null,
       2
     )

@@ -427,5 +427,73 @@ methods footnote — it's a stronger demonstration of eval-design maturity
 than most of the harness work: catching your own eval before it caught (or
 rather, failed to catch) the system.
 
+## 2026-08-28 · Phase 3 started: catalog → SQL half only, advice → RAG half blocked
+Built the catalog-query half of the hybrid architecture (`PROJECT_CONTEXT.md`
+§1) and ran the real A/B against Phase 1's naive baseline
+(`docs/phase3-hybrid-ab.md` has the full evidence). Did not build the
+advice → RAG half: `data/advice/` is still empty, and the standing decision
+not to fabricate that corpus with an LLM stands. `app/lib/pipelines/hybrid.ts`
+is catalog-only and says so in its own header comment — this is a
+documented gap, not a silent one. It's also single-turn (one query, one
+answer), matching the naive pipeline's shape for a fair comparison, not
+the full multi-turn conversational slot-filling layer in §3 (rx_power
+derivation, the five-question cap, etc.) — that's a larger feature for
+later.
+
+**Real SQL, not a JSON filter pretending to be one.** `node:sqlite`
+(built into Node 22+, confirmed working on this Node 24 install) builds
+`data/catalog/out/catalog.db` from the catalog
+(`app/scripts/build-catalog-db.ts`) with a proper `frame_purpose_tags`
+junction table, so "does this frame have the sports tag" is a real SQL
+`EXISTS` join, not a text match. Bumped `@types/node` to `^24` to match
+the actual runtime and get sqlite typings. Rejected a real database
+server or an ORM at this scale — same judgment call as Phase 1's
+in-memory vector store: 100 rows doesn't need infrastructure the naive
+baseline didn't need either.
+
+**Mechanism:** function-calling extracts a structured filter from the
+query (`extract_filter` tool) → compiles to parameterized SQL
+(`app/lib/catalog-db.ts`) → if zero rows, the relaxation ladder
+(`findNearestAlternatives`) drops exactly one clause at a time and returns
+the cheapest frame that qualifies once that clause is dropped, mirroring
+`app/lib/nearest-miss.ts`'s approach for the golden set but applied live.
+Generation reuses the naive pipeline's bracketed-reference convention and
+blurb text (`getBlurb`) so a difference in outcome is attributable to
+which frames were selected, not how they're described.
+
+**Model-sharing refactor:** pulled `CHAT_MODEL`/`CHAT_TEMPERATURE` out of
+`naive.ts` into `app/lib/config/model.ts`, imported by both pipelines --
+required so the A/B isolates retrieval mechanism as the only variable.
+Also hit a real API constraint fixing this: `gpt-5.6-luna` rejects
+function tools on `/v1/chat/completions` unless `reasoning_effort` is
+explicitly set to `"none"` (confirmed against the live API). Set that
+only on the extraction call, not the generation call, so the fix doesn't
+retroactively change the naive pipeline's already-published behavior.
+
+**Result, in short (full writeup in docs/phase3-hybrid-ab.md):** on the
+control query, hybrid's retrieved set is 5/5 constraint-compliant vs.
+naive's 3/5, and surfaces Nira Edition 292 (₹4,600) — the catalog's
+actual cheapest titanium frame, which naive has never surfaced in any
+run logged in this project. On all four queries where nothing satisfies
+the full constraint set, hybrid's relaxation-ladder alternatives match
+`refusal.json`'s independently-generated `nearest_miss` ground truth
+**8 for 8**. Naive's ad hoc substitutions match **zero** verified-correct
+alternatives, and reproduce the outdoor/sports mislabeling defect twice
+in this run alone; hybrid's equivalent answers, same chat model, same
+temperature, get both right, because SQL checked tag membership before
+the model ever saw the candidate. This is the concrete version of
+`PROJECT_CONTEXT.md` §1's abstract claim, not just an assertion of it.
+
+**Known gap surfaced while building this, not yet fixed:** the model's
+filter extraction infers `product_type` (e.g. "sports **sunglasses**" →
+`product_type: sunglasses`) for two of the five golden queries, but
+neither `physical.json` nor `refusal.json` encodes that constraint for
+those cases. Didn't change any number in this run (every relevant frame
+already happens to be `sunglasses`), but it's the same category of gap
+`sunglasses-under-1100` was fixed for two commits ago, just not yet
+tripped. Flagging rather than fixing now to avoid scope creep on an
+already-large commit; worth closing before this table is relied on for
+anything beyond what it currently claims.
+
 ---
 <!-- next entry here -->

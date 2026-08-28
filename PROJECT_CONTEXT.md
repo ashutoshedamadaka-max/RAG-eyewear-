@@ -12,7 +12,10 @@ covering the eval harness, golden sets, latency, and knowledge-base freshness.
 constraint-violation checks are in (`evals/`, `app/lib/constraints.ts`);
 refusal-and-safety golden set seeded at its full ~15 cases
 (`evals/golden/refusal.json`, not yet graded — needs human/rubric review);
-physical.json has 7 of ~40 seed cases; style.json not started.
+physical.json has 7 of ~40 seed cases; style.json not started. Phase 3
+started — catalog → SQL half built and A/B'd against Phase 1
+(`docs/phase3-hybrid-ab.md`); advice → RAG half blocked on the still-empty
+advice corpus (§5).
 
 ---
 

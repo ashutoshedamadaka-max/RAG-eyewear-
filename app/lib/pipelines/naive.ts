@@ -1,14 +1,7 @@
 import OpenAI from "openai";
 import { getEmbeddingModel, retrieveTopK, type RetrievedHit } from "../retrieval";
+import { CHAT_MODEL, CHAT_TEMPERATURE } from "../config/model";
 
-// Rolling alias, not a dated snapshot: as of 2026-08-28 OpenAI has not
-// published dated snapshots for the gpt-5.6 family (confirmed against both
-// the live /v1/models list and the deprecations page -- only gpt-5.6-sol /
-// -terra / -luna exist). Pin here to the smallest/cheapest tier -- Luna,
-// not Terra, which is the mid tier, not the small one -- and revisit this
-// pin once OpenAI exposes a dated snapshot. See decisions.md 2026-08-28.
-export const CHAT_MODEL = "gpt-5.6-luna";
-export const CHAT_TEMPERATURE = 1;
 export const TOP_K = 5;
 
 export const SYSTEM_PROMPT =

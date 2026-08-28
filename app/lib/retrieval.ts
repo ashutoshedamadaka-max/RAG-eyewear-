@@ -64,6 +64,15 @@ export function getFrameBySku(sku: string): CatalogFrame | undefined {
   return getAllFrames().find((f) => f.sku === sku);
 }
 
+export function getFrameById(frameId: string): CatalogFrame | undefined {
+  return loadStore().catalog.get(frameId);
+}
+
+/** Same blurb text the naive pipeline embeds, reused by the hybrid pipeline so both describe frames to the LLM identically -- any difference in outcome is attributable to which frames were selected, not how they're described. */
+export function getBlurb(frameId: string): string {
+  return loadStore().blurbs.get(frameId) ?? "";
+}
+
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   let normA = 0;

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { runNaivePipeline } from "@/lib/pipelines/naive";
+import { PIPELINES } from "@/lib/pipelines";
 
 // Thin dispatcher. `pipeline` selects which retrieval/generation pipeline
-// answers the request -- currently only "naive" (Phase 1) exists. Phase 3
-// adds "hybrid" here so the eval harness (app/scripts/run-eval.ts) can run
-// both through the same request shape for the A/B.
+// answers the request -- "naive" (Phase 1, vector-only) or "hybrid"
+// (Phase 3, SQL structured filters). Both are registered in
+// app/lib/pipelines/index.ts so this route and the eval harness
+// (app/scripts/run-eval.ts) share one source of truth for what pipelines
+// exist.
 export async function POST(req: Request) {
   const { query, pipeline = "naive" } = (await req.json()) as {
     query?: string;
@@ -14,20 +16,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing 'query' string" }, { status: 400 });
   }
 
-  if (pipeline !== "naive") {
-    return NextResponse.json(
-      { error: `Unknown or not-yet-implemented pipeline: '${pipeline}'` },
-      { status: 400 }
-    );
+  const run = PIPELINES[pipeline];
+  if (!run) {
+    return NextResponse.json({ error: `Unknown pipeline: '${pipeline}'` }, { status: 400 });
   }
 
-  const result = await runNaivePipeline(query);
+  const result = await run(query);
 
   return NextResponse.json({
     query: result.query,
     pipeline: result.pipeline,
     chatModel: result.chatModel,
     answer: result.answer,
+    meta: result.meta,
     retrieved: result.retrieved.map((hit) => ({
       frame_id: hit.frame_id,
       score: hit.score,
