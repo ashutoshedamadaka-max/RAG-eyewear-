@@ -11,7 +11,10 @@
     "embed": "tsx scripts/embed-catalog.ts",
     "eval": "tsx scripts/run-eval.ts",
     "nearest-miss": "tsx scripts/generate-nearest-miss.ts",
-    "build-catalog-db": "tsx scripts/build-catalog-db.ts"
+    "build-catalog-db": "tsx scripts/build-catalog-db.ts",
+    "advice-chunks": "tsx scripts/build-advice-chunks.ts",
+    "embed-advice": "tsx scripts/embed-advice.ts",
+    "validate-judges": "tsx scripts/validate-judges.ts"
   },
   "dependencies": {
     "next": "16.3.3",

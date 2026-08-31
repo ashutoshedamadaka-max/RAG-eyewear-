@@ -10,14 +10,20 @@ covering the eval harness, golden sets, latency, and knowledge-base freshness.
 **Status:** Phase 0 (data) and Phase 1 (naive baseline) complete — see
 `docs/phase1-baseline-failures.md`. Phase 2 (eval harness) started —
 constraint-violation checks are in (`evals/`, `app/lib/constraints.ts`);
-refusal-and-safety golden set seeded at its full ~15 cases
-(`evals/golden/refusal.json`, not yet graded — needs human/rubric review);
-physical.json has 7 seed cases plus a frame-size-interaction derivation
-case; style.json not started. Phase 3 started — catalog → SQL half built
-and A/B'd against Phase 1 (`docs/phase3-hybrid-ab.md`); advice → RAG half
-still not built, but `data/advice/` has 7 documents from verified primary
-sources (§5) covering the two threshold disputes Phase 3 needed —
-nowhere near the full ~40–60 target yet.
+refusal-and-safety golden set has ~19 cases across four categories
+(`evals/golden/refusal.json`, not yet graded by a human — needs
+rubric review, though the two RAG-specific categories now also run
+through the Phase 4 LLM judges); physical.json has 7 seed cases plus a
+frame-size-interaction derivation case; style.json not started. Phase 3
+complete — catalog → SQL half built and A/B'd against Phase 1
+(`docs/phase3-hybrid-ab.md`). **Phase 4 complete** — advice → RAG built
+and orchestrated with the catalog half in one pipeline
+(`app/lib/pipelines/orchestrated.ts`), evaluated with three validated LLM
+judges (`docs/phase4-advice-rag.md`); `data/advice/` still has only 6
+documents (nowhere near the ~40–60 target) and is 100%
+`claim_type: physical` (no `convention` source yet), both flagged
+honestly rather than papered over. Phase 5 (retrieval quality) or
+finishing Phase 2's golden sets are next — see §2.
 
 ---
 
@@ -64,13 +70,14 @@ Do not skip or reorder these. The reasons are in each line.
 | Phase | Work | Why it must come here |
 |---|---|---|
 | 0 ✅ | Catalog data | Done — see §4 |
-| 1 | **Naive baseline**: pure vector RAG over everything, catalog included | Build it *knowing it will fail*. Its failure on constraint queries is the case study's opening scene and the baseline every later number is measured against. Screenshot the failures. |
-| 2 | **Eval harness + three golden sets** | Before any optimisation. Without it every later "improvement" is superstition. |
-| 3 | **Hybrid split**: catalog → SQL tool, advice → RAG | The A/B table against Phase 1 justifies the whole architecture |
-| 4 | Retrieval quality: chunking, hybrid search, reranking — measured separately | Report which techniques helped and which didn't, with numbers |
-| 5 | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it |
-| 6 | Latency: instrument per stage, parallelise, stream | Budget before/after |
-| 7 | Write-up | Assemble from `decisions.md` |
+| 1 ✅ | **Naive baseline**: pure vector RAG over everything, catalog included | Build it *knowing it will fail*. Its failure on constraint queries is the case study's opening scene and the baseline every later number is measured against. Screenshot the failures. |
+| 2 (started) | **Eval harness + three golden sets** | Before any optimisation. Without it every later "improvement" is superstition. |
+| 3 ✅ | **Catalog → SQL tool** | The A/B table against Phase 1 justifies the structured half of the architecture |
+| 4 ✅ | **Advice → RAG, orchestrated with Phase 3's SQL tool in one pipeline** | Renumbered 2026-08-31 to its own row — this turned out to be a genuinely separate build (chunking, embedding, claim_type runtime behavior, LLM judges), not a sub-step of Phase 3, and was blocked on the advice corpus existing at all (§5), which Phase 3 wasn't. The original plan bundled these as one "Phase 3"; splitting the row after the fact rather than pretending the plan predicted two sessions. |
+| 5 | Retrieval quality: chunking strategy, hybrid search, reranking — measured separately | Report which techniques helped and which didn't, with numbers. Distinct from Phase 4: that phase built the RAG pipeline; this phase compares alternative retrieval techniques against it |
+| 6 | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it — and measure the catalog/advice freshness asymmetry surfaced 2026-08-31 (SQL needs no re-embedding on a catalog change; advice does) |
+| 7 | Latency: instrument per stage, parallelise, stream | Budget before/after |
+| 8 | Write-up | Assemble from `decisions.md` |
 
 **Start `decisions.md` on day one and log as you go, including reversals and dead
 ends.** Post-hoc decision logs read as fabricated because they usually are — they
@@ -94,6 +101,61 @@ QUERY     hard WHERE + soft ORDER BY
 The derivation layer is where retrieved optical knowledge becomes a SQL
 predicate. Every rule traces to a document, which is what lets the assistant say
 "at -3.50 you'll want full-rim" *and cite why* instead of asserting it.
+
+### Vocabulary policy (2026-08-31): the user supplies situation, the system supplies specification
+
+The average user knows nothing about rim types, lens materials, or index
+numbers. They want glasses. They say "I'm on a laptop nine hours a day and
+my glasses slide down" — the system derives blue-light coating, adjustable
+nose pads, and a frame-width cap. They never say "adjustable nose pads."
+Three rules, not guidelines:
+
+1. **No question may require vocabulary the user isn't expected to have.**
+   If a question can only be answered correctly by someone who already
+   knows the answer to the thing you're trying to find out, it's the wrong
+   question. Ask about the situation, not the specification.
+2. **Technical attributes are derived, never solicited.** `rim_type`,
+   `material`, lens index, `nose_pad_type` do not appear in the Slots table
+   below and never will — there is no STATED path to them, only DERIVED.
+   This is already true of the current schema; the rule exists so a future
+   slot addition doesn't quietly violate it. If a user volunteers a
+   technical-sounding preference anyway ("I want something light"),
+   translate it to the physical constraint it actually implies (a
+   `weight_g` ceiling) — don't take it as a request to choose a material,
+   and don't ask a follow-up that would require them to know one.
+3. **Every technical term appearing in output must be explained in the
+   same sentence it appears.** "Adjustable nose pads, which is what'll
+   stop the sliding" — explain while justifying the pick, the way an
+   optician explains *after* deciding, not by quizzing the customer first.
+   A technical noun with no clause attached to it in the same sentence is
+   a policy violation, not a style nit.
+
+**The honest tension this creates:** fewer technical questions means less
+information, and sometimes a wrong derivation. Someone at -5.00D who says
+"I don't know my power" can't safely be handed a rimless frame — but
+demanding a number they don't have isn't the fix either. Correct handling
+is to proceed on a stated assumption and say so: "I've assumed a moderate
+prescription for these picks; if yours is stronger than about -4.00, some
+of these — especially the rimless ones — won't work well. Know it
+roughly, or want to check your last pair's receipt?" This is the existing
+"assumed values must be surfaced" rule (below) applied specifically to the
+case where the missing information is exactly the thing that gates a hard
+constraint. See `evals/golden/refusal.json`'s `assumption_surfacing_cases`
+for the golden-set treatment of this path.
+
+### Question phrasing
+
+Ask order is unchanged (purpose → prescription → fit issues → budget →
+style), but every question is phrased as a situation, not a specification:
+
+| Slot being filled | Not this (specification) | This (situation) |
+|---|---|---|
+| `purpose[]` | "What product category and purpose tags?" | "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?" |
+| `rx_status` / `rx_power` | "What's your prescription power?" | "Do you wear glasses now, and if so, do you know roughly how strong your prescription is?" — graceful path if not: proceed on the stated assumption above, don't block on a number they don't have. |
+| `lens_type` | "Progressive or single vision?" | "Do you need help seeing both far away and up close, or just one of those?" ("both" → progressive; "just one" → single; "only up close, for reading" → reading) |
+| `fit_issues[]` | "Any splaying, pressing, or cheekbone contact?" | "Have your current glasses been sliding down, feeling tight, or leaving marks?" — the model maps free-text symptom descriptions to `fit_issues[]` values; the user never sees or chooses the enum. |
+| `budget_min`/`budget_max` | (already lay) | "What's your budget for the frame?" |
+| `face_shape` | (already lay) | Tappable illustrations — no vocabulary needed, per §7. |
 
 ### Slots
 
@@ -170,6 +232,34 @@ at ingest (opinion is excluded from the corpus at ingest time — see decisions.
 2026-08-28), hedge convention claims in generated copy, and reserve confident
 language for physical constraints. That distinction is a product decision about
 user trust and should be written up as one.
+
+**`claim_type` is not a bookkeeping tag — it does three jobs at runtime
+(2026-08-31), and the eval checks that it actually changes behavior, not
+just that the field exists:**
+
+1. **Register.** `physical` claims are stated plainly with a citation: "at
+   -5.00D you'll want full-rim — rimless mounting isn't reliable at that
+   edge thickness [Rodenstock]." `convention` claims are hedged and
+   labelled as convention: "rectangular frames are conventionally
+   suggested for rounder faces, though that's style convention, not a
+   fitting requirement." Same retrieval mechanism, different register,
+   because the epistemic status differs — see
+   `app/lib/pipelines/orchestrated.ts`'s system prompt.
+2. **Authority.** `physical` claims may generate hard SQL constraints
+   (everything in the derivation table above). `convention` claims may
+   only nudge ranking — this generalises the existing face-shape rule
+   (soft, +0.15 max, never a filter) from a special case into the general
+   policy: no `convention`-tagged claim is ever allowed to exclude a
+   frame, no matter how confidently it's retrieved.
+3. **Exclusion.** `opinion` never reaches the index — filtered at ingest
+   (`app/scripts/build-advice-chunks.ts`), not at retrieval or generation,
+   for the reason logged 2026-08-28: a retrieval-time filter is one prompt
+   change away from silently letting it back in.
+
+If the system sounds identical retrieving from a `physical` chunk and a
+`convention` chunk, the tagging is bookkeeping, not a control. Graded
+directly in Phase 4's judge-based eval — see decisions.md 2026-08-31,
+"hedging-matches-claim-type."
 
 ### Sufficiency and stopping
 
@@ -372,8 +462,8 @@ eyewear-rag/
 ├── PROJECT_CONTEXT.md        ← this file
 ├── data/
 │   ├── catalog/              ← generate_catalog.py, render.py, validate.py, build_browser.py
-│   │   └── out/              ← catalog.json, images/, validation_report.txt
-│   └── advice/               ← empty; §5
+│   │   └── out/              ← catalog.json, catalog.db, images/, validation_report.txt
+│   └── advice/               ← 6 sourced .md documents (§5); out/ has chunks.json, embeddings.json
 ├── evals/
 │   ├── golden/               ← physical.json, style.json, refusal.json
 │   └── harness/

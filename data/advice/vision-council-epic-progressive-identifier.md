@@ -11,6 +11,8 @@ verification_method: "Downloaded PDF directly (3,326 pages -- the full catalog),
 
 # Vision Council EPIC — what this source actually is
 
+## What this source actually is
+
 Unlike the other documents in this corpus, EPIC is not a guidance document
 with a recommended threshold — it's a lens-identification reference: given
 a lens's etched manufacturer marking, look up which product it is and what

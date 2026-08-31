@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { cosineSimilarity } from "./cosine";
 
 export interface CatalogFrame {
   frame_id: string;
@@ -71,18 +72,6 @@ export function getFrameById(frameId: string): CatalogFrame | undefined {
 /** Same blurb text the naive pipeline embeds, reused by the hybrid pipeline so both describe frames to the LLM identically -- any difference in outcome is attributable to which frames were selected, not how they're described. */
 export function getBlurb(frameId: string): string {
   return loadStore().blurbs.get(frameId) ?? "";
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 export interface RetrievedHit {

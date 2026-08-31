@@ -53,16 +53,33 @@ npm run eval -- --pipeline=both    # naive vs. hybrid, side by side
 ```
 
 Catalog queries route to real SQL (`node:sqlite`) instead of vector
-similarity. See `docs/phase3-hybrid-ab.md` for the results — the advice →
-RAG half isn't built yet, though `data/advice/` now has 7 documents from
-verified primary sources (§5) rather than being empty.
+similarity. See `docs/phase3-hybrid-ab.md` for the results.
+
+## Run the Phase 4 advice/RAG pipeline
+
+```bash
+cd app
+npm run advice-chunks              # -> ../data/advice/out/chunks.json
+npm run embed-advice               # -> ../data/advice/out/embeddings.json
+npm run validate-judges            # LLM judges vs. hand-labelled examples
+npm run eval -- --pipeline=both    # naive vs. hybrid vs. orchestrated
+```
+
+Advice corpus (documents only, never the catalog) chunked and embedded;
+`orchestrated` pipeline combines Phase 3's SQL frame selection with RAG
+over advice, cited and hedged by `claim_type`. Three LLM judges
+(groundedness, citation accuracy, hedging-match) grade properties of prose
+`app/lib/constraints.ts` can't — see `docs/phase4-advice-rag.md`.
 
 ## Status
 
 Phase 0 (data) and Phase 1 (naive baseline) complete. Phase 2 (eval
 harness) started — constraint-violation checks are in; refusal-and-safety
-golden set seeded at ~15 cases (`evals/golden/refusal.json`); physical.json
-has 7 seed cases plus a frame-size lens-index case; style.json not started.
-Phase 3 started — catalog → SQL half built and A/B'd against Phase 1;
-advice → RAG pipeline not built, but `data/advice/` has 7 sourced
-documents (nowhere near the ~40–60 target) — see PROJECT_CONTEXT §2, §5, §6.
+golden set has ~19 cases across four categories (`evals/golden/refusal.json`);
+physical.json has 7 seed cases plus a frame-size lens-index case;
+style.json not started. Phase 3 complete — catalog → SQL half built and
+A/B'd against Phase 1. Phase 4 complete — advice → RAG built and
+orchestrated with the SQL half in one pipeline, evaluated with validated
+LLM judges; `data/advice/` still has only 6 documents (nowhere near the
+~40–60 target) and no `convention`-tagged source yet — see PROJECT_CONTEXT
+§2, §5, §6.

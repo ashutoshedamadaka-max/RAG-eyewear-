@@ -1,0 +1,1332 @@
+{
+  "pipeline": "both",
+  "generatedAt": "2026-08-31T06:01:05.333Z",
+  "byPipeline": {
+    "naive": [
+      {
+        "id": "titanium-8000-instock",
+        "query": "Titanium frames under 8000 rupees, in stock",
+        "note": "Control case -- a query where valid candidates are plentiful enough that naive retrieval can land on a correct answer by chance.",
+        "constraints": [
+          "price <= 8000",
+          "material == titanium",
+          "in_stock == true"
+        ],
+        "pipeline": "naive",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+        "answer": "Best matches for titanium frames under ₹8,000 and currently in stock:\n\n- **[3] Basalt Form 448 — ₹4,800**: Lightweight, minimal oval rimless frame for narrow faces; suitable for everyday, reading, and formal wear. Includes UV400 protection.\n- **[4] Terra Optics Mark 282 — ₹6,000**: Wide-fit square sunglasses frame with polarized UV400 lenses; ideal for outdoor use and daytime driving.\n- **[5] Sable Edition 852 — ₹6,850**: Lightweight round computer frame for narrow faces, with blue-light readiness; suitable for everyday and office wear.",
+        "retrieved": [
+          {
+            "frame_id": "FR035",
+            "sku": "VAY-035",
+            "score": 0.537083365077521,
+            "violations": [
+              "price <= 8000 (actual: 8250)",
+              "in_stock == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR023",
+            "sku": "TRU-023",
+            "score": 0.5294291982565863,
+            "violations": [
+              "price <= 8000 (actual: 9650)"
+            ]
+          },
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "score": 0.527245781768448,
+            "violations": []
+          },
+          {
+            "frame_id": "FR078",
+            "sku": "TER-078",
+            "score": 0.5231921482282482,
+            "violations": []
+          },
+          {
+            "frame_id": "FR082",
+            "sku": "SAB-082",
+            "score": 0.5174156288377612,
+            "violations": []
+          }
+        ],
+        "retrievedPassRate": "3/5",
+        "recommended": [
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "violations": []
+          },
+          {
+            "frame_id": "FR078",
+            "sku": "TER-078",
+            "violations": []
+          },
+          {
+            "frame_id": "FR082",
+            "sku": "SAB-082",
+            "violations": []
+          }
+        ],
+        "recommendedPassRate": "3/3"
+      },
+      {
+        "id": "polarized-sports-under-2500",
+        "query": "Polarized sports sunglasses under 2500 rupees",
+        "note": "Targets catalog intentional gap #1 (validate.py asserts this combination is empty). Correct answer: name the violated constraint and offer the nearest alternative, not a bare refusal -- see decisions.md 2026-08-28, 'refusal framing correction'.",
+        "constraints": [
+          "price <= 2500",
+          "purpose_tags includes sports",
+          "polarized == true"
+        ],
+        "pipeline": "naive",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+        "answer": "Only one retrieved frame fully matches your request for polarized sports sunglasses under ₹2,500:\n\n- **[3] Kestrel Edition 850 — ₹1,350**: Polarized with UV400 protection, suitable for outdoor use, lightweight at 21.3g, and in stock. It has a minimal matte-black oval design and fits medium faces.\n\nThe other polarized options are priced above ₹2,500, while the remaining affordable option is not polarized.",
+        "retrieved": [
+          {
+            "frame_id": "FR005",
+            "sku": "COR-005",
+            "score": 0.5236146779590535,
+            "violations": [
+              "price <= 2500 (actual: 7900)"
+            ]
+          },
+          {
+            "frame_id": "FR063",
+            "sku": "SAB-063",
+            "score": 0.5155572811573951,
+            "violations": [
+              "price <= 2500 (actual: 5800)",
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "score": 0.5103128314420453,
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          },
+          {
+            "frame_id": "FR089",
+            "sku": "AER-089",
+            "score": 0.5025930564530988,
+            "violations": [
+              "price <= 2500 (actual: 3800)",
+              "polarized == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR012",
+            "sku": "SUN-012",
+            "score": 0.49977056282488735,
+            "violations": [
+              "purpose_tags includes sports (actual: [\"computer\",\"everyday\"])",
+              "polarized == true (actual: false)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/5",
+        "recommended": [
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/1"
+      },
+      {
+        "id": "progressive-rimless",
+        "query": "Progressive-ready rimless frames",
+        "note": "Targets catalog intentional gap #2.",
+        "constraints": [
+          "progressive_ready == true",
+          "rim_type == rimless"
+        ],
+        "pipeline": "naive",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+        "answer": "No frame perfectly matches both **progressive-ready** and **rimless**. Closest options:\n\n- **[5] Orbit&Co Series 396** — Progressive-ready, Rx-compatible up to 6D, and in stock. It has a **semi-rim** design rather than fully rimless.\n- **[4] Corvin Mark 496** — The only **fully rimless** option, with adjustable nose pads, but it is **not progressive-ready** and uses a fixed 1.25D reading power.\n- **[3] Fathom Series 616** — Progressive-ready and Rx-compatible up to 8D, but it is **full-rim** and currently out of stock.",
+        "retrieved": [
+          {
+            "frame_id": "FR077",
+            "sku": "BAS-077",
+            "score": 0.5265883320249958,
+            "violations": [
+              "progressive_ready == true (actual: false)",
+              "rim_type == rimless (actual: \"full\")"
+            ]
+          },
+          {
+            "frame_id": "FR041",
+            "sku": "FAT-041",
+            "score": 0.5152097590775192,
+            "violations": [
+              "progressive_ready == true (actual: false)",
+              "rim_type == rimless (actual: \"full\")"
+            ]
+          },
+          {
+            "frame_id": "FR036",
+            "sku": "FAT-036",
+            "score": 0.5096665391346304,
+            "violations": [
+              "rim_type == rimless (actual: \"full\")"
+            ]
+          },
+          {
+            "frame_id": "FR081",
+            "sku": "COR-081",
+            "score": 0.5076541522269911,
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR015",
+            "sku": "ORB-015",
+            "score": 0.5073908083535733,
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/5",
+        "recommended": [
+          {
+            "frame_id": "FR015",
+            "sku": "ORB-015",
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          },
+          {
+            "frame_id": "FR081",
+            "sku": "COR-081",
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR036",
+            "sku": "FAT-036",
+            "violations": [
+              "rim_type == rimless (actual: \"full\")"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/3"
+      },
+      {
+        "id": "titanium-under-4500",
+        "query": "Titanium frames under 4500 rupees",
+        "note": "Targets catalog intentional gap #3. Ideal answer recommends Nira Edition 292 (the nearest miss, ₹4,600, a ₹100 overage -- see evals/golden/refusal.json's gap3-titanium-under-4500 case for the generated nearest_miss data) and names the overage explicitly rather than burying it. An earlier version of this note said Basalt Form 448 at ₹4,800 was the nearest miss -- that was inherited from what the naive baseline happened to retrieve, not computed from the catalog, and was wrong (Basalt is tied for 2nd cheapest at ₹4,800; Nira Edition 292 is the true cheapest at ₹4,600). See decisions.md 2026-08-28, 'golden set ground truth was circular.'",
+        "constraints": [
+          "price <= 4500",
+          "material == titanium"
+        ],
+        "pipeline": "naive",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+        "answer": "No retrieved frames meet the **under ₹4,500** budget. The closest titanium options are:\n\n- **[2] Basalt Form 448** — ₹4,800; oval, rimless, lightweight at 11g.\n- **[3] Sundial Series 103** — ₹5,400; square, rimless, lightweight at 11g.\n\nIf your budget can stretch by ₹300, **[2]** is the best match.",
+        "retrieved": [
+          {
+            "frame_id": "FR047",
+            "sku": "VAY-047",
+            "score": 0.5396678089352802,
+            "violations": [
+              "price <= 4500 (actual: 6150)"
+            ]
+          },
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "score": 0.5390830145588923,
+            "violations": [
+              "price <= 4500 (actual: 4800)"
+            ]
+          },
+          {
+            "frame_id": "FR019",
+            "sku": "SUN-019",
+            "score": 0.5376632966617823,
+            "violations": [
+              "price <= 4500 (actual: 5400)"
+            ]
+          },
+          {
+            "frame_id": "FR023",
+            "sku": "TRU-023",
+            "score": 0.5341358213028199,
+            "violations": [
+              "price <= 4500 (actual: 9650)"
+            ]
+          },
+          {
+            "frame_id": "FR078",
+            "sku": "TER-078",
+            "score": 0.5324078822037323,
+            "violations": [
+              "price <= 4500 (actual: 6000)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/5",
+        "recommended": [
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "violations": [
+              "price <= 4500 (actual: 4800)"
+            ]
+          },
+          {
+            "frame_id": "FR019",
+            "sku": "SUN-019",
+            "violations": [
+              "price <= 4500 (actual: 5400)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      },
+      {
+        "id": "sports-under-500",
+        "query": "sports sunglasses under 500 rupees",
+        "note": "Not an intentional gap -- just far out of range. Not a test of whether the pipeline refuses (the gpt-5.6-luna re-run showed it doesn't reliably -- docs/phase1-baseline-failures.md, 'Better prose, worse compliance'), and per PROJECT_CONTEXT.md §6 bare refusal isn't the target behavior anyway. This entry only checks hard-constraint compliance of whatever gets recommended, same as every other case here; the framing question (does it name the constraint and offer the real nearest sports-tagged frame, per evals/golden/refusal.json's sports-under-500 case) is graded there, not here.",
+        "constraints": [
+          "price <= 500",
+          "purpose_tags includes sports"
+        ],
+        "pipeline": "naive",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Recommend 2-3 frames from the retrieved product descriptions below that best match the customer's request. Only use frames from the retrieved list; do not invent frames. Reference each pick by its bracketed number.",
+        "answer": "No retrieved frames meet the **sports sunglasses under ₹500** requirement.\n\nClosest options are:\n\n- **[4] Sable Series 805** — Sports/outdoor sunglasses with polarized UV400 lenses; ₹5,800 and in stock.\n- **[2] Corvin Edition 683** — Sporty polarized UV400 sunglasses; ₹7,900, but currently out of stock.",
+        "retrieved": [
+          {
+            "frame_id": "FR012",
+            "sku": "SUN-012",
+            "score": 0.5239200709411114,
+            "violations": [
+              "price <= 500 (actual: 1250)",
+              "purpose_tags includes sports (actual: [\"computer\",\"everyday\"])"
+            ]
+          },
+          {
+            "frame_id": "FR005",
+            "sku": "COR-005",
+            "score": 0.5169664973096024,
+            "violations": [
+              "price <= 500 (actual: 7900)"
+            ]
+          },
+          {
+            "frame_id": "FR056",
+            "sku": "SUN-056",
+            "score": 0.5129308637144513,
+            "violations": [
+              "price <= 500 (actual: 4900)",
+              "purpose_tags includes sports (actual: [\"computer\",\"driving_night\",\"everyday\"])"
+            ]
+          },
+          {
+            "frame_id": "FR063",
+            "sku": "SAB-063",
+            "score": 0.5044576514832715,
+            "violations": [
+              "price <= 500 (actual: 5800)",
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          },
+          {
+            "frame_id": "FR072",
+            "sku": "SUN-072",
+            "score": 0.5026260020797504,
+            "violations": [
+              "price <= 500 (actual: 3500)",
+              "purpose_tags includes sports (actual: [\"reading\"])"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/5",
+        "recommended": [
+          {
+            "frame_id": "FR063",
+            "sku": "SAB-063",
+            "violations": [
+              "price <= 500 (actual: 5800)",
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          },
+          {
+            "frame_id": "FR005",
+            "sku": "COR-005",
+            "violations": [
+              "price <= 500 (actual: 7900)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      }
+    ],
+    "hybrid": [
+      {
+        "id": "titanium-8000-instock",
+        "query": "Titanium frames under 8000 rupees, in stock",
+        "note": "Control case -- a query where valid candidates are plentiful enough that naive retrieval can land on a correct answer by chance.",
+        "constraints": [
+          "price <= 8000",
+          "material == titanium",
+          "in_stock == true"
+        ],
+        "pipeline": "hybrid",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Below are catalog results from a structured database query. If they exactly match the customer's request, recommend 2-3 of them. If instead they are NEAREST ALTERNATIVES (marked as such, because nothing matched exactly), say plainly that nothing matches exactly, name the specific requirement each alternative drops using the note attached to it, and offer it as an option anyway. Never claim an alternative satisfies a requirement its note says it drops. Only use frames from the list below; do not invent frames. Reference each pick by its bracketed number.",
+        "meta": {
+          "filter": {
+            "material": "titanium",
+            "max_price": 8000,
+            "requires_in_stock": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE material = ? AND price_frame_only <= ? AND in_stock = 1 ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": false,
+          "alternativesUsed": []
+        },
+        "answer": "These titanium frames match your requirements—under ₹8,000 and currently in stock:\n\n- **[1] Nira Edition 292** — ₹4,600; silver rimless computer frame, medium fit; **18 units in stock**.\n- **[2] Meridian Mark 585** — ₹4,800; navy full-rim sunglasses frame, medium fit with UV400 protection; **16 units in stock**.\n- **[4] Sable Mark 143** — ₹5,150; silver full-rim computer frame, narrow fit with blue-light readiness; **10 units in stock**.",
+        "retrieved": [
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": []
+          },
+          {
+            "frame_id": "FR001",
+            "sku": "MER-001",
+            "violations": []
+          },
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "violations": []
+          },
+          {
+            "frame_id": "FR034",
+            "sku": "SAB-034",
+            "violations": []
+          },
+          {
+            "frame_id": "FR019",
+            "sku": "SUN-019",
+            "violations": []
+          }
+        ],
+        "retrievedPassRate": "5/5",
+        "recommended": [
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": []
+          },
+          {
+            "frame_id": "FR001",
+            "sku": "MER-001",
+            "violations": []
+          },
+          {
+            "frame_id": "FR034",
+            "sku": "SAB-034",
+            "violations": []
+          }
+        ],
+        "recommendedPassRate": "3/3"
+      },
+      {
+        "id": "polarized-sports-under-2500",
+        "query": "Polarized sports sunglasses under 2500 rupees",
+        "note": "Targets catalog intentional gap #1 (validate.py asserts this combination is empty). Correct answer: name the violated constraint and offer the nearest alternative, not a bare refusal -- see decisions.md 2026-08-28, 'refusal framing correction'.",
+        "constraints": [
+          "price <= 2500",
+          "purpose_tags includes sports",
+          "polarized == true"
+        ],
+        "pipeline": "hybrid",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Below are catalog results from a structured database query. If they exactly match the customer's request, recommend 2-3 of them. If instead they are NEAREST ALTERNATIVES (marked as such, because nothing matched exactly), say plainly that nothing matches exactly, name the specific requirement each alternative drops using the note attached to it, and offer it as an option anyway. Never claim an alternative satisfies a requirement its note says it drops. Only use frames from the list below; do not invent frames. Reference each pick by its bracketed number.",
+        "meta": {
+          "filter": {
+            "product_type": "sunglasses",
+            "max_price": 2500,
+            "purpose_tags": [
+              "sports"
+            ],
+            "requires_polarized": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND polarized = 1 AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "price <= 2500",
+              "frame_id": "FR097"
+            },
+            {
+              "droppedClause": "polarized == true",
+              "frame_id": "FR073"
+            },
+            {
+              "droppedClause": "purpose_tags includes sports",
+              "frame_id": "FR040"
+            }
+          ]
+        },
+        "answer": "Nothing matches all three requirements—**polarized, suitable for sports, and under ₹2,500**. Here are the nearest alternatives:\n\n- **[1] Terra Optics Line 509 — ₹3,500:** Polarized and suitable for sports, but **exceeds the ₹2,500 budget**.\n- **[2] Wren Edition 729 — ₹2,150:** Under budget and suitable for sports, but **not polarized**.\n- **[3] Kestrel Edition 850 — ₹1,350:** Polarized and under budget, but **does not include sports among its purpose tags**.",
+        "retrieved": [
+          {
+            "frame_id": "FR097",
+            "sku": "TER-097",
+            "violations": [
+              "price <= 2500 (actual: 3500)"
+            ]
+          },
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "polarized == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/3",
+        "recommended": [
+          {
+            "frame_id": "FR097",
+            "sku": "TER-097",
+            "violations": [
+              "price <= 2500 (actual: 3500)"
+            ]
+          },
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "polarized == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/3"
+      },
+      {
+        "id": "progressive-rimless",
+        "query": "Progressive-ready rimless frames",
+        "note": "Targets catalog intentional gap #2.",
+        "constraints": [
+          "progressive_ready == true",
+          "rim_type == rimless"
+        ],
+        "pipeline": "hybrid",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Below are catalog results from a structured database query. If they exactly match the customer's request, recommend 2-3 of them. If instead they are NEAREST ALTERNATIVES (marked as such, because nothing matched exactly), say plainly that nothing matches exactly, name the specific requirement each alternative drops using the note attached to it, and offer it as an option anyway. Never claim an alternative satisfies a requirement its note says it drops. Only use frames from the list below; do not invent frames. Reference each pick by its bracketed number.",
+        "meta": {
+          "filter": {
+            "rim_type": "rimless",
+            "requires_progressive_ready": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE progressive_ready = 1 AND rim_type = ? ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "progressive_ready == true",
+              "frame_id": "FR049"
+            },
+            {
+              "droppedClause": "rim_type == rimless",
+              "frame_id": "FR040"
+            }
+          ]
+        },
+        "answer": "Nothing matches **both progressive-ready and rimless** exactly. Here are the nearest alternatives:\n\n- **[1] Orbit&Co Line 482** — Rimless and suitable for everyday/computer use, but it **is not progressive-ready**. INR 3,250.\n- **[2] Kestrel Edition 850** — **Progressive-ready**, but it has a **semi-rim design rather than rimless**. INR 1,350.",
+        "retrieved": [
+          {
+            "frame_id": "FR049",
+            "sku": "ORB-049",
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/2",
+        "recommended": [
+          {
+            "frame_id": "FR049",
+            "sku": "ORB-049",
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      },
+      {
+        "id": "titanium-under-4500",
+        "query": "Titanium frames under 4500 rupees",
+        "note": "Targets catalog intentional gap #3. Ideal answer recommends Nira Edition 292 (the nearest miss, ₹4,600, a ₹100 overage -- see evals/golden/refusal.json's gap3-titanium-under-4500 case for the generated nearest_miss data) and names the overage explicitly rather than burying it. An earlier version of this note said Basalt Form 448 at ₹4,800 was the nearest miss -- that was inherited from what the naive baseline happened to retrieve, not computed from the catalog, and was wrong (Basalt is tied for 2nd cheapest at ₹4,800; Nira Edition 292 is the true cheapest at ₹4,600). See decisions.md 2026-08-28, 'golden set ground truth was circular.'",
+        "constraints": [
+          "price <= 4500",
+          "material == titanium"
+        ],
+        "pipeline": "hybrid",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Below are catalog results from a structured database query. If they exactly match the customer's request, recommend 2-3 of them. If instead they are NEAREST ALTERNATIVES (marked as such, because nothing matched exactly), say plainly that nothing matches exactly, name the specific requirement each alternative drops using the note attached to it, and offer it as an option anyway. Never claim an alternative satisfies a requirement its note says it drops. Only use frames from the list below; do not invent frames. Reference each pick by its bracketed number.",
+        "meta": {
+          "filter": {
+            "material": "titanium",
+            "max_price": 4500
+          },
+          "sql": "SELECT frame_id FROM frames WHERE material = ? AND price_frame_only <= ? ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "material == titanium",
+              "frame_id": "FR076"
+            },
+            {
+              "droppedClause": "price <= 4500",
+              "frame_id": "FR100"
+            }
+          ]
+        },
+        "answer": "Nothing matches your request exactly. Here are the nearest alternatives:\n\n- **[1] Truss Series 377** — INR 1300, but it is **metal, not titanium**. It has a square shape, silver finish, and fits narrow faces.\n- **[2] Nira Edition 292** — **titanium**, but priced at **INR 4600**, which is ₹100 over your ₹4500 limit. It is rimless, silver, and fits medium faces.",
+        "retrieved": [
+          {
+            "frame_id": "FR076",
+            "sku": "TRU-076",
+            "violations": [
+              "material == titanium (actual: \"metal\")"
+            ]
+          },
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": [
+              "price <= 4500 (actual: 4600)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/2",
+        "recommended": [
+          {
+            "frame_id": "FR076",
+            "sku": "TRU-076",
+            "violations": [
+              "material == titanium (actual: \"metal\")"
+            ]
+          },
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": [
+              "price <= 4500 (actual: 4600)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      },
+      {
+        "id": "sports-under-500",
+        "query": "sports sunglasses under 500 rupees",
+        "note": "Not an intentional gap -- just far out of range. Not a test of whether the pipeline refuses (the gpt-5.6-luna re-run showed it doesn't reliably -- docs/phase1-baseline-failures.md, 'Better prose, worse compliance'), and per PROJECT_CONTEXT.md §6 bare refusal isn't the target behavior anyway. This entry only checks hard-constraint compliance of whatever gets recommended, same as every other case here; the framing question (does it name the constraint and offer the real nearest sports-tagged frame, per evals/golden/refusal.json's sports-under-500 case) is graded there, not here.",
+        "constraints": [
+          "price <= 500",
+          "purpose_tags includes sports"
+        ],
+        "pipeline": "hybrid",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are an eyewear store assistant. Below are catalog results from a structured database query. If they exactly match the customer's request, recommend 2-3 of them. If instead they are NEAREST ALTERNATIVES (marked as such, because nothing matched exactly), say plainly that nothing matches exactly, name the specific requirement each alternative drops using the note attached to it, and offer it as an option anyway. Never claim an alternative satisfies a requirement its note says it drops. Only use frames from the list below; do not invent frames. Reference each pick by its bracketed number.",
+        "meta": {
+          "filter": {
+            "product_type": "sunglasses",
+            "max_price": 500,
+            "purpose_tags": [
+              "sports"
+            ]
+          },
+          "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "price <= 500",
+              "frame_id": "FR073"
+            }
+          ]
+        },
+        "answer": "Nothing matches exactly: the only result exceeds your ₹500 budget.\n\n- **[1] Wren Edition 729** — ₹2,150, so it does **not** meet the “under ₹500” requirement. It is otherwise a sporty sunglasses frame suitable for outdoor activities and sports.",
+        "retrieved": [
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "price <= 500 (actual: 2150)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/1",
+        "recommended": [
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "price <= 500 (actual: 2150)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/1"
+      }
+    ],
+    "orchestrated": [
+      {
+        "id": "titanium-8000-instock",
+        "query": "Titanium frames under 8000 rupees, in stock",
+        "note": "Control case -- a query where valid candidates are plentiful enough that naive retrieval can land on a correct answer by chance.",
+        "constraints": [
+          "price <= 8000",
+          "material == titanium",
+          "in_stock == true"
+        ],
+        "pipeline": "orchestrated",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are the in-store assistant at an optical shop -- warm, personable, genuinely interested in getting the customer the right fit. Talk like a good optician, not a script.\n\nPersona note: personality lives in HOW you ask, acknowledge, and explain -- not in how strongly you assert things. A good optician is personable and still says \"let's get that checked.\"\n\nBelow the persona, these constraints are not suggestions. Follow them even when they cut against sounding enthusiastic:\n\n1. NEVER assert a subjective or aesthetic judgment as fact. \"Those will look amazing on you\" is not allowed -- looks are the customer's call, not yours to declare. You may say what a frame is designed for or how it's suited to what they described; you may not declare how it will look on them.\n2. Ground every checkable claim in a labeled source. Frame facts (price, material, stock, fit) cite the bracketed catalog number, [1]-[5]. Optical or fitting advice (why a spec matters) cites the bracketed advice reference, [A1]-[A4]. A technical or fitting claim with no citation is not allowed -- if nothing provided supports it, don't make it.\n3. Match confidence to the source's claim_type, which is labeled on every advice reference. PHYSICAL claims are stated plainly: \"rimless mounting isn't reliable at -5.00D and beyond [A2].\" CONVENTION claims are hedged and named as convention: \"rectangular frames are conventionally suggested for rounder faces, though that's a style convention, not a fitting requirement [A3].\" Never state a convention claim with the same confidence as a physical one.\n4. Never invent a frame, a fact, or a citation. Only reference frames and advice actually provided below.\n5. If the customer is excited about something that fails a hard requirement (their prescription, a safety constraint, a stated fit problem), say so plainly, in the same breath as acknowledging the enthusiasm. Warmth is in how you deliver the fact, never in softening or dropping it.\n6. Explain every technical term in the same sentence it appears -- \"adjustable nose pads, which is what'll stop the sliding,\" not \"adjustable nose pads\" on its own. The customer is not expected to know the vocabulary.\n7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.\n8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption (\"I've assumed a moderate prescription for these picks\") and say what changes if that assumption is wrong.\n9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as \"fitting height\" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.",
+        "meta": {
+          "filter": {
+            "material": "titanium",
+            "max_price": 8000,
+            "requires_in_stock": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE material = ? AND price_frame_only <= ? AND in_stock = 1 ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": false,
+          "alternativesUsed": [],
+          "adviceRetrieved": [
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#2",
+              "score": 0.30929659826158157,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Application to this project"
+            },
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#1",
+              "score": 0.30566960394135334,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Sample entries (real, as fetched — not representative of the full 3,326-page catalog, which was not read exhaustively)"
+            },
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#3",
+              "score": 0.29768620555544895,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Application to this project"
+            },
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#0",
+              "score": 0.29623788322341704,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Drilled rimless lens material recommendations"
+            }
+          ]
+        },
+        "answer": "All five catalog options meet your requirements: titanium, under ₹8,000, and currently in stock. Prices are for the frame only.\n\n| Frame | Price / stock | Fit and key details |\n|---|---:|---|\n| **Nira Edition 292** | ₹4,600 / 18 units | Medium fit, oval shape, silver, 14.5 g. Rimless construction, meaning the lenses are mounted without a full surrounding rim. Prescription-lens compatible up to 4D; adjustable nose pads, which allow the fit to be fine-tuned. [1] |\n| **Meridian Mark 585** | ₹4,800 / 16 units | Medium fit, rectangle shape, navy titanium, 17.5 g. Full-rim sunglasses frame with UV400 protection, meaning it is rated to block ultraviolet wavelengths up to 400 nm. Prescription-lens compatible up to 10D and progressive-ready, meaning it is designed to accept progressive lenses. [2] |\n| **Basalt Form 448** | ₹4,800 / 27 units | Narrow fit, oval shape, bronze titanium, 11 g. Rimless construction; prescription-lens compatible up to 3.5D and has adjustable nose pads. [3] |\n| **Sable Mark 143** | ₹5,150 / 10 units | Narrow fit, round shape, silver, 12.5 g. Full-rim computer frame; prescription-lens compatible up to 8D, progressive-ready, and has adjustable nose pads. [4] |\n| **Sundial Series 103** | ₹5,400 / 27 units | Medium fit, square shape, navy titanium, 11 g. Rimless construction; prescription-lens compatible up to 3.5D and has adjustable nose pads. [5] |\n\nIf you use progressive lenses, the **Meridian Mark 585** and **Sable Mark 143** are the listed progressive-ready choices [2][4]. Since I don’t have your prescription, I’d verify it against the stated limits before ordering—especially for the rimless options, which are listed up to 3.5D or 4D [1][3][5].",
+        "retrieved": [
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": []
+          },
+          {
+            "frame_id": "FR001",
+            "sku": "MER-001",
+            "violations": []
+          },
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "violations": []
+          },
+          {
+            "frame_id": "FR034",
+            "sku": "SAB-034",
+            "violations": []
+          },
+          {
+            "frame_id": "FR019",
+            "sku": "SUN-019",
+            "violations": []
+          }
+        ],
+        "retrievedPassRate": "5/5",
+        "recommended": [
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": []
+          },
+          {
+            "frame_id": "FR001",
+            "sku": "MER-001",
+            "violations": []
+          },
+          {
+            "frame_id": "FR092",
+            "sku": "BAS-092",
+            "violations": []
+          },
+          {
+            "frame_id": "FR034",
+            "sku": "SAB-034",
+            "violations": []
+          },
+          {
+            "frame_id": "FR019",
+            "sku": "SUN-019",
+            "violations": []
+          }
+        ],
+        "recommendedPassRate": "5/5"
+      },
+      {
+        "id": "polarized-sports-under-2500",
+        "query": "Polarized sports sunglasses under 2500 rupees",
+        "note": "Targets catalog intentional gap #1 (validate.py asserts this combination is empty). Correct answer: name the violated constraint and offer the nearest alternative, not a bare refusal -- see decisions.md 2026-08-28, 'refusal framing correction'.",
+        "constraints": [
+          "price <= 2500",
+          "purpose_tags includes sports",
+          "polarized == true"
+        ],
+        "pipeline": "orchestrated",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are the in-store assistant at an optical shop -- warm, personable, genuinely interested in getting the customer the right fit. Talk like a good optician, not a script.\n\nPersona note: personality lives in HOW you ask, acknowledge, and explain -- not in how strongly you assert things. A good optician is personable and still says \"let's get that checked.\"\n\nBelow the persona, these constraints are not suggestions. Follow them even when they cut against sounding enthusiastic:\n\n1. NEVER assert a subjective or aesthetic judgment as fact. \"Those will look amazing on you\" is not allowed -- looks are the customer's call, not yours to declare. You may say what a frame is designed for or how it's suited to what they described; you may not declare how it will look on them.\n2. Ground every checkable claim in a labeled source. Frame facts (price, material, stock, fit) cite the bracketed catalog number, [1]-[5]. Optical or fitting advice (why a spec matters) cites the bracketed advice reference, [A1]-[A4]. A technical or fitting claim with no citation is not allowed -- if nothing provided supports it, don't make it.\n3. Match confidence to the source's claim_type, which is labeled on every advice reference. PHYSICAL claims are stated plainly: \"rimless mounting isn't reliable at -5.00D and beyond [A2].\" CONVENTION claims are hedged and named as convention: \"rectangular frames are conventionally suggested for rounder faces, though that's a style convention, not a fitting requirement [A3].\" Never state a convention claim with the same confidence as a physical one.\n4. Never invent a frame, a fact, or a citation. Only reference frames and advice actually provided below.\n5. If the customer is excited about something that fails a hard requirement (their prescription, a safety constraint, a stated fit problem), say so plainly, in the same breath as acknowledging the enthusiasm. Warmth is in how you deliver the fact, never in softening or dropping it.\n6. Explain every technical term in the same sentence it appears -- \"adjustable nose pads, which is what'll stop the sliding,\" not \"adjustable nose pads\" on its own. The customer is not expected to know the vocabulary.\n7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.\n8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption (\"I've assumed a moderate prescription for these picks\") and say what changes if that assumption is wrong.\n9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as \"fitting height\" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.",
+        "meta": {
+          "filter": {
+            "product_type": "sunglasses",
+            "max_price": 2500,
+            "purpose_tags": [
+              "sports"
+            ],
+            "requires_polarized": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND polarized = 1 AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "price <= 2500",
+              "frame_id": "FR097"
+            },
+            {
+              "droppedClause": "polarized == true",
+              "frame_id": "FR073"
+            },
+            {
+              "droppedClause": "purpose_tags includes sports",
+              "frame_id": "FR040"
+            }
+          ],
+          "adviceRetrieved": [
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#1",
+              "score": 0.3401284918814032,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Sample entries (real, as fetched — not representative of the full 3,326-page catalog, which was not read exhaustively)"
+            },
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#1",
+              "score": 0.30791270001424503,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Frame selection guidance"
+            },
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#0",
+              "score": 0.30045096086348944,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Drilled rimless lens material recommendations"
+            },
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#2",
+              "score": 0.29825126841291744,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Application to this project"
+            }
+          ]
+        },
+        "answer": "I couldn’t find an exact match for **polarized sports sunglasses under ₹2,500**.\n\nClosest options:\n\n- **Wren Edition 729 — ₹2,150**: Listed for sports use and fits medium face widths, but it is **not polarized**. It has UV400 protection and a 14° wrap. [2]  \n- **Kestrel Edition 850 — ₹1,350**: **Polarized** with UV400 protection, but it is listed for driving and outdoor use rather than sports. [3]  \n- **Terra Optics Line 509 — ₹3,500**: Polarized and listed for sports, but it is **₹1,000 over budget**. [1]\n\nSo, if **polarization is non-negotiable**, I’d look at the Kestrel and confirm whether its fit and intended use work for your sports activity. If **sports suitability and budget matter more**, the Wren is the nearest option, with polarization being the requirement it drops. All three are currently in stock. [1][2][3]",
+        "retrieved": [
+          {
+            "frame_id": "FR097",
+            "sku": "TER-097",
+            "violations": [
+              "price <= 2500 (actual: 3500)"
+            ]
+          },
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "polarized == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/3",
+        "recommended": [
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "polarized == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "purpose_tags includes sports (actual: [\"driving_day\",\"outdoor\"])"
+            ]
+          },
+          {
+            "frame_id": "FR097",
+            "sku": "TER-097",
+            "violations": [
+              "price <= 2500 (actual: 3500)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/3"
+      },
+      {
+        "id": "progressive-rimless",
+        "query": "Progressive-ready rimless frames",
+        "note": "Targets catalog intentional gap #2.",
+        "constraints": [
+          "progressive_ready == true",
+          "rim_type == rimless"
+        ],
+        "pipeline": "orchestrated",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are the in-store assistant at an optical shop -- warm, personable, genuinely interested in getting the customer the right fit. Talk like a good optician, not a script.\n\nPersona note: personality lives in HOW you ask, acknowledge, and explain -- not in how strongly you assert things. A good optician is personable and still says \"let's get that checked.\"\n\nBelow the persona, these constraints are not suggestions. Follow them even when they cut against sounding enthusiastic:\n\n1. NEVER assert a subjective or aesthetic judgment as fact. \"Those will look amazing on you\" is not allowed -- looks are the customer's call, not yours to declare. You may say what a frame is designed for or how it's suited to what they described; you may not declare how it will look on them.\n2. Ground every checkable claim in a labeled source. Frame facts (price, material, stock, fit) cite the bracketed catalog number, [1]-[5]. Optical or fitting advice (why a spec matters) cites the bracketed advice reference, [A1]-[A4]. A technical or fitting claim with no citation is not allowed -- if nothing provided supports it, don't make it.\n3. Match confidence to the source's claim_type, which is labeled on every advice reference. PHYSICAL claims are stated plainly: \"rimless mounting isn't reliable at -5.00D and beyond [A2].\" CONVENTION claims are hedged and named as convention: \"rectangular frames are conventionally suggested for rounder faces, though that's a style convention, not a fitting requirement [A3].\" Never state a convention claim with the same confidence as a physical one.\n4. Never invent a frame, a fact, or a citation. Only reference frames and advice actually provided below.\n5. If the customer is excited about something that fails a hard requirement (their prescription, a safety constraint, a stated fit problem), say so plainly, in the same breath as acknowledging the enthusiasm. Warmth is in how you deliver the fact, never in softening or dropping it.\n6. Explain every technical term in the same sentence it appears -- \"adjustable nose pads, which is what'll stop the sliding,\" not \"adjustable nose pads\" on its own. The customer is not expected to know the vocabulary.\n7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.\n8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption (\"I've assumed a moderate prescription for these picks\") and say what changes if that assumption is wrong.\n9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as \"fitting height\" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.",
+        "meta": {
+          "filter": {
+            "rim_type": "rimless",
+            "requires_progressive_ready": true
+          },
+          "sql": "SELECT frame_id FROM frames WHERE progressive_ready = 1 AND rim_type = ? ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "progressive_ready == true",
+              "frame_id": "FR049"
+            },
+            {
+              "droppedClause": "rim_type == rimless",
+              "frame_id": "FR040"
+            }
+          ],
+          "adviceRetrieved": [
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#1",
+              "score": 0.5996227029560111,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Frame selection guidance"
+            },
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#3",
+              "score": 0.5535670452826611,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Application to this project"
+            },
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#0",
+              "score": 0.5099326451242358,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Frame depth (\"B\") vs. fitting height"
+            },
+            {
+              "chunk_id": "rodenstock-frame-fitting-heights#2",
+              "score": 0.49838311194178964,
+              "claim_type": "physical",
+              "source_org": "Rodenstock GmbH",
+              "doc_id": "rodenstock-frame-fitting-heights",
+              "section_heading": "Progression length and minimum fitting height"
+            }
+          ]
+        },
+        "answer": "I found **no frame that meets both requirements—progressive-ready and rimless**.\n\n- **Orbit&Co Line 482** is the closer match for the rimless requirement: it has a metal rimless construction, adjustable nose pads—which allow small fitting-height corrections—and is listed for prescriptions up to 4D. However, it is explicitly **not progressive-ready**, so I wouldn’t use it for progressive lenses without confirming with the lab and optician. It’s INR 3,250, frame only, and 14 are in stock. [1] Adjustable nose pads can help maintain the frame’s adjustment during progressive fitting. [A1]\n- **Kestrel Edition 850** meets the progressive-ready requirement, but it has a **semi-rim construction rather than rimless**. It is listed for prescriptions up to 6D, costs INR 1,350 frame only, and 20 are in stock. [2]\n\nFor progressive lenses, the catalog’s **lens height**—the full vertical lens opening, also called frame depth or “B”—is 31 mm for the Orbit and 39 mm for the Kestrel. [1][2] That measurement is **not the same as fitting height**, which is the distance from the pupil centre to the bottom of the lens; the actual fitting height still needs to be measured on you. [A3] General-purpose progressive guidance commonly recommends about 25–30 mm of frame depth, while longer-progression designs may use more; that does not make the Orbit progressive-ready by itself. [A2][A3]\n\nSo the clear choices are:\n\n1. **Prioritize rimless:** Orbit&Co Line 482, but drop the requirement for confirmed progressive readiness. [1]  \n2. **Prioritize progressive readiness:** Kestrel Edition 850, but drop the rimless requirement. [2]\n\nI’ve assumed your prescription is within the listed limits; if it’s stronger than 4D, the Orbit would not meet its stated prescription compatibility, and if it’s stronger than 6D, the Kestrel would need checking as well. [1][2]",
+        "retrieved": [
+          {
+            "frame_id": "FR049",
+            "sku": "ORB-049",
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/2",
+        "recommended": [
+          {
+            "frame_id": "FR049",
+            "sku": "ORB-049",
+            "violations": [
+              "progressive_ready == true (actual: false)"
+            ]
+          },
+          {
+            "frame_id": "FR040",
+            "sku": "KES-040",
+            "violations": [
+              "rim_type == rimless (actual: \"semi\")"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      },
+      {
+        "id": "titanium-under-4500",
+        "query": "Titanium frames under 4500 rupees",
+        "note": "Targets catalog intentional gap #3. Ideal answer recommends Nira Edition 292 (the nearest miss, ₹4,600, a ₹100 overage -- see evals/golden/refusal.json's gap3-titanium-under-4500 case for the generated nearest_miss data) and names the overage explicitly rather than burying it. An earlier version of this note said Basalt Form 448 at ₹4,800 was the nearest miss -- that was inherited from what the naive baseline happened to retrieve, not computed from the catalog, and was wrong (Basalt is tied for 2nd cheapest at ₹4,800; Nira Edition 292 is the true cheapest at ₹4,600). See decisions.md 2026-08-28, 'golden set ground truth was circular.'",
+        "constraints": [
+          "price <= 4500",
+          "material == titanium"
+        ],
+        "pipeline": "orchestrated",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are the in-store assistant at an optical shop -- warm, personable, genuinely interested in getting the customer the right fit. Talk like a good optician, not a script.\n\nPersona note: personality lives in HOW you ask, acknowledge, and explain -- not in how strongly you assert things. A good optician is personable and still says \"let's get that checked.\"\n\nBelow the persona, these constraints are not suggestions. Follow them even when they cut against sounding enthusiastic:\n\n1. NEVER assert a subjective or aesthetic judgment as fact. \"Those will look amazing on you\" is not allowed -- looks are the customer's call, not yours to declare. You may say what a frame is designed for or how it's suited to what they described; you may not declare how it will look on them.\n2. Ground every checkable claim in a labeled source. Frame facts (price, material, stock, fit) cite the bracketed catalog number, [1]-[5]. Optical or fitting advice (why a spec matters) cites the bracketed advice reference, [A1]-[A4]. A technical or fitting claim with no citation is not allowed -- if nothing provided supports it, don't make it.\n3. Match confidence to the source's claim_type, which is labeled on every advice reference. PHYSICAL claims are stated plainly: \"rimless mounting isn't reliable at -5.00D and beyond [A2].\" CONVENTION claims are hedged and named as convention: \"rectangular frames are conventionally suggested for rounder faces, though that's a style convention, not a fitting requirement [A3].\" Never state a convention claim with the same confidence as a physical one.\n4. Never invent a frame, a fact, or a citation. Only reference frames and advice actually provided below.\n5. If the customer is excited about something that fails a hard requirement (their prescription, a safety constraint, a stated fit problem), say so plainly, in the same breath as acknowledging the enthusiasm. Warmth is in how you deliver the fact, never in softening or dropping it.\n6. Explain every technical term in the same sentence it appears -- \"adjustable nose pads, which is what'll stop the sliding,\" not \"adjustable nose pads\" on its own. The customer is not expected to know the vocabulary.\n7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.\n8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption (\"I've assumed a moderate prescription for these picks\") and say what changes if that assumption is wrong.\n9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as \"fitting height\" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.",
+        "meta": {
+          "filter": {
+            "material": "titanium",
+            "max_price": 4500
+          },
+          "sql": "SELECT frame_id FROM frames WHERE material = ? AND price_frame_only <= ? ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "material == titanium",
+              "frame_id": "FR076"
+            },
+            {
+              "droppedClause": "price <= 4500",
+              "frame_id": "FR100"
+            }
+          ],
+          "adviceRetrieved": [
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#0",
+              "score": 0.30628780578607345,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Drilled rimless lens material recommendations"
+            },
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#1",
+              "score": 0.3024054932306414,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Frame selection guidance"
+            },
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#3",
+              "score": 0.2999271462449175,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Application to this project"
+            },
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#2",
+              "score": 0.2909551639289793,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Application to this project"
+            }
+          ]
+        },
+        "answer": "I couldn’t find an exact match for **titanium frames under INR 4,500**.\n\n- **Closest to your budget:** Truss Series 377 — **INR 1,300**, but it’s metal rather than titanium. It has a full rim, adjustable nose pads—which allow small fit adjustments—and fits narrow face widths. It’s in stock. [1]\n- **Closest to your material requirement:** Nira Edition 292 — **titanium**, but it’s **INR 4,600**, which is INR 100 over budget. It has a rimless design, meaning the lenses are mounted without a surrounding rim, fits medium face widths, and is in stock. [2]\n\nSo the choice is between dropping **titanium** with the Truss or stretching the budget by **INR 100** for the Nira.",
+        "retrieved": [
+          {
+            "frame_id": "FR076",
+            "sku": "TRU-076",
+            "violations": [
+              "material == titanium (actual: \"metal\")"
+            ]
+          },
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": [
+              "price <= 4500 (actual: 4600)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/2",
+        "recommended": [
+          {
+            "frame_id": "FR076",
+            "sku": "TRU-076",
+            "violations": [
+              "material == titanium (actual: \"metal\")"
+            ]
+          },
+          {
+            "frame_id": "FR100",
+            "sku": "NIR-100",
+            "violations": [
+              "price <= 4500 (actual: 4600)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/2"
+      },
+      {
+        "id": "sports-under-500",
+        "query": "sports sunglasses under 500 rupees",
+        "note": "Not an intentional gap -- just far out of range. Not a test of whether the pipeline refuses (the gpt-5.6-luna re-run showed it doesn't reliably -- docs/phase1-baseline-failures.md, 'Better prose, worse compliance'), and per PROJECT_CONTEXT.md §6 bare refusal isn't the target behavior anyway. This entry only checks hard-constraint compliance of whatever gets recommended, same as every other case here; the framing question (does it name the constraint and offer the real nearest sports-tagged frame, per evals/golden/refusal.json's sports-under-500 case) is graded there, not here.",
+        "constraints": [
+          "price <= 500",
+          "purpose_tags includes sports"
+        ],
+        "pipeline": "orchestrated",
+        "chatModel": "gpt-5.6-luna",
+        "temperature": 1,
+        "systemPrompt": "You are the in-store assistant at an optical shop -- warm, personable, genuinely interested in getting the customer the right fit. Talk like a good optician, not a script.\n\nPersona note: personality lives in HOW you ask, acknowledge, and explain -- not in how strongly you assert things. A good optician is personable and still says \"let's get that checked.\"\n\nBelow the persona, these constraints are not suggestions. Follow them even when they cut against sounding enthusiastic:\n\n1. NEVER assert a subjective or aesthetic judgment as fact. \"Those will look amazing on you\" is not allowed -- looks are the customer's call, not yours to declare. You may say what a frame is designed for or how it's suited to what they described; you may not declare how it will look on them.\n2. Ground every checkable claim in a labeled source. Frame facts (price, material, stock, fit) cite the bracketed catalog number, [1]-[5]. Optical or fitting advice (why a spec matters) cites the bracketed advice reference, [A1]-[A4]. A technical or fitting claim with no citation is not allowed -- if nothing provided supports it, don't make it.\n3. Match confidence to the source's claim_type, which is labeled on every advice reference. PHYSICAL claims are stated plainly: \"rimless mounting isn't reliable at -5.00D and beyond [A2].\" CONVENTION claims are hedged and named as convention: \"rectangular frames are conventionally suggested for rounder faces, though that's a style convention, not a fitting requirement [A3].\" Never state a convention claim with the same confidence as a physical one.\n4. Never invent a frame, a fact, or a citation. Only reference frames and advice actually provided below.\n5. If the customer is excited about something that fails a hard requirement (their prescription, a safety constraint, a stated fit problem), say so plainly, in the same breath as acknowledging the enthusiasm. Warmth is in how you deliver the fact, never in softening or dropping it.\n6. Explain every technical term in the same sentence it appears -- \"adjustable nose pads, which is what'll stop the sliding,\" not \"adjustable nose pads\" on its own. The customer is not expected to know the vocabulary.\n7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.\n8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption (\"I've assumed a moderate prescription for these picks\") and say what changes if that assumption is wrong.\n9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as \"fitting height\" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.",
+        "meta": {
+          "filter": {
+            "product_type": "sunglasses",
+            "max_price": 500,
+            "purpose_tags": [
+              "sports"
+            ]
+          },
+          "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 5",
+          "relaxed": true,
+          "alternativesUsed": [
+            {
+              "droppedClause": "price <= 500",
+              "frame_id": "FR073"
+            }
+          ],
+          "adviceRetrieved": [
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#1",
+              "score": 0.2948472245243704,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Sample entries (real, as fetched — not representative of the full 3,326-page catalog, which was not read exhaustively)"
+            },
+            {
+              "chunk_id": "opticampus-progressive-lens-dispensing#1",
+              "score": 0.28787129198077177,
+              "claim_type": "physical",
+              "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+              "doc_id": "opticampus-progressive-lens-dispensing",
+              "section_heading": "Frame selection guidance"
+            },
+            {
+              "chunk_id": "ttuhsc-rimless-lens-materials#3",
+              "score": 0.2783681350333091,
+              "claim_type": "physical",
+              "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+              "doc_id": "ttuhsc-rimless-lens-materials",
+              "section_heading": "Application to this project"
+            },
+            {
+              "chunk_id": "vision-council-epic-progressive-identifier#2",
+              "score": 0.25796316090584614,
+              "claim_type": "physical",
+              "source_org": "The Vision Council",
+              "doc_id": "vision-council-epic-progressive-identifier",
+              "section_heading": "Application to this project"
+            }
+          ]
+        },
+        "answer": "I couldn’t find a sports sunglasses option under ₹500 in the available catalog. The nearest alternative is the **Wren Edition 729**, priced at **₹2,150 for the frame only**, so it exceeds your budget by ₹1,650 [1].\n\nIt does meet several of your other requirements: it’s described for **outdoor use and sports**, has **UV400 protection**, a **grey tint**, and is currently in stock [1]. It is **not polarized** and **isn’t compatible with prescription lenses** [1].\n\nIf your ₹500 limit is firm, this option won’t work; the exact requirement it drops is **price**.",
+        "retrieved": [
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "price <= 500 (actual: 2150)"
+            ]
+          }
+        ],
+        "retrievedPassRate": "0/1",
+        "recommended": [
+          {
+            "frame_id": "FR073",
+            "sku": "WRE-073",
+            "violations": [
+              "price <= 500 (actual: 2150)"
+            ]
+          }
+        ],
+        "recommendedPassRate": "0/1"
+      }
+    ]
+  },
+  "compositionResults": [
+    {
+      "id": "progressive-lens-height-threshold-sensitivity",
+      "description": "How many progressive_ready frames clear the B-height floor at the old unconstrained value (30mm), the current resolved value (32mm), and the optician-cited figure that turned out to be unsupported (44mm) -- see decisions.md 2026-08-28, 'Threshold research resolved the progressive disagreement.' 44mm is kept in this sweep specifically to keep the catalog-collapse consequence visible, not because it's still a live candidate.",
+      "base_count": 72,
+      "rows": [
+        {
+          "threshold_mm": 30,
+          "total_clearing": 72,
+          "non_sunglasses_clearing": 52
+        },
+        {
+          "threshold_mm": 32,
+          "total_clearing": 67,
+          "non_sunglasses_clearing": 47
+        },
+        {
+          "threshold_mm": 44,
+          "total_clearing": 26,
+          "non_sunglasses_clearing": 16
+        }
+      ]
+    }
+  ],
+  "derivationResults": [
+    {
+      "id": "lens-index-frame-size-interaction",
+      "description": "app/lib/derivation.ts#assessLensIndex replaced the old single-threshold deriveRimTypeConstraint (decisions.md 2026-08-28, 'high-index should be a function, not a threshold'). At the SAME Rx power, frame size and rim type should change the recommendation: a small full-rim frame and a large rimless frame are different fits for the same prescription, and plus power should never trigger the rimless-construction hard constraint the way minus power does.",
+      "rows": [
+        {
+          "label": "small full-rim, -3.00D",
+          "rx_power_d": -3,
+          "lens_width_mm": 48,
+          "rim_type": "full",
+          "tier": "consider",
+          "suggestedIndex": 1.6,
+          "requiresNonRimless": false,
+          "maxLensWidthMm": null,
+          "reason": "rx -3D, 48mm lens, full rim -> adjusted severity 3.00D (no adjustments), tier=consider"
+        },
+        {
+          "label": "large rimless, -3.00D (same Rx)",
+          "rx_power_d": -3,
+          "lens_width_mm": 58,
+          "rim_type": "rimless",
+          "tier": "recommended",
+          "suggestedIndex": 1.67,
+          "requiresNonRimless": true,
+          "maxLensWidthMm": null,
+          "reason": "rx -3D, 58mm lens, rimless rim -> adjusted severity 4.50D (large lens (58mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier; rimless mount exposes edge thickness on a minus lens, recommend earlier), tier=recommended"
+        },
+        {
+          "label": "small full-rim, +3.00D",
+          "rx_power_d": 3,
+          "lens_width_mm": 48,
+          "rim_type": "full",
+          "tier": "standard",
+          "suggestedIndex": 1.5,
+          "requiresNonRimless": false,
+          "maxLensWidthMm": null,
+          "reason": "rx 3D, 48mm lens, full rim -> adjusted severity 1.50D (plus lens is centre-thick, not edge-thick -- cosmetic/weight concern is less urgent per diopter than a minus lens's edge thickness), tier=standard"
+        },
+        {
+          "label": "large rimless, +3.00D (same Rx)",
+          "rx_power_d": 3,
+          "lens_width_mm": 58,
+          "rim_type": "rimless",
+          "tier": "consider",
+          "suggestedIndex": 1.6,
+          "requiresNonRimless": false,
+          "maxLensWidthMm": null,
+          "reason": "rx 3D, 58mm lens, rimless rim -> adjusted severity 2.50D (large lens (58mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier; plus lens is centre-thick, not edge-thick -- cosmetic/weight concern is less urgent per diopter than a minus lens's edge thickness), tier=consider"
+        }
+      ]
+    }
+  ]
+}

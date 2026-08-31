@@ -681,5 +681,265 @@ topics PROJECT_CONTEXT.md lists — this corpus start covers exactly the
 two disputes this session's threshold work needed, not the full ~40-60
 document target.
 
+## 2026-08-31 · Phase 4, part 1: vocabulary policy written into PROJECT_CONTEXT.md §3
+Before building anything: the average user doesn't know what a rim type,
+lens index, or `nose_pad_type` is, and the architecture already agreed
+with that in spirit (none of those appear in the Slots table) but never
+said so as policy, which meant nothing stopped a future slot addition
+from quietly violating it. Wrote three explicit rules into §3: no question
+may require vocabulary the user isn't expected to have; technical
+attributes are derived, never solicited; every technical term in output
+must be explained in the same sentence it appears. Added a lay-language
+rewrite of every conversation question (§3 "Question phrasing" table) --
+not "what's your prescription power" but "do you wear glasses now, and do
+you know roughly how strong?"
+
+**The honest tension, handled rather than hidden:** fewer technical
+questions means less information, and sometimes a wrong derivation.
+Someone at -5.00D who doesn't know their power can't safely be handed a
+rimless frame, but demanding a number they don't have isn't the fix
+either. Resolution: proceed on a stated, named assumption and say what
+changes if it's wrong -- not a new idea, this is the existing
+"assumed values must be surfaced" rule, applied specifically to the case
+where the missing information gates a hard constraint. Two golden cases
+added (`evals/golden/refusal.json`, `assumption_surfacing_cases`): one
+where the unknown prescription actually matters (rimless request), one
+where it doesn't (reading glasses, which are fixed-power in this catalog
+regardless of Rx) -- included specifically so a system that hedges on
+reflex, rather than because the missing fact actually gates something, is
+caught rather than rewarded for over-caution.
+
+## 2026-08-31 · Phase 4, part 2: advice corpus chunked and embedded, documents only
+`app/scripts/build-advice-chunks.ts`: one chunk per H2 section across
+`data/advice/*.md`, 19 chunks from 6 documents. Deliberately NOT the
+catalog -- chunking and embedding the catalog would rebuild the exact
+naive-baseline architecture Phase 1 was built to disprove; the catalog
+stays in SQLite behind `WHERE` (Phase 3), full stop.
+
+Section boundaries were chosen as the chunk unit because they're the
+actual safe split points in this specific corpus: every table in every
+document lives entirely inside one H2 section (verified by inspection
+before writing the chunker, and re-verified programmatically at chunk time
+via a header-separator-row check), so section chunking keeps every table
+intact without needing separate table-extraction logic. Every chunk is
+prepended with `{document title} — {section heading}` before embedding --
+"16mm minimum, 24mm frame height" is meaningless without knowing it's
+Rodenstock's design table, not a competitor's or a different measurement
+entirely.
+
+**A real authoring gap, caught by the chunker refusing to guess.** The
+chunker throws rather than silently drops content if it finds prose
+between a document's H1 title and its first H2 -- and it did, once: the
+Vision Council EPIC document had a real paragraph there. Fixed the source
+document (added a heading) rather than adding a special case to the
+chunker to paper over it. This is the same discipline as the earlier
+table-integrity check: catch structural assumptions failing loudly, at
+build time, not silently at query time.
+
+**`claim_type: opinion` exclusion actually runs, even though it currently
+matches nothing.** No opinion-tagged documents exist in this corpus yet
+(all 19 chunks are `physical`), so the filter has zero visible effect
+today -- but the code path that would filter it out is real and tested
+(`build-advice-chunks.ts` throws on any claim_type it doesn't recognize,
+and explicitly skips `opinion`), not just documented policy waiting to be
+implemented later. When an opinion-tagged source is eventually added,
+correctness doesn't depend on remembering to write the filter then.
+
+**Known gap, honest about it:** all 19 chunks are `claim_type: physical`.
+The `convention` register/authority behavior (PROJECT_CONTEXT.md §3, the
+runtime-function entry below) is implemented and instructed in the system
+prompt, but cannot currently be exercised through live retrieval, because
+no convention-tagged source exists in this corpus -- the corpus is
+6 vendor technical documents, not style guidance. Validated the hedging
+judge against a synthetic convention chunk instead (clearly labelled
+fictional, "Style Reference Co.", never mixed into the real corpus) --
+see the judge-validation entry below. A real convention source (face-shape
+styling, deferred 2026-08-28 for unrelated reasons) would close this gap
+properly; noting it rather than letting the corpus's current composition
+imply more coverage than it has.
+
+## 2026-08-31 · Phase 4, part 2 (cont.): claim_type is a runtime function, not a tag
+Three jobs, all now real code, not just PROJECT_CONTEXT.md prose:
+**register** -- the orchestrated system prompt (below) instructs physical
+claims stated plainly with a citation, convention claims hedged and
+explicitly named as convention, and every advice reference passed to the
+model is labelled with its claim_type inline
+(`app/lib/pipelines/orchestrated.ts#formatAdviceContext`); **authority**
+-- physical claims may drive the hard SQL constraints in
+`app/lib/catalog-db.ts`/`app/lib/constraints.ts`, convention claims may
+only nudge ranking, generalizing the existing face-shape rule (soft,
++0.15 max, decisions.md 2026-08-27) from a special case into policy;
+**exclusion** -- covered above. The hedging-match LLM judge (below) is
+what actually checks whether register is followed, not just instructed.
+
+## 2026-08-31 · Phase 4, part 3+4: orchestrated pipeline and the warmth-is-confidence hazard
+`app/lib/pipelines/orchestrated.ts`, registered as a third pipeline
+(`naive` / `hybrid` / `orchestrated`) in `app/lib/pipelines/index.ts` so
+`npm run eval -- --pipeline=both` now compares all three. Frame selection
+(extraction, SQL, relaxation ladder) is identical to `hybrid.ts` --
+factored the shared `extractFilter`/`EXTRACTION_TOOL` out to
+`app/lib/pipelines/extract-filter.ts` so the two pipelines can't drift on
+what counts as a valid filter. What's new is a second retrieval pass over
+advice chunks folded into the same generation call, and a system prompt
+built around a specific hazard: warmth reads as confidence. "Those will
+look amazing on you" is an unhedged claim in a friendly voice, and the
+friendliness makes it harder to notice than the same claim said flatly
+would be.
+
+Persona is stated first in the prompt; eight numbered constraints are
+stated second, explicitly, in writing -- not folded into the persona
+paragraph where they'd be easy to read past. Constraint 5 names the
+hazard directly: if the customer is excited about something that fails a
+hard requirement, acknowledge the excitement and state the disqualifying
+fact plainly, in the same breath, because warmth belongs in delivery, not
+in softening the fact. Two golden cases test this directly
+(`evals/golden/refusal.json`, `persona_constraint_conflict_cases`).
+
+**Real transcript, not a hypothetical:** "I have a strong prescription,
+around -6, and I really want rimless glasses because they look so light.
+Will that work?" got: "I understand why you like the rimless look... But
+at around -6.00D, none of the rimless frames in this catalog meets your
+prescription requirement" -- named specifically, per-frame, with the
+actual limits, not softened. Held on the first real run, before any
+prompt iteration. Kept as a golden case specifically so a future prompt
+change that erodes this doesn't just get noticed once and forgotten.
+
+A ninth constraint was added after the judge-validation process (below)
+found a real domain bug: the prompt now explicitly distinguishes
+`lens_height_mm` (frame/B-height) from "fitting height" (a different,
+smaller advice-sourced figure) -- see that entry for what this fixed.
+
+## 2026-08-31 · Phase 4, part 5: LLM judges, validated -- and the validation caught more real bugs than it validated the judges
+`app/lib/judges.ts`: three judges (groundedness, citation accuracy,
+hedging-matches-claim-type), structured output with a `reasoning` field
+generated before `verdict` (binary pass/fail, not a 1-5 scale -- a scale
+invites averaging away exactly the disagreement a judge exists to
+surface). These are the first LLM judges in this project, used
+specifically because these three properties are properties of prose that
+`app/lib/constraints.ts`'s deterministic field comparisons can't grade --
+the contrast is deliberate and belongs in the case study: deterministic
+checks for the catalog half, validated judges for the advice half, each
+chosen because of what the data actually is.
+
+**Hit a real API constraint immediately:** `gpt-5.6-luna` rejects
+`temperature=0` outright ("does not support 0 with this model, only the
+default (1) value is supported" -- confirmed against the live API). The
+standard judge-determinism move isn't available on this model; judges run
+at the same shared `CHAT_TEMPERATURE` as generation. Consequence, not
+swept under the rug: judge verdicts are not perfectly reproducible
+run-to-run, confirmed directly (see below) -- one more reason
+`npm run validate-judges` needs to be re-run periodically, not treated as
+a one-time gate passed and forgotten.
+
+**Validation set: 15 hand-labelled examples**
+(`evals/golden/judge_validation.json`) -- 6 real transcripts from actually
+running `orchestrated.ts` on realistic queries, each hand-verified
+claim-by-claim against `data/catalog/out/catalog.json` before labelling
+(not skimmed); 9 constructed adversarial examples, because the 6 real
+transcripts turned out to be consistently well-behaved on first read,
+which is itself a "watch for a flattering result" moment -- an
+all-real, all-positive validation set would say nothing about whether
+these judges can actually catch a failure, only that this model usually
+doesn't produce one. Constructed examples cover fabricated claims,
+misattributed citations, hallucinated statistics, an invented product
+name, and (since the real corpus has zero convention-tagged content) a
+synthetic convention chunk used only in this validation set, clearly
+labelled fictional, to actually exercise the hedging judge.
+
+**First run: 40% / 71% / 100% agreement.** Investigated every
+disagreement individually rather than assume the judge was wrong, and
+found the judge was right more often than my hand labels were:
+
+- The standout: a real transcript answering "progressive lenses, small
+  face, will they fit in a small frame" compared the frames'
+  `lens_height_mm` (34mm, 40mm) directly against a 16-20mm *fitting-height*
+  figure from retrieved advice, treating clearing one as satisfying the
+  other. The retrieved advice in the SAME context explicitly warns against
+  exactly this conflation -- it's the precise distinction Phase 3's
+  threshold re-provenance work (2026-08-29) was built around. First-pass
+  hand label said this passed groundedness. It didn't. Fixed at the
+  source: added constraint 9 to the orchestrated system prompt (above)
+  stating the distinction explicitly; re-ran the identical query and
+  confirmed the fix -- the new answer correctly separates the two
+  measurements and says the optician still needs to measure fitting
+  height directly.
+- A real transcript said "The ₹3,000 price is for the frame only" when
+  ₹3,000 was the customer's stated *budget*, not the ₹1,350 frame's price
+  -- a genuine conflation, missed on first pass.
+- A real transcript speculated that "tapered temples" aid fit adjustment
+  (not established anywhere in context) and compared a recommended
+  frame's weight against the customer's *unstated* current-frame weight
+  -- both invented comparisons, missed on first pass.
+- My own constructed "correctly hedged" positive-control example
+  referenced "you also mentioned progressives" in a query that never
+  mentioned progressives -- an authoring bug in the test, caught by the
+  same run, fixed in the test rather than the system.
+
+**Two judge-prompt corrections, both principled, not curve-fitting to
+pass my labels:** (1) groundedness and citation-accuracy were
+unintentionally overlapping -- a misattributed citation (right fact,
+wrong bracket number) was failing both judges for the same underlying
+reason, collapsing two dimensions I meant to be orthogonal. Refined
+groundedness to mean "supported somewhere in the provided context,
+regardless of which bracket number is attached" and citation-accuracy to
+only grade claims that carry an explicit citation at all (an uncited
+claim is purely a groundedness question). (2) Both judges were
+initially failing brief, generic definitional elaboration of jargon
+already present in context (e.g. "TR90, a thermoplastic material" when
+the source just says "TR90") -- exactly the kind of explanation
+PROJECT_CONTEXT.md §3's vocabulary policy *requires* the system to
+provide. Carved that out of both prompts explicitly, while keeping
+numbers, comparisons, and claims about unprovided information strictly
+in scope.
+
+**Final state, reported as-is, not re-run until clean:** groundedness
+93% (14/15), citation accuracy 85% (11/13), hedging match 100% (3/3).
+Two disagreements remain, both defensible alternate readings of
+genuinely ambiguous prose (whether a frame correctly counts as "nearest
+by size" when it's narrowest by one dimension and widest by another;
+whether 1.67 counts as "very-high-index" against a source that only
+explicitly names ">1.67" as "ultra-high-index") -- kept rather than
+massaged away, because the goal was validating the judges, not producing
+a clean number.
+
+## 2026-08-31 · Two things that arrived free while building this
+**Link rot, quantified.** 2 of the 6 advice documents (Zeiss, TTUHSC --
+decisions.md 2026-08-29) had their live source URL return 404 between
+citation and fetch, within the same week the corpus was assembled -- a
+33% rot rate on sources cited days earlier. Both recovered via
+web.archive.org (one snapshot from 2018, one dated 2026-04-12 -- the
+archive outlived the live document by years in both directions). The
+mitigation already existed by necessity, not by plan: every document's
+frontmatter carries `source_url`, `verified` date, and
+`verification_method`, and the two recovered ones additionally carry
+`source_url_note` documenting the Wayback snapshot used. The general
+lesson for the write-up: any system that cites external URLs as evidence
+needs archived copies as a matter of course, not as a contingency, plus a
+periodic link-check job to catch rot before a citation silently points at
+nothing -- at this rate (2 of 6 in under a week), assuming citations stay
+live is not a safe default.
+
+**A real freshness asymmetry, worth measuring properly in Phase 6.**
+Catalog changes (price, stock, a new frame) need no re-embedding at all --
+`app/lib/catalog-db.ts` queries live SQL against whatever's in
+`catalog.db`, so a changed row is correct on the very next query. Advice
+changes require a full re-chunk and re-embed
+(`npm run advice-chunks && npm run embed-advice`) before they're
+reflected in retrieval at all, and nothing currently detects that an
+advice document changed and the index is stale (no `content_hash`-style
+staleness check exists for `data/advice/`, unlike the catalog's
+`content_hash`/`stock_updated_at` fields built for exactly this in Phase 0).
+This is a genuine, structural advantage of the SQL/RAG split beyond the
+constraint-satisfaction argument Phase 3 already made: the half of the
+system that changes constantly (stock, price) is also the half that's
+cheapest to keep fresh, and the half that changes rarely (optical
+guidance) is the half that's expensive to refresh. That pairing isn't a
+coincidence to note in passing -- it's a real architectural argument for
+Phase 6 to measure directly (simulate an advice-corpus update, time the
+re-embed, compare against a simulated catalog price change) rather than
+just assert. (Renumbered 2026-08-31 -- see PROJECT_CONTEXT.md §2: the
+original plan's "Phase 3" bundled catalog-SQL and advice-RAG as one row;
+splitting them after the fact pushed freshness from Phase 5 to Phase 6.)
+
 ---
 <!-- next entry here -->
