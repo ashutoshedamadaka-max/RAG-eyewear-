@@ -12,7 +12,7 @@ import path from "node:path";
 import { PIPELINES } from "../lib/pipelines";
 import { getAllFrames, type CatalogFrame } from "../lib/retrieval";
 import { checkFrame, describeConstraint, type Constraint, type Violation } from "../lib/constraints";
-import { deriveRimTypeConstraint } from "../lib/derivation";
+import { assessLensIndex, type RimType } from "../lib/derivation";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const GOLDEN_PATH = path.join(ROOT, "evals", "golden", "physical.json");
@@ -33,12 +33,18 @@ interface CatalogCompositionCase {
   thresholds_mm: number[];
 }
 
+interface DerivationScenario {
+  label: string;
+  rx_power_d: number;
+  lens_width_mm: number;
+  rim_type: RimType;
+}
+
 interface DerivationFunctionCase {
   id: string;
   description: string;
   function: string;
-  rx_power_test_d: number;
-  thresholds_d: number[];
+  scenarios: DerivationScenario[];
 }
 
 interface GoldenFile {
@@ -162,14 +168,14 @@ function runCatalogCompositionCases(cases: CatalogCompositionCase[]) {
 
 function runDerivationFunctionCases(cases: DerivationFunctionCase[]) {
   return cases.map((c) => {
-    if (c.function !== "deriveRimTypeConstraint") {
+    if (c.function !== "assessLensIndex") {
       throw new Error(`Unknown derivation function: ${c.function}`);
     }
-    const rows = c.thresholds_d.map((threshold) => {
-      const d = deriveRimTypeConstraint(c.rx_power_test_d, threshold);
-      return { threshold_d: threshold, requires_non_rimless: d.requiresNonRimless, reason: d.reason };
+    const rows = c.scenarios.map((s) => {
+      const a = assessLensIndex(s.rx_power_d, s.lens_width_mm, s.rim_type);
+      return { ...s, ...a };
     });
-    return { id: c.id, description: c.description, rx_power_test_d: c.rx_power_test_d, rows };
+    return { id: c.id, description: c.description, rows };
   });
 }
 
@@ -231,11 +237,14 @@ async function main() {
   }
 
   const derivationResults = runDerivationFunctionCases(golden.derivation_function_cases);
-  console.log("--- Derivation function cases (threshold sensitivity) ---\n");
+  console.log("--- Derivation function cases (frame-size / rim-type interaction) ---\n");
   for (const r of derivationResults) {
     console.log(`[${r.id}] ${r.description}`);
     for (const row of r.rows) {
-      console.log(`  threshold ${row.threshold_d}D: requires_non_rimless=${row.requires_non_rimless}`);
+      console.log(
+        `  ${row.label}: tier=${row.tier} suggestedIndex=${row.suggestedIndex} requiresNonRimless=${row.requiresNonRimless} maxLensWidthMm=${row.maxLensWidthMm}`
+      );
+      console.log(`    ${row.reason}`);
     }
     console.log();
   }

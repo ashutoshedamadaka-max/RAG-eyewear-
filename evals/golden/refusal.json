@@ -128,12 +128,15 @@
         },
         {
           "relaxed": "rim_type == rimless",
-          "frame_id": "FR013",
-          "sku": "HAL-013",
-          "brand": "Halcyon",
-          "model": "Type 165",
-          "price_frame_only": 1150,
-          "violation": "rim_type == rimless fails (actual: \"full\")"
+          "frame_id": "FR040",
+          "sku": "KES-040",
+          "brand": "Kestrel",
+          "model": "Edition 850",
+          "price_frame_only": 1350,
+          "violation": "rim_type == rimless fails (actual: \"semi\")",
+          "domainTierUsed": [
+            "semi"
+          ]
         }
       ]
     },
@@ -164,12 +167,15 @@
         },
         {
           "relaxed": "material == titanium",
-          "frame_id": "FR013",
-          "sku": "HAL-013",
-          "brand": "Halcyon",
-          "model": "Type 165",
-          "price_frame_only": 1150,
-          "violation": "material == titanium fails (actual: \"tr90\")"
+          "frame_id": "FR076",
+          "sku": "TRU-076",
+          "brand": "Truss",
+          "model": "Series 377",
+          "price_frame_only": 1300,
+          "violation": "material == titanium fails (actual: \"metal\")",
+          "domainTierUsed": [
+            "metal"
+          ]
         }
       ]
     },

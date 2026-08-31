@@ -54,13 +54,15 @@ npm run eval -- --pipeline=both    # naive vs. hybrid, side by side
 
 Catalog queries route to real SQL (`node:sqlite`) instead of vector
 similarity. See `docs/phase3-hybrid-ab.md` for the results — the advice →
-RAG half isn't built yet (`data/advice/` is still empty).
+RAG half isn't built yet, though `data/advice/` now has 7 documents from
+verified primary sources (§5) rather than being empty.
 
 ## Status
 
 Phase 0 (data) and Phase 1 (naive baseline) complete. Phase 2 (eval
 harness) started — constraint-violation checks are in; refusal-and-safety
 golden set seeded at ~15 cases (`evals/golden/refusal.json`); physical.json
-has 7 of ~40; style.json not started. Phase 3 started — catalog → SQL half
-built and A/B'd against Phase 1; advice → RAG half blocked on the still-empty
-advice corpus — see PROJECT_CONTEXT §2, §5, §6.
+has 7 seed cases plus a frame-size lens-index case; style.json not started.
+Phase 3 started — catalog → SQL half built and A/B'd against Phase 1;
+advice → RAG pipeline not built, but `data/advice/` has 7 sourced
+documents (nowhere near the ~40–60 target) — see PROJECT_CONTEXT §2, §5, §6.

@@ -12,10 +12,12 @@ covering the eval harness, golden sets, latency, and knowledge-base freshness.
 constraint-violation checks are in (`evals/`, `app/lib/constraints.ts`);
 refusal-and-safety golden set seeded at its full ~15 cases
 (`evals/golden/refusal.json`, not yet graded — needs human/rubric review);
-physical.json has 7 of ~40 seed cases; style.json not started. Phase 3
-started — catalog → SQL half built and A/B'd against Phase 1
-(`docs/phase3-hybrid-ab.md`); advice → RAG half blocked on the still-empty
-advice corpus (§5).
+physical.json has 7 seed cases plus a frame-size-interaction derivation
+case; style.json not started. Phase 3 started — catalog → SQL half built
+and A/B'd against Phase 1 (`docs/phase3-hybrid-ab.md`); advice → RAG half
+still not built, but `data/advice/` has 7 documents from verified primary
+sources (§5) covering the two threshold disputes Phase 3 needed —
+nowhere near the full ~40–60 target yet.
 
 ---
 
@@ -34,8 +36,9 @@ numeric constraint. Embedding product blurbs and hoping is the failure mode of
 most "AI recommender" demos and the first thing a technical interviewer probes.
 
 The genuinely retrievable knowledge is the *optician's advice*: how frame width
-relates to face width, why high-index lenses matter beyond about -3.00D
-(provisional — see §3 derivation rules), why progressives need a minimum lens
+relates to face width, why high-index lenses matter more at some
+prescriptions and frame sizes than others (a function of Rx power, lens
+size, and rim type, not one cutoff — see §3 derivation rules), why progressives need a minimum lens
 height, what "my glasses keep sliding" actually indicates. That is unstructured,
 citable, and it's what a good salesperson knows.
 
@@ -125,10 +128,10 @@ Each row is a citation opportunity. This table belongs in the case study.
 
 | Trigger | Constraint | Kind |
 |---|---|---|
-| `rx_power ≤ HIGH_INDEX_RX_THRESHOLD_D` (-3.00, provisional — was -4.00, see decisions.md 2026-08-28) | `rim_type ∈ {full, semi}` | hard |
-| `rx_power ≤ -6.00` | + `lens_width ≤ 54` | hard |
-| `rx_power ≤ HIGH_INDEX_RX_THRESHOLD_D` | high-index lens + anti-reflective coating advice (AR coating is critical specifically at high index — no dedicated catalog column, advice-copy only) | soft + advice |
-| `lens_type = progressive` | `lens_height ≥ PROGRESSIVE_MIN_LENS_HEIGHT_MM` (32mm, provisional — was 30, see decisions.md 2026-08-28) | **hard, never relax** |
+| `assessLensIndex(rx_power, lens_width_mm, rim_type).requiresNonRimless` (function, not a scalar threshold since 2026-08-28 — see `app/lib/derivation.ts`; a large lens or a semi/rimless mount pulls this earlier at the same Rx, and it never fires for plus power) | `rim_type ∈ {full, semi}` | hard |
+| `rx_power ≤ -6.00` (minus only) | + `lens_width ≤ 54` | hard |
+| same trigger as row 1 | tier-dependent lens-index advice (1.50 → 1.60 → 1.67 → 1.74, capped at **1.67 for rimless** regardless of tier — 1.74 has lower tensile strength for drill-mounting, source: `data/advice/ttuhsc-rimless-lens-materials.md`) + anti-reflective coating advice (no dedicated catalog column, advice-copy only) | soft + advice |
+| `lens_type = progressive` | `lens_height ≥ PROGRESSIVE_MIN_B_HEIGHT_MM` (32mm — resolved 2026-08-28, not provisional; see decisions.md, "Threshold research resolved the progressive disagreement") | **hard, never relax** |
 | user wants rimless | `max_power_supported ≥ \|rx\|` | hard |
 | `fit_issues ∋ splaying` (temple arms splay outward) | too small — `face_width_fit` one size wider | hard |
 | `fit_issues ∋ pressing` (temple arms press inward) | too wide — cap `face_width_fit` one size narrower | hard |
@@ -265,14 +268,22 @@ recall numbers will be flattered by easy questions.
 
 ---
 
-## 5. Still to source: the advice corpus
+## 5. The advice corpus — started, nowhere near complete
 
-This is what RAG actually runs on and it is **not** yet built. Roughly 40–60
-documents.
+This is what RAG actually runs on. Target is roughly 40–60 documents; as of
+2026-08-29 there are 7, in `data/advice/`, each fetched and read directly
+rather than written from memory (Rodenstock ×2, Zeiss, HOYA, Vision
+Council EPIC, OptiCampus, TTUHSC — see decisions.md 2026-08-29 for how each
+was sourced and verified, including two dead links recovered via
+web.archive.org). They exist because Phase 3's threshold work needed them,
+not because corpus-building started as its own effort — the advice → RAG
+pipeline itself is still not built (§1, §2).
 
 **Do not generate this content with an LLM.** If the sources aren't real, the
 system launders model output back to itself, citations point at nothing, and
-faithfulness evals become circular. A sharp interviewer will name that.
+faithfulness evals become circular. A sharp interviewer will name that. This
+has held for every document added so far — see each file's frontmatter for
+`source_url` and `verification_method`.
 
 Sources with clean licensing: American Academy of Ophthalmology patient
 material; Zeiss and Essilor technical lens guides; The Vision Council; optometry
@@ -303,10 +314,13 @@ as unearned editorializing if it reached the corpus at all).
 They fail differently and need different graders. Track per-category scores; an
 overall average hides everything that matters.
 
-1. **Physical correctness (~40)** — high-index above -3.00D (provisional), minimum
-   lens height for progressives, frame width vs PD. Objectively gradeable, some
-   programmatically — see `evals/harness` and `app/lib/constraints.ts` for the
-   no-LLM-judge constraint checks this category runs on.
+1. **Physical correctness (~40)** — lens-index recommendation as a function of
+   Rx power, lens size, and rim type (`app/lib/derivation.ts#assessLensIndex`,
+   see `evals/golden/physical.json`'s `lens-index-frame-size-interaction`
+   case), minimum B-height for progressives (resolved 2026-08-28), frame
+   width vs PD. Objectively gradeable, some programmatically — see
+   `evals/harness` and `app/lib/constraints.ts` for the no-LLM-judge
+   constraint checks this category runs on.
 2. **Style fit (~20)** — needs the optician. This human dependency is the reason
    to line that up early.
 3. **Refusal and safety (~15)** — "will these fix my astigmatism", "I'm seeing

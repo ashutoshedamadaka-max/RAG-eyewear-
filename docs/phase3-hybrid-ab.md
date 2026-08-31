@@ -1,7 +1,9 @@
 # Phase 3 — hybrid A/B: catalog SQL vs. naive vector retrieval
 
 Real evidence, captured 2026-08-28, from `npm run eval -- --pipeline=both`
-(`evals/harness/reports/both-2026-08-28T09-45-52-089Z.json`). Same five
+(`evals/harness/reports/both-2026-08-28T10-25-16-718Z.json`, after the
+ordered-categorical-relaxation fix below — see decisions.md for the earlier
+run this superseded). Same five
 golden query cases (`evals/golden/physical.json`), same chat model and
 temperature (`app/lib/config/model.ts` — both pipelines import from the
 same file specifically so the A/B isolates the retrieval mechanism as the
@@ -49,6 +51,13 @@ rests on.
    together, as one requirement), re-runs the query, and returns the
    cheapest frame that qualifies once that one requirement is dropped —
    the relaxation ladder from `PROJECT_CONTEXT.md` §3, operationalized.
+   For `rim_type` and `material`, "drop the clause" doesn't mean "any
+   value" — it walks an ordered domain
+   (`app/lib/config/domains.ts`: `rimless → semi → full`,
+   `titanium → metal → {tr90, acetate}`) one tier at a time, so a rimless
+   request resolves to semi-rim before full-rim, and a titanium request
+   resolves to metal before plastic. See "Result 3" below for what this
+   changed.
 4. **Generate** — same bracketed-reference prose convention as the naive
    pipeline. If alternatives were used instead of exact matches, each is
    labeled with exactly which requirement it drops, and the system prompt
@@ -67,7 +76,8 @@ to rank in the top 5 by cosine similarity despite failing the stated price
 ceiling. SQL doesn't have a "close enough" mode for a numeric comparison;
 every one of hybrid's 5 results satisfies all three constraints, because
 that's what `WHERE material = ? AND price_frame_only <= ? AND in_stock = 1`
-means.
+means. Hybrid's recommended-frame pass rate is 5/5 too — this run's
+generation step named all five, all valid.
 
 **Sharper than the pass-rate number:** hybrid's answer for this query names
 **Nira Edition 292 at ₹4,600** — the actual cheapest titanium frame in the
@@ -82,9 +92,9 @@ option. SQL sorted by price found it immediately.
 
 | Query | naive recommended pass | hybrid recommended pass |
 |---|---|---|
-| Polarized sports ≤₹2,500 (gap #1) | 0/1 | 0/3 |
+| Polarized sports ≤₹2,500 (gap #1) | 0/3 | 0/3 |
 | Progressive-ready rimless (gap #2) | 0/3 | 0/2 |
-| Titanium ≤₹4,500 (gap #3) | 0/2 | 0/2 |
+| Titanium ≤₹4,500 (gap #3) | 0/1 | 0/2 |
 | Sports ≤₹500 | 0/2 | 0/1 |
 
 Read naively, hybrid looks the same or worse — more non-compliant frames
@@ -96,70 +106,117 @@ out of range). No pipeline can score above 0 here without inventing a
 frame. The pass-rate check `app/lib/constraints.ts` runs is a floor-level
 mechanistic check — "does the recommendation satisfy every stated
 constraint" — and it isn't equipped to grade *how well* a system explains
-that nothing does. That's what the check below is for.
+that nothing does. That's what the check below is for. (One more reason
+not to over-read this table: the frame-extraction regex counts any
+bracketed reference in the answer, including a frame explicitly named as
+*excluded* — "the other options, **[1]** and **[2]**, exceed your budget"
+counts [1] and [2] toward the denominator even though the prose is
+correctly declining them. Read the quotes, not just the fraction.)
 
-## Result 3: relaxation-ladder accuracy against independently-verified ground truth
+## Result 3: relaxation-ladder consistency check, and comparison against naive's substitutions
 
-`evals/golden/refusal.json`'s `nearest_miss` fields (decisions.md
-2026-08-28, "golden set ground truth was circular") are generated directly
-from the catalog by relaxing one constraint at a time — the exact same
-algorithm `app/lib/catalog-db.ts#findNearestAlternatives` runs live, applied
-independently. That makes them a real check, not a rubric written to match
-what the pipeline happens to do.
+**Framing correction (2026-08-28):** an earlier version of this section
+called the match between `evals/golden/refusal.json`'s `nearest_miss`
+fields and `app/lib/catalog-db.ts#findNearestAlternatives`'s live output
+"independently-verified ground truth." That overstated it. Both are the
+*same algorithm* — relax one constraint, walk the ordered domain if there
+is one, take the cheapest frame that qualifies — implemented twice: once
+as an in-memory JS filter over `catalog.json`
+(`app/lib/nearest-miss.ts#computeNearestMisses`, used to generate the
+golden set) and once as live parameterized SQL
+(`app/lib/catalog-db.ts#findNearestAlternatives`, used by the pipeline).
+Agreement between them is a **consistency check** — it shows the two code
+paths aren't buggy relative to each other, and specifically that porting
+the ordered-domain fix (below) to both places didn't introduce a drift
+between them. It does **not** independently validate that "cheapest frame
+after relaxing exactly one constraint" is the *right* notion of nearest
+miss — that's a design choice, not an externally verified fact, and both
+implementations share it. What the table below still legitimately shows is
+narrower and still real: both are computed directly from the catalog, so
+neither inherits the circularity bug (`decisions.md`, "golden set ground
+truth was circular") that produced naive's wrong answers in the first
+place.
 
-| Query | Relaxed | Golden ground truth | Hybrid's live answer | Match? | Naive's substitution | Match? |
-|---|---|---|---|---|---|---|
-| gap #1 | price | Terra Optics Line 509, ₹3,500 | Terra Optics Line 509, ₹3,500 | ✅ | *(not offered)* | — |
-| gap #1 | polarized | Wren Edition 729, ₹2,150 | Wren Edition 729, ₹2,150 | ✅ | *(not offered)* | — |
-| gap #1 | sports tag | Kestrel Edition 850, ₹1,350 | Kestrel Edition 850, ₹1,350 | ✅ | Kestrel Edition 850, ₹1,350 (labeled "sports" — **false**) | ⚠️ right frame, wrong label |
-| gap #2 | progressive_ready | Orbit&Co Line 482, ₹3,250 | Orbit&Co Line 482, ₹3,250 | ✅ | *(not offered)* | — |
-| gap #2 | rim_type | Halcyon Type 165, ₹1,150 | Halcyon Type 165, ₹1,150 | ✅ | Corvin Mark 496, ₹4,250 (rimless, not progressive-ready) | ❌ wrong frame |
-| gap #3 | material | Halcyon Type 165, ₹1,150 | Halcyon Type 165, ₹1,150 | ✅ | *(not offered)* | — |
-| gap #3 | price | **Nira Edition 292, ₹4,600** | **Nira Edition 292, ₹4,600** | ✅ | Basalt Form 448, ₹4,800 (₹300 over — wrong; true gap is ₹100) | ❌ wrong frame |
-| sports ≤₹500 | price | Wren Edition 729, ₹2,150 | Wren Edition 729, ₹2,150 | ✅ | Sable Series 805, ₹5,800 (labeled "sports/outdoor" — **false**) | ❌ wrong frame, wrong label |
+**Also updated in this run:** relaxing `rim_type` or `material` no longer
+jumps straight to "any value." It walks the ordered domain
+(`app/lib/config/domains.ts`) one tier at a time. Two rows below changed as
+a result: gap #2's rim_type relaxation now resolves to a semi-rim frame
+(one step from rimless) instead of a full-rim frame (two steps), and gap
+#3's material relaxation now resolves to a metal frame (one step from
+titanium) instead of a plastic one (two steps) — both cheaper *and* closer
+to the original request than before.
 
-**8 of 8 hybrid relaxations match verified ground truth exactly.** Zero of
-naive's substitutions match a verified-correct nearest-miss frame; the one
-case where it happened to name the same frame as the correct answer
-(Kestrel Edition 850 for gap #1) still mislabeled it as sports-suitable,
-which is the frame's actual disqualifying attribute. This is the concrete
-version of the abstract claim in `PROJECT_CONTEXT.md` §1: cosine similarity
-has no mechanism to compute "the cheapest frame that would qualify if I
-dropped exactly this one requirement." SQL does, because that's what a
-`WHERE` clause with one fewer condition literally is.
+| Query | Relaxed | Golden generator (`nearest-miss.ts`) | Hybrid live (`catalog-db.ts`) | Consistent? | Naive's substitution |
+|---|---|---|---|---|---|
+| gap #1 | price | Terra Optics Line 509, ₹3,500 | Terra Optics Line 509, ₹3,500 | ✅ | *(not offered)* |
+| gap #1 | polarized | Wren Edition 729, ₹2,150 | Wren Edition 729, ₹2,150 | ✅ | *(not offered)* |
+| gap #1 | sports tag | Kestrel Edition 850, ₹1,350 | Kestrel Edition 850, ₹1,350 | ✅ | Kestrel Edition 850, ₹1,350, no sports claim made this run (see Result 4) |
+| gap #2 | progressive_ready | Orbit&Co Line 482, ₹3,250 | Orbit&Co Line 482, ₹3,250 | ✅ | *(not offered)* |
+| gap #2 | rim_type | **Kestrel Edition 850, ₹1,350 (semi — 1 tier from rimless)** | **Kestrel Edition 850, ₹1,350 (semi)** | ✅ | Orbit&Co Series 396, ₹1,550 (semi, right category — but also offered Fathom Series 616, ₹8,250, full-rim and out of stock, as an equally-weighted option) |
+| gap #3 | material | **Truss Series 377, ₹1,300 (metal — 1 tier from titanium)** | **Truss Series 377, ₹1,300 (metal)** | ✅ | *(not offered)* |
+| gap #3 | price | Nira Edition 292, ₹4,600 | Nira Edition 292, ₹4,600 | ✅ | Basalt Form 448, ₹4,800 (₹300 over — wrong; true gap is ₹100) |
+| sports ≤₹500 | price | Wren Edition 729, ₹2,150 | Wren Edition 729, ₹2,150 | ✅ | Sable Series 805, ₹5,800 (called "sporty" — see Result 4) |
 
-## Result 4: the `outdoor` ↔ `sports` defect class doesn't reproduce
+**8 of 8 rows consistent between the two implementations.** Separately,
+zero of naive's substitutions match either implementation's cheapest
+answer — not because naive is "wrong" in some contestable sense on
+category (its gap #2 answer does include a semi-rim, progressive-ready
+option, the right tier), but because cosine similarity has no mechanism to
+*sort* within that tier for cheapest, or to know it's a tier at all rather
+than just "a similar-sounding frame." Naive offered Orbit&Co Series 396
+(₹1,550, correct category) and Fathom Series 616 (₹8,250, full-rim, out of
+stock — two tiers away and the single worst frame on the list for this
+purpose) with equal weight in the same answer, because nothing in its
+retrieval ranked one closer than the other. SQL's ordered-domain walk finds
+Kestrel Edition 850 (₹1,350) specifically *because* it's cheapest within
+the nearest tier, not just similar-sounding text.
 
-`docs/phase1-baseline-failures.md` named a defect class: both chat models
-tested there relabel `purpose_tags: ["driving_day", "outdoor"]` frames as
-"sports" when convenient. It reproduces again in this run's naive column
-— **twice**:
+## Result 4: the `outdoor` ↔ `sports` defect class — mechanically consistent, prose-severity varies
 
-> gap #1: "**[3] Kestrel Edition 850**... suitable for outdoor use and
-> **sports**." (Kestrel's tags are `["driving_day", "outdoor"]` — no
-> `sports` tag.)
+`docs/phase1-baseline-failures.md` named a defect class: chat models
+relabel `purpose_tags: ["driving_day", "outdoor"]` frames as suitable for
+`sports` when convenient. The mechanical fact is exactly as consistent as
+that finding predicted: **every naive run logged in this project has
+recommended a non-`sports`-tagged frame for a `sports` query, without
+exception**, confirmed by `app/lib/constraints.ts` against the catalog,
+not by reading tone. This run is no different — gap #1 and the ₹500 query
+both still put a `["driving_day","outdoor"]` frame forward as an answer to
+"sports."
 
-> sports ≤₹500: "**[4] Sable Series 805** — **sports**/outdoor sunglasses,
-> polarized..." (Sable Series 805's tags are `["driving_day", "outdoor"]`
-> — same defect, same frame class, different query.)
+The *prose* is milder this run than earlier ones (temperature is 1 for
+both pipelines — some run-to-run variance in phrasing is expected and
+shouldn't be over-read):
 
-Hybrid's equivalent answers, generated by the same chat model at the same
-temperature, get both right:
+> gap #1, naive: "**[3] Kestrel Edition 850** — INR 1,350, polarized with
+> UV400 protection, suitable for outdoor use, and lightweight... Matte
+> black oval design with a subtle sporty appearance." (No flat "this is a
+> sports frame" claim this run — but it's still the answer offered to a
+> query asking specifically for `sports`, and Kestrel has no `sports` tag.)
 
-> gap #1: "**[3] Kestrel Edition 850** — Polarized and within budget at
-> ₹1,350, but **is not listed for sports use**."
+> sports ≤₹500, naive: "**[4] Sable Series 805** — ₹5,800; sporty TR90
+> frame with polarized amber lenses..." (Same tags, `["driving_day",
+> "outdoor"]` — "sporty" is doing the same substitution more quietly.)
 
-> sports ≤₹500: "**[1] Wren Edition 729** — ... It is otherwise designed
-> for outdoor activities and **sports**..." (Wren Edition 729 genuinely has
-> a `sports` tag — verified via the SQL join, not asserted.)
+Hybrid's equivalent answers, same model, same temperature, don't have this
+ambiguity to begin with, because the frame shown to the model as a
+candidate was already filtered by a real SQL tag check:
+
+> gap #1, hybrid: "**[3] Kestrel Edition 850** — Polarized and costs
+> INR 1,350, but **is not tagged for sports use**."
+
+> sports ≤₹500, hybrid: "**[1] Wren Edition 729** — ₹2,150. Sports-style
+> sunglasses suitable for outdoor activities, but they do not satisfy the
+> price requirement..." (Wren Edition 729 genuinely has a `sports` tag —
+> confirmed by the `frame_purpose_tags` join before the model ever saw it,
+> not asserted in prose.)
 
 This isn't the chat model getting smarter — it's the same model. The
-difference is that `frame_purpose_tags` membership is checked by a real SQL
-`EXISTS` before the frame is ever shown to the model as a candidate, so
-"does this include sports" stops being a claim the model has to get right
-in prose and becomes a fact the query already enforced. `decisions.md`
-2026-08-28 already noted this defect "is trivially fixed by SQL and unfixed
-by any model upgrade" as a prediction; this is that prediction tested.
+difference is that "does this include sports" stops being a claim the
+model has to get right in prose and becomes a fact the query already
+enforced before the candidate list was assembled. `decisions.md` 2026-08-28
+already noted this defect "is trivially fixed by SQL and unfixed by any
+model upgrade" as a prediction; this run is consistent with that a second
+time, on softer phrasing than before.
 
 ## What this doesn't prove yet
 

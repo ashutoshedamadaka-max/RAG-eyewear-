@@ -7,6 +7,7 @@
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { getFrameById, type CatalogFrame } from "./retrieval";
+import { ORDERED_DOMAINS } from "./config/domains";
 
 const DB_PATH = path.resolve(process.cwd(), "..", "data", "catalog", "out", "catalog.db");
 
@@ -97,6 +98,13 @@ export function queryFrames(filter: StructuredFilter, limit = 10): QueryResult {
 export interface NearestAlternative {
   droppedClause: string;
   frame: CatalogFrame;
+  /** Set only when an ordered domain was walked -- which tier produced the result. */
+  domainTierUsed?: string[];
+}
+
+/** rim_type/material FilterKeys happen to match their catalog column names directly. */
+function domainColumnFor(key: FilterKey): string | null {
+  return key === "rim_type" || key === "material" ? key : null;
 }
 
 /**
@@ -106,6 +114,11 @@ export interface NearestAlternative {
  * cheapest frame that qualifies once that one requirement is dropped.
  * Mirrors app/lib/nearest-miss.ts's approach for the golden set, applied
  * here to a live query instead of a fixed constraint list.
+ *
+ * For rim_type/material (ordered categorical domains -- decisions.md
+ * 2026-08-28), relaxing doesn't drop straight to "any value": it tries the
+ * nearest domain tier first (rimless -> semi -> full) and only widens
+ * further if that tier has no candidates.
  */
 export function findNearestAlternatives(filter: StructuredFilter, limit = 1): NearestAlternative[] {
   const clauses = compileClauses(filter);
@@ -117,9 +130,32 @@ export function findNearestAlternatives(filter: StructuredFilter, limit = 1): Ne
     relaxedKeys.add(clause.key);
 
     const others = clauses.filter((c) => c.key !== clause.key);
-    const results = runClauses(others, limit);
-    if (results.length > 0) {
-      alternatives.push({ droppedClause: clause.describe, frame: results[0] });
+    const domainColumn = domainColumnFor(clause.key);
+    const requestedValue = domainColumn ? (filter[clause.key] as string | undefined) : undefined;
+
+    if (domainColumn && requestedValue) {
+      const domain = ORDERED_DOMAINS[domainColumn];
+      const startTier = domain.findIndex((tier) => tier.includes(requestedValue));
+      const tiersToTry = startTier >= 0 ? domain.slice(startTier + 1) : domain;
+
+      for (const tier of tiersToTry) {
+        const tierClause: CompiledClause = {
+          key: clause.key,
+          sql: `${domainColumn} IN (${tier.map(() => "?").join(", ")})`,
+          params: tier,
+          describe: clause.describe,
+        };
+        const results = runClauses([...others, tierClause], limit);
+        if (results.length > 0) {
+          alternatives.push({ droppedClause: clause.describe, frame: results[0], domainTierUsed: tier });
+          break;
+        }
+      }
+    } else {
+      const results = runClauses(others, limit);
+      if (results.length > 0) {
+        alternatives.push({ droppedClause: clause.describe, frame: results[0] });
+      }
     }
   }
 

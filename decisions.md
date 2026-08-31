@@ -495,5 +495,191 @@ tripped. Flagging rather than fixing now to avoid scope creep on an
 already-large commit; worth closing before this table is relied on for
 anything beyond what it currently claims.
 
+## 2026-08-29 · Ordered categorical relaxation, and Result 3 reframed as a consistency check
+Two fixes to the relaxation ladder, both landed in `app/lib/nearest-miss.ts`
+(the golden-set generator) and `app/lib/catalog-db.ts` (the live hybrid
+pipeline) identically.
+
+**Ordered domains.** Relaxing `rim_type` or `material` used to drop the
+constraint straight to "any value" and take the cheapest frame regardless
+of category. Now it walks an ordered domain
+(`app/lib/config/domains.ts`: `rimless → semi → full`,
+`titanium → metal → {tr90, acetate}`) one tier at a time. Concrete effect,
+verified by re-running both implementations: relaxing gap #2's `rim_type`
+requirement now resolves to Kestrel Edition 850 (semi-rim, ₹1,350) instead
+of Halcyon Type 165 (full-rim, ₹1,150) — one category step from rimless
+instead of two, and it's the cheapest option *within* that nearer tier, not
+just the cheapest option overall. Relaxing gap #3's `material` requirement
+now resolves to Truss Series 377 (metal, ₹1,300) instead of Halcyon Type
+165 (tr90, ₹1,150) — one step from titanium instead of two. Domains are
+exhaustive over the catalog's actual values, so this is a strict
+refinement of the old behavior, not a different fallback: walking every
+tier is equivalent to the old "drop entirely," it just tries the nearer
+tiers first.
+
+**Result 3 in `docs/phase3-hybrid-ab.md` was overclaiming.** It called
+agreement between the golden-set generator and the live SQL pipeline
+"independently-verified ground truth." That's wrong: both are the *same
+algorithm* (relax one constraint, walk the ordered domain, take the
+cheapest qualifying frame) implemented twice — once as an in-memory JS
+filter, once as live SQL. Agreement between them is a **consistency
+check** — it confirms the two code paths aren't buggy relative to each
+other, and specifically that the ordered-domain fix above didn't
+introduce drift between them. It does not independently validate that
+"cheapest frame after relaxing exactly one constraint, nearest category
+first" is the *right* notion of nearest miss — that's a design choice
+both implementations share, not an externally verified fact. What's still
+legitimately true, and worth keeping: both are computed directly from the
+catalog, so neither inherits the circularity bug that produced naive's
+wrong answers (Basalt Form 448 instead of Nira Edition 292, etc. —
+"golden set ground truth was circular," 2026-08-28). Relabeled the
+section and the table accordingly; re-ran the full A/B on the updated
+relaxation logic rather than patch old numbers.
+
+## 2026-08-29 · Threshold research resolved the progressive disagreement
+The 30mm-vs-44mm fight was never really a disagreement about the right
+number — it was two different measurements being compared as if they were
+one. Verified by fetching and reading the actual source documents (PDFs
+downloaded directly, decrypted where needed, text extracted with `pypdf`
+after `pdftoppm`/poppler wasn't available in this environment; two of six
+source URLs had gone dead since being cited and were recovered via
+web.archive.org):
+
+- **Fitting height** (pupil centre to lens bottom): 14–20mm across every
+  vendor checked — Rodenstock 16/18/20mm, Zeiss 14/16/18mm, HOYA
+  14–21mm, Vision Council EPIC entries sampled at 13–18mm across three
+  manufacturers.
+- **Frame/B-height** (the full vertical lens opening — what this
+  catalog's `lens_height_mm` column and `PROGRESSIVE_MIN_LENS_HEIGHT_MM`
+  actually measure): 24–34mm per Rodenstock's Table 2-3, 25–30mm per
+  OptiCampus ("minimum depth... labelled 'Depth B'" in the source
+  diagram).
+
+Our own 30mm default and the optician's 44mm were each being measured
+against the *other* quantity implicitly, which is exactly the error that
+produces a factor-of-1.5 disagreement out of numbers that are individually
+reasonable. **The optician's 44mm could not be substantiated in Rodenstock,
+Zeiss, or HOYA documentation** — their own longest-corridor and
+near-comfort product lines top out at 34–36mm, nowhere near 44mm. Recorded
+as unsupported, not as a stricter alternative that lost a coin flip.
+
+Kept 32mm, but re-provenanced and renamed (`PROGRESSIVE_MIN_B_HEIGHT_MM`,
+so the B-height/fitting-height distinction can't be silently re-conflated
+by a future edit) rather than treated as resolved-to-one-true-number: the
+sources themselves give a range depending on corridor length, and 32mm
+sits inside Rodenstock's documented range, just above OptiCampus's
+general-purpose figure. Full citations in `data/advice/` (see below).
+
+**The finding that actually matters for the write-up:** parameterising
+this threshold instead of adopting either party's number outright is what
+kept the mistake from becoming expensive. Had 44mm been adopted directly
+back on 2026-08-28 without a config constant to isolate it, the
+consequence — only 26 of 100 catalog frames clearing the bar (16
+non-sunglasses), down from 72, nearly collapsing the progressive-ready
+query class and making the progressive-rimless intentional gap
+meaningless — would have been baked into query logic across the
+codebase instead of visible as one number in one file, checked by one
+golden-set case (`evals/golden/physical.json`,
+`progressive-lens-height-threshold-sensitivity`) that made the
+consequence impossible to miss before it shipped. The lesson isn't
+"32 was the right guess" — it's that isolating a contested number behind
+a named constant with a test that shows its blast radius is what turns a
+wrong external claim into a caught one instead of a shipped one.
+
+## 2026-08-29 · High-index lens recommendation is a function, not a threshold
+Replaced `app/lib/derivation.ts#deriveRimTypeConstraint` (a single scalar
+Rx-power cutoff) with `assessLensIndex(rxPowerD, lensWidthMm, rimType)`.
+A single threshold can't represent two real effects:
+
+- **Sag depth scales with roughly diameter².** A large lens needs the
+  high-index recommendation earlier (at a lower |Rx|) than a small one at
+  the same power. `LARGE_LENS_WIDTH_MM = 55` (75th percentile of this
+  catalog's `lens_width_mm`, verified 2026-08-28) pulls every tier
+  boundary earlier by `SIZE_SHIFT_D = 1.0`D when crossed; a semi/rimless
+  mount on a minus lens adds a further `EDGE_EXPOSURE_SHIFT_D = 0.5`D
+  (more edge is visible to begin with).
+- **Minus lenses are edge-thick; plus lenses are centre-thick.** The same
+  |Rx| doesn't mean the same thing for +3.00 and -3.00.
+  `PLUS_LENS_SHIFT_D = 1.5`D delays the tier boundary for plus power, and
+  — more importantly — plus power **never** triggers the
+  `requiresNonRimless` hard constraint in this model, regardless of
+  magnitude, because plus-lens edges stay thin regardless of power; the
+  rimless/edge-drilling concern is a minus-lens-specific physical fact,
+  not a symmetric one.
+
+Verified live (`npm run eval`, `lens-index-frame-size-interaction` golden
+case): at the identical -3.00D prescription, a small (48mm) full-rim frame
+lands in tier "consider" (`requiresNonRimless: false`) while a large
+(58mm) rimless frame at the same power lands in "recommended"
+(`requiresNonRimless: true`) — same Rx, different recommendation, which
+is the whole point. At +3.00D, neither configuration trips
+`requiresNonRimless`, confirming the plus/minus asymmetry holds.
+
+**Rimless is capped at 1.67 regardless of tier, and this is not a hedge.**
+Sourced to a real tensile-strength table found in TTUHSC's rimless-eyewear
+CE course (`data/advice/ttuhsc-rimless-lens-materials.md`): 1.74 measures
+31.6 kgf tensile strength, against 1.67's 67.3 kgf and 1.60's 80.5 kgf —
+under half of either. The table recommends 1.74 for high-Rx thinness, not
+for drill-mount durability; the function only claims the first, and says
+so in its `reason` field. This is exactly the encoding the brief asked
+for: don't recommend the highest index for rimless just because it's
+thinnest.
+
+Tier boundaries (`LENS_INDEX_TIER_BOUNDARIES_D`: consider 2.00D, recommended
+4.00D, high 6.00D) are taken as given for this pass, not independently
+verified against a named source the way the B-height figures and the
+tensile-strength table were — flagging that distinction so it isn't read
+as equally sourced.
+
+`evals/golden/physical.json`'s derivation case rewritten from a
+single-function threshold sweep to a 4-scenario matrix (small/large ×
++/-3.00D) exercising the actual interaction; `app/scripts/run-eval.ts`
+updated to match the new function signature and case shape.
+`PROJECT_CONTEXT.md` §3's derivation table and §6's golden-set description
+updated to describe the function-based system instead of the retired
+scalar constants.
+
+## 2026-08-29 · Advice corpus started from six verified primary sources
+`data/advice/` was empty since Phase 0. Populated it properly this time —
+every document below was fetched and read in this session, not written
+from training-data recall, per the standing decision against fabricating
+this corpus (2026-08-27).
+
+1. **Rodenstock, *Tips & Technology 2022*** — downloaded 11MB PDF directly
+   (WebFetch alone hit a 10MB response-size limit), extracted with
+   `pypdf`. Table 2-3 and the fitting-height-by-progression-length figures.
+2. **Rodenstock, *Instructions for use — Progressive lenses* (Jan 2022)**
+   — the +2mm/+8mm grinding-height formula.
+3. **OptiCampus, *Progressive Lens Dispensing*** (Darryl J Meister, 2008)
+   — AES-encrypted PDF (permissions-only; `cryptography` package
+   installed to decrypt with `pypdf`). The "25-30mm... Depth 'B'" figure
+   and fitting-height measurement-error guidance (parallax, "fudging").
+4. **ZEISS, *Precision Progressive Range Portfolio Brochure*** — live URL
+   404'd; recovered via web.archive.org (2018-03-29 snapshot). 14/16/18mm
+   fitting heights for the Precision Pure/Plus/Superb line.
+5. **HOYA, *2026 Product & Technology Reference Guide*** — 36-page PDF,
+   fitting heights for the Array/Amplitude free-form lines.
+6. **The Vision Council, EPIC** (Electronic Progressive Identifier
+   Catalog) — 3,326-page lens-identification lookup tool, not a guidance
+   document; read front matter plus three sampled entries (Essilor,
+   Nikon, Signet Armorlite) rather than exhaustively, and said so in the
+   document's own frontmatter rather than implying full coverage.
+7. **TTUHSC, *The Art and Science of Rimless Eyewear, Part 1*** (2018 CE
+   course) — live URL 404'd; recovered via web.archive.org (a 2026-04-12
+   snapshot — the archive outlived the source by years). The drilled-rimless
+   material tensile-strength table this session's high-index function
+   relies on.
+
+All six tagged `claim_type: physical` per project convention, each with
+`source_url`, `verified` date, and `verification_method` in frontmatter so
+a later auditor can tell what was actually read versus summarized.
+**Not yet done:** Essilor was named as a cross-check source for the
+progressive-height claim but not located; the "44mm unsupported" finding
+above rests on the four sources that were found, not five. No documents
+yet on face-width fitting, material skin-sensitivity, or the other §5
+topics PROJECT_CONTEXT.md lists — this corpus start covers exactly the
+two disputes this session's threshold work needed, not the full ~40-60
+document target.
+
 ---
 <!-- next entry here -->
