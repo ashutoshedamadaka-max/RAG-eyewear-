@@ -105,9 +105,14 @@ export interface AdviceChunk {
   claim_type: string;
   source_org: string;
   source_document: string;
-  source_url: string;
+  /** Most sources are fetchable vendor/CE PDFs and have this. Privately-shared, non-URL sources (e.g. a Google Doc) have source_provenance instead -- see below. */
+  source_url?: string;
   source_url_secondary?: string;
   source_url_note?: string;
+  /** e.g. "Authored guide, not an interview transcript" -- how the source was produced, when that's not obvious from a URL. */
+  source_type?: string;
+  /** Free text for how a non-URL source reached this repo (who shared it, when, how) -- required in place of source_url when there isn't one. */
+  source_provenance?: string;
   verified: string;
   verification_method: string;
 }
@@ -127,8 +132,17 @@ function main() {
     const raw = fs.readFileSync(path.join(ADVICE_DIR, file), "utf-8");
     const { data, body } = parseFrontmatter(raw);
 
-    for (const required of ["title", "claim_type", "source_org", "source_url", "verified"]) {
+    for (const required of ["title", "claim_type", "source_org", "verified"]) {
       if (!data[required]) throw new Error(`${docId}: missing required frontmatter field "${required}"`);
+    }
+    // Every chunk needs SOME way to trace back to where it came from --
+    // most sources are fetchable and use source_url; a privately-shared
+    // document (no public URL to point at) must use source_provenance
+    // instead. Neither present is the one thing this chunker refuses to
+    // let through: an untraceable chunk defeats the entire point of the
+    // claim_type/citation system.
+    if (!data.source_url && !data.source_provenance) {
+      throw new Error(`${docId}: needs either "source_url" (fetchable source) or "source_provenance" (how a non-URL source reached this repo) -- a chunk with neither can't be traced back to anything.`);
     }
 
     // Exclusion at ingest (PROJECT_CONTEXT.md §3, §5; decisions.md
@@ -161,9 +175,11 @@ function main() {
         claim_type: data.claim_type,
         source_org: data.source_org,
         source_document: data.source_document ?? "",
-        source_url: data.source_url,
+        ...(data.source_url ? { source_url: data.source_url } : {}),
         ...(data.source_url_secondary ? { source_url_secondary: data.source_url_secondary } : {}),
         ...(data.source_url_note ? { source_url_note: data.source_url_note } : {}),
+        ...(data.source_type ? { source_type: data.source_type } : {}),
+        ...(data.source_provenance ? { source_provenance: data.source_provenance } : {}),
         verified: data.verified,
         verification_method: data.verification_method ?? "",
       });

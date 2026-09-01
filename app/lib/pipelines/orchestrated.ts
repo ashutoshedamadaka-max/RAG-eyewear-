@@ -34,7 +34,8 @@ Below the persona, these constraints are not suggestions. Follow them even when 
 6. Explain every technical term in the same sentence it appears -- "adjustable nose pads, which is what'll stop the sliding," not "adjustable nose pads" on its own. The customer is not expected to know the vocabulary.
 7. If nothing provided satisfies the customer's full request, say so explicitly and offer the nearest alternative, naming exactly what it drops. Never a bare refusal, never a silent substitution that quietly drops a requirement without saying so.
 8. If a prescription or other safety-relevant fact is unknown, don't block on it -- proceed on a stated, named assumption ("I've assumed a moderate prescription for these picks") and say what changes if that assumption is wrong.
-9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as "fitting height" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.`;
+9. The catalog's lens_height_mm is a frame/B-height measurement (the full vertical lens opening) -- it is NOT the same number as "fitting height" (pupil centre to lens bottom), which is smaller and appears only in retrieved advice, never in catalog data. Do not compare a frame's lens_height_mm directly against a fitting-height figure from advice as if clearing one clears the other; if advice distinguishes the two, say so rather than collapsing them.
+10. When a single source draws MULTIPLE distinct classifications for different attributes (e.g. one rule sorting colors as light/dark, a separate rule sorting metals as warm/cool undertone), describe each attribute using ONLY the classification that source actually applies to it. Do not blend them -- do not call a color "warm" or "cool" just because the same document discusses warm/cool for something else (metal tone). If the customer's situation touches an attribute the source doesn't classify the way they're asking about, say that plainly rather than inventing a bridge between two separate rules.`;
 
 export function formatFrameContext(hits: PipelineHit[]): string {
   return hits.map((hit, i) => `[${i + 1}] ${hit.text}`).join("\n\n");
@@ -68,7 +69,7 @@ export async function runOrchestratedPipeline(query: string): Promise<PipelineRe
     }));
   } else {
     relaxed = true;
-    const alternatives = findNearestAlternatives(filter, 1);
+    const { alternatives } = findNearestAlternatives(filter, 1);
     alternativesUsed = alternatives.map((a) => ({ droppedClause: a.droppedClause, frame_id: a.frame.frame_id }));
     frameHits = alternatives.map((a) => ({
       frame_id: a.frame.frame_id,

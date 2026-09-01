@@ -14,7 +14,10 @@
     "build-catalog-db": "tsx scripts/build-catalog-db.ts",
     "advice-chunks": "tsx scripts/build-advice-chunks.ts",
     "embed-advice": "tsx scripts/embed-advice.ts",
-    "validate-judges": "tsx scripts/validate-judges.ts"
+    "validate-judges": "tsx scripts/validate-judges.ts",
+    "eval-conversation": "tsx scripts/run-conversation-eval.ts",
+    "eval-never-relax": "tsx scripts/run-never-relax-eval.ts",
+    "eval-gap-handling": "tsx scripts/run-gap-handling-eval.ts"
   },
   "dependencies": {
     "next": "16.3.3",

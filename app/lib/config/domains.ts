@@ -15,8 +15,20 @@
 export const RIM_TYPE_DOMAIN: string[][] = [["rimless"], ["semi"], ["full"]];
 export const MATERIAL_DOMAIN: string[][] = [["titanium"], ["metal"], ["tr90", "acetate"]];
 
+/**
+ * `face_width_fit` is ordered narrow < medium < wide (verified 2026-08-28
+ * alongside rim_type/material, catalog's only other ordered categorical
+ * column). Used two ways: the conversation layer's derivation rules
+ * (Phase 5, PROJECT_CONTEXT.md §3) shift a target tier by one step for
+ * `fit_issues ∋ splaying` (one size wider) or `pressing`/`cheekbone_contact`
+ * (one size narrower); the relaxation ladder below can also walk it
+ * outward like any other ordered domain if a shifted tier returns nothing.
+ */
+export const FACE_WIDTH_FIT_DOMAIN: string[][] = [["narrow"], ["medium"], ["wide"]];
+
 /** Keyed by catalog column name, not by Constraint type -- both nearest-miss.ts and catalog-db.ts map their own constraint shapes onto this. */
 export const ORDERED_DOMAINS: Record<string, string[][]> = {
   rim_type: RIM_TYPE_DOMAIN,
   material: MATERIAL_DOMAIN,
+  face_width_fit: FACE_WIDTH_FIT_DOMAIN,
 };

@@ -1,0 +1,350 @@
+{
+  "generatedAt": "2026-08-31T13:12:40.407Z",
+  "summary": {
+    "groundedness": {
+      "total": 17,
+      "agree": 14,
+      "disagreements": [
+        {
+          "id": "real-0-rimless-strong-rx",
+          "hand": "fail",
+          "judge": "pass",
+          "reasoning": "The answer correctly states that none of the listed rimless frames is catalog-rated for approximately -6.00D: two are rated up to 4D and three up to 3.5D. The recommendation to seek laboratory confirmation before ordering is consistent with those catalog compatibility limits. The explanation of rimless mounting is a permitted generic definition. The claims that smaller lenses generally reduce thickness and that larger or irregular shapes can increase thickness are directly supported by [A1]. The claims about careful material selection for drilled mounting, 1.74 being marked for high prescriptions, and its lower tensile strength than 1.60 and 1.67 are supported by [A2]-[A3]. The statement that Halcyon is a small, relatively regular round option is supported by its catalog dimensions and round shape, together with [A1]'s preference for smaller, more regular shapes. The answer also correctly notes that Halcyon remains rated only to -3.50D and that no non-rimless catalog alternative is provided. The remaining statements are conversational or appropriately framed as an assumption/request for further confirmation. All checkable claims are grounded in the provided context."
+        },
+        {
+          "id": "real-3-titanium-vs-metal-decline",
+          "hand": "pass",
+          "judge": "fail",
+          "reasoning": "1. The statement that the provided catalog does not document titanium-versus-conventional-metal properties is grounded: none of the five catalog frames is identified as titanium or regular metal, and the advice chunks do not supply those properties.\n2. The weights and material identifications for the TR90 frames (Halcyon at 21.3 g and Orbit&Co at 18.4 g) are directly supported by [1] and [4].\n3. The weights and acetate identifications for the three acetate frames are directly supported by [2], [3], and [5].\n4. However, calling TR90 “a thermoplastic frame material” is not supported by the provided context; the catalog only says the frames are made of TR90. Likewise, calling acetate “a plastic frame material” is not explicitly stated in the context. These are material-property claims beyond the retrieved evidence, not merely a generic explanation of a term already defined in the context.\n5. The conclusion that the available selection is a TR90-versus-acetate comparison is supported by the listed materials. Because the answer includes at least one unsupported factual material-property claim, the whole answer fails groundedness."
+        },
+        {
+          "id": "real-4-driving-sunglasses",
+          "hand": "fail",
+          "judge": "pass",
+          "reasoning": "The Kestrel’s price, frame-only status, polarization, UV400 protection, daytime-driving/outdoor suitability, medium-face fit, 21.3 g weight, 6D prescription compatibility, and 20-unit stock level are all stated in catalog entry [1]. The statement that prescription lenses would cost extra is supported by the catalog explicitly labeling the price as frame-only. Calling it the closest match is a grounded comparison: among the listed options, it is suitable for daytime driving, polarized, under budget, and prescription-compatible. The Sable’s ₹2,200 frame-only price, daytime-driving suitability, 6.5D compatibility, lack of polarization, wide-face fit, and one-unit stock are all supported by [3]. The Wren’s ₹2,150 price, daytime-driving suitability, lack of prescription compatibility, UV400 protection, and grey tint are supported by [2]. The conditional recommendation to confirm a prescription is within the Kestrel or Sable limits follows directly from their stated compatibility limits. The statement about assuming no prescription or a moderate prescription is explicitly framed as an assumption rather than a claim about facts supplied by the customer, and it does not introduce a catalog-dependent factual assertion. Every checkable product claim is grounded in the retrieved catalog."
+        }
+      ]
+    },
+    "citation_accuracy": {
+      "total": 15,
+      "agree": 12,
+      "disagreements": [
+        {
+          "id": "real-0-rimless-strong-rx",
+          "hand": "pass",
+          "judge": "fail",
+          "reasoning": "The frame citations correctly support the stated prescription limits: [1] and [4] list compatibility up to 4D, while [2], [3], and [5] list up to 3.5D. [A1] supports the claims that smaller, more regular lens shapes generally help reduce thickness and that larger or irregular shapes can increase it. [A2] and [A3] support the claims about 1.74 being marked for high prescriptions and having lower tensile strength than 1.60 and 1.67; [A3] directly provides the table. However, the claim that the Halcyon Type 404 is the “nearest catalog option” by shape and size is comparative and is not actually stated or established by source [5], which only provides Halcyon’s individual specifications. [A1] gives general shape/size guidance but does not establish that Halcyon is nearest among the catalog options. Thus that citation is misattached to an unsupported comparative claim."
+        },
+        {
+          "id": "real-1-laptop-sliding",
+          "hand": "pass",
+          "judge": "fail",
+          "reasoning": "The [A1] citation correctly supports the claim that adjustable nose-pad arms allow small fitting-height corrections. The [2] citations correctly support the Truss frame’s adjustable nose pads, narrow-face fit, 20.2 g metal construction, Rx limit, and stock count. The [5] citations correctly support the Lumen frame’s adjustable nose pads, narrow fit, 21.4 g weight, 10D limit, and stock count. However, [5] is attached to the claim that Lumen “is lighter than your current frame may be”; the catalog only gives Lumen’s weight and provides no information about the customer’s current frame, so that comparison is unsupported. Also, the cited catalog facts support that the frames are computer frames and blue-light ready, and that the other frames have fixed integrated nose pads. The conclusion that this makes them less suitable is advice/inference rather than a directly supported catalog fact, but the unsupported current-frame weight comparison is sufficient to fail the answer."
+        },
+        {
+          "id": "real-5-high-index-honesty",
+          "hand": "pass",
+          "judge": "fail",
+          "reasoning": "The [A2] citation correctly supports that 1.74 is marked for a high prescription/thinness benefit and has lower tensile strength than 1.60 and 1.67. Citation [3] correctly supports the Meridian Series 147’s 10D compatibility, sunglasses status, brown tint, and 6° wrap. Citation [2] correctly supports the Meridian Form 420’s 8D limit and narrow-face fit. Citations [4] and [5] support the two listed frames’ 8D prescription compatibility and their clear/no-tint eyeglass-frame characteristics. However, the statement that if either eye is above 8D, the 10D-rated Meridian Series 147 is the only cataloged option is overbroad. The catalog supports it only up to 10D; for prescriptions above 10D, it is not an applicable option, and [3] does not support the unqualified conditional claim. Therefore, at least one cited claim is overstated relative to its source."
+        }
+      ]
+    },
+    "hedging_match": {
+      "total": 5,
+      "agree": 5,
+      "disagreements": []
+    }
+  },
+  "cases": [
+    {
+      "id": "real-0-rimless-strong-rx",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "pass",
+        "agrees": false,
+        "reasoning": "The answer correctly states that none of the listed rimless frames is catalog-rated for approximately -6.00D: two are rated up to 4D and three up to 3.5D. The recommendation to seek laboratory confirmation before ordering is consistent with those catalog compatibility limits. The explanation of rimless mounting is a permitted generic definition. The claims that smaller lenses generally reduce thickness and that larger or irregular shapes can increase thickness are directly supported by [A1]. The claims about careful material selection for drilled mounting, 1.74 being marked for high prescriptions, and its lower tensile strength than 1.60 and 1.67 are supported by [A2]-[A3]. The statement that Halcyon is a small, relatively regular round option is supported by its catalog dimensions and round shape, together with [A1]'s preference for smaller, more regular shapes. The answer also correctly notes that Halcyon remains rated only to -3.50D and that no non-rimless catalog alternative is provided. The remaining statements are conversational or appropriately framed as an assumption/request for further confirmation. All checkable claims are grounded in the provided context."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "fail",
+        "agrees": false,
+        "reasoning": "The frame citations correctly support the stated prescription limits: [1] and [4] list compatibility up to 4D, while [2], [3], and [5] list up to 3.5D. [A1] supports the claims that smaller, more regular lens shapes generally help reduce thickness and that larger or irregular shapes can increase it. [A2] and [A3] support the claims about 1.74 being marked for high prescriptions and having lower tensile strength than 1.60 and 1.67; [A3] directly provides the table. However, the claim that the Halcyon Type 404 is the “nearest catalog option” by shape and size is comparative and is not actually stated or established by source [5], which only provides Halcyon’s individual specifications. [A1] gives general shape/size guidance but does not establish that Halcyon is nearest among the catalog options. Thus that citation is misattached to an unsupported comparative claim."
+      }
+    },
+    {
+      "id": "real-1-laptop-sliding",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The opening recommendation of adjustable nose pads is grounded: A1 states that adjustable nose-pad arms allow small fitting-height corrections later, and the cited Truss and Lumen catalog entries specify adjustable nose pads.\n2. The conditional discussion of prescription strength is grounded in the catalog’s stated Rx limits, although the claim that the prescription is “moderate” is explicitly presented as an assumption rather than as a retrieved fact.\n3. The Truss details—computer use, adjustable nose pads, narrow-face fit, 20.2 g weight, metal construction, 6D Rx limit, price, and stock—are all supported by [2]. Calling it the “strongest starting point” is a recommendation based on those supported characteristics.\n4. The statement that tapered temples “may also give us another adjustment point” is not supported by the retrieved context. The catalog only says the temples are tapered; it does not state that tapered temples provide an adjustment point.\n5. The Lumen details—adjustable nose pads, narrow-face fit, 21.4 g weight, 10D Rx limit, price, and stock—are supported by [5]. However, saying it “is lighter than your current frame” is an unsupported comparison because the customer’s current-frame weight was not provided. The fact that slippage is uncomfortable also does not establish anything about the current frame’s weight.\n6. The claim that both frames are computer frames and blue-light ready is supported by [2] and [5]. The caution that this is not a guarantee that the frame alone will resolve discomfort is a reasonable qualification, but it is not directly stated in the retrieved context; likewise, checking prescription and finished lens choice is only partly suggested by the listed Rx limits and is not fully supported as a specific remedy for laptop discomfort.\n7. The claims about Sundial, Aeris, and Sable having fixed integrated nose pads are supported by [1], [3], and [4]. Explaining fixed integrated nose pads as not separately adjustable is a generic terminology explanation permitted by the instructions. The resulting recommendation to treat them as less suitable first choices for a sliding problem is grounded in the contrast with the adjustable-pad guidance in A1.\n\nBecause the answer includes at least one unsupported claim—especially the invented comparison to the customer’s current-frame weight, as well as the unsupported tapered-temple adjustment claim—the whole answer fails groundedness."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "fail",
+        "agrees": false,
+        "reasoning": "The [A1] citation correctly supports the claim that adjustable nose-pad arms allow small fitting-height corrections. The [2] citations correctly support the Truss frame’s adjustable nose pads, narrow-face fit, 20.2 g metal construction, Rx limit, and stock count. The [5] citations correctly support the Lumen frame’s adjustable nose pads, narrow fit, 21.4 g weight, 10D limit, and stock count. However, [5] is attached to the claim that Lumen “is lighter than your current frame may be”; the catalog only gives Lumen’s weight and provides no information about the customer’s current frame, so that comparison is unsupported. Also, the cited catalog facts support that the frames are computer frames and blue-light ready, and that the other frames have fixed integrated nose pads. The conclusion that this makes them less suitable is advice/inference rather than a directly supported catalog fact, but the unsupported current-frame weight comparison is sufficient to fail the answer."
+      }
+    },
+    {
+      "id": "real-2-progressive-small-face",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that progressives can fit in a small frame is supported by the catalog: both recommended frames are listed as progressive-ready and fit narrow faces.\n2. The frame widths, narrow-face classifications, lens heights, prescription limits, prices, stock counts, and fixed integrated nose pads for Nira Series 863 and Meridian Form 420 are all accurately supported by [4] and [2].\n3. The stated minimum fitting heights of about 16–20 mm are supported by [A2].\n4. The statement that general frame-depth guidance gives roughly 25–30 mm or more is supported by [A3], which discusses frame depth/B-height.\n5. However, the answer then uses the catalog lens-height figures of 34 mm and 40 mm to conclude that the frames are above the 16–20 mm minimum fitting-height range. The retrieved advice explicitly distinguishes fitting height from frame/B-height and warns that these measurements should not be compared directly. The catalog provides lens height, not the actual pupil-to-lower-lens fitting height, so the answer cannot establish that these frames meet the progressive fitting-height requirement from the provided context.\n6. The explanation of fixed versus adjustable nose pads and the need to check fit is supported by [1] and [A1]. The remaining prescription caveat and recommendation are consistent with the listed catalog facts.\n\nBecause the answer makes an unsupported/conflated comparison between lens height and fitting height, at least one checkable claim is not grounded."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "[4] correctly supports the Nira Series 863 details: 114 mm frame width, narrow-face fit, 34 mm lens height, progressive-ready status, 8D limit, price, and stock. [2] likewise correctly supports the Meridian Form 420 details. [A2] correctly supports the stated 16–20 mm minimum fitting-height range, depending on progressive design. However, the sentence saying that the two frames' lens heights are “above that range” is not properly supported by [A3]. A2 discusses fitting height, while the catalog gives lens height; these are not interchangeable measurements. A3 specifically discusses frame depth/B-height and cautions that it should not be conflated with fitting-height figures. [A3] does support general 25–30 mm frame-depth guidance, but not the claimed comparison between the frames’ lens heights and A2’s fitting-height range. [1] correctly supports the fixed integrated nose pads, and [A1] correctly supports the claim that adjustable nose pads allow small fitting-height corrections. Because the A3 citation is attached to an overstated or mismatched comparison, at least one cited claim is misattributed."
+      }
+    },
+    {
+      "id": "real-3-titanium-vs-metal-decline",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "fail",
+        "agrees": false,
+        "reasoning": "1. The statement that the provided catalog does not document titanium-versus-conventional-metal properties is grounded: none of the five catalog frames is identified as titanium or regular metal, and the advice chunks do not supply those properties.\n2. The weights and material identifications for the TR90 frames (Halcyon at 21.3 g and Orbit&Co at 18.4 g) are directly supported by [1] and [4].\n3. The weights and acetate identifications for the three acetate frames are directly supported by [2], [3], and [5].\n4. However, calling TR90 “a thermoplastic frame material” is not supported by the provided context; the catalog only says the frames are made of TR90. Likewise, calling acetate “a plastic frame material” is not explicitly stated in the context. These are material-property claims beyond the retrieved evidence, not merely a generic explanation of a term already defined in the context.\n5. The conclusion that the available selection is a TR90-versus-acetate comparison is supported by the listed materials. Because the answer includes at least one unsupported factual material-property claim, the whole answer fails groundedness."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The citation [1] correctly supports that Halcyon Type 165 is made of TR90 and weighs 21.3 g. Citation [4] correctly supports that Orbit&Co Line 323 is made of TR90 and weighs 18.4 g. Citation [2] correctly supports that Meridian Form 420 is acetate and weighs 25.3 g; [3] correctly supports that Meridian Series 147 is acetate and weighs 25.9 g; and [5] correctly supports that Sundial Type 312 is acetate and weighs 27.7 g. The brief characterization of TR90 and acetate as plastic materials is a permissible generic gloss. All cited claims are accurately supported by their respective sources."
+      }
+    },
+    {
+      "id": "real-4-driving-sunglasses",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "pass",
+        "agrees": false,
+        "reasoning": "The Kestrel’s price, frame-only status, polarization, UV400 protection, daytime-driving/outdoor suitability, medium-face fit, 21.3 g weight, 6D prescription compatibility, and 20-unit stock level are all stated in catalog entry [1]. The statement that prescription lenses would cost extra is supported by the catalog explicitly labeling the price as frame-only. Calling it the closest match is a grounded comparison: among the listed options, it is suitable for daytime driving, polarized, under budget, and prescription-compatible. The Sable’s ₹2,200 frame-only price, daytime-driving suitability, 6.5D compatibility, lack of polarization, wide-face fit, and one-unit stock are all supported by [3]. The Wren’s ₹2,150 price, daytime-driving suitability, lack of prescription compatibility, UV400 protection, and grey tint are supported by [2]. The conditional recommendation to confirm a prescription is within the Kestrel or Sable limits follows directly from their stated compatibility limits. The statement about assuming no prescription or a moderate prescription is explicitly framed as an assumption rather than a claim about facts supplied by the customer, and it does not introduce a catalog-dependent factual assertion. Every checkable product claim is grounded in the retrieved catalog."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The Kestrel claims cited to [1] are all supported: ₹1,350 frame-only price, polarized lenses, UV400 protection, suitability for day driving/outdoor use, medium fit, 21.3 g weight, Rx compatibility up to 6D, and 20 units in stock. [1] also supports the statement that the listed price is for the frame only, so lenses would be additional if needed. The Sable claims cited to [3] are supported: ₹2,200 frame-only price, daytime-driving suitability, Rx compatibility up to 6.5D, lack of polarization, wide-face fit, and one unit in stock. The Wren claims cited to [2] are supported: ₹2,150 frame-only price, daytime-driving suitability, lack of prescription compatibility, UV400 protection, and grey tint. The final prescription-limit statement is correctly supported by [1] and [3]. No cited claim is misattributed or overstated."
+      }
+    },
+    {
+      "id": "real-5-high-index-honesty",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The statement that the catalog does not confirm current availability of 1.67 or 1.74 lenses is supported because the retrieved catalog lists frame compatibility and inventory, but no lens-material inventory. The explanation of 1.74 is directly supported by [A2]: it is marked for a high Rx and has a lens-thinness benefit, while its tensile strength is lower than 1.60 and 1.67. Meridian Series 147's 10D compatibility, sunglasses status, brown tint, and 6° wrap are all in [3]. Meridian Form 420's 8D compatibility, eyeglass status, and narrow-face fit are in [2]. Orbit&Co Line 323 and Sundial Type 312 are eyeglass/computer frames with no tint and 8D compatibility, supported by [4] and [5]. The claim that Meridian Series 147 is the only cataloged option above 8D is supported by the catalog: it is rated to 10D, while the other frames are rated to 6D or 8D. The qualification that the recommendation would require a tinted sunglasses frame is also supported by [3]. No unsupported technical or comparative claim is introduced."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "fail",
+        "agrees": false,
+        "reasoning": "The [A2] citation correctly supports that 1.74 is marked for a high prescription/thinness benefit and has lower tensile strength than 1.60 and 1.67. Citation [3] correctly supports the Meridian Series 147’s 10D compatibility, sunglasses status, brown tint, and 6° wrap. Citation [2] correctly supports the Meridian Form 420’s 8D limit and narrow-face fit. Citations [4] and [5] support the two listed frames’ 8D prescription compatibility and their clear/no-tint eyeglass-frame characteristics. However, the statement that if either eye is above 8D, the 10D-rated Meridian Series 147 is the only cataloged option is overbroad. The catalog supports it only up to 10D; for prescriptions above 10D, it is not an applicable option, and [3] does not support the unqualified conditional claim. Therefore, at least one cited claim is overstated relative to its source."
+      }
+    },
+    {
+      "id": "constructed-groundedness-fail-titanium-fabrication",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claims that titanium frames are generally more hypoallergenic, 30–40% lighter than standard metal alloys, and often recommended for sensitive skin are not supported anywhere in the retrieved catalog or advice. They may be general industry claims, but they are ungrounded under the provided evidence requirement. 2. The statement that none of the listed frames are identified as titanium or regular metal is supported: the catalog identifies the materials as TR90 or acetate for all five frames. 3. The identification of TR90 in Halcyon Type 165 at 21.3g and Orbit&Co Line 323 at 18.4g is directly supported by [1] and [4]. 4. The identification of acetate in Meridian Form 420, Meridian Series 147, and Sundial Type 312 is directly supported by [2], [3], and [5]. Because at least one checkable claim is unsupported, the overall answer fails."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The cited claim that TR90 appears in the Halcyon Type 165 and Orbit&Co Line 323, with weights of 21.3g and 18.4g respectively, is supported by [1] and [4]. The cited claim that acetate appears in the Meridian Form 420, Meridian Series 147, and Sundial Type 312 is supported by [2], [3], and [5]. The statement that none of the listed frames are titanium or regular metal is consistent with all five catalog entries, which identify the materials as TR90 or acetate. The uncited general claims about titanium are not evaluated under the citation-accuracy criterion."
+      }
+    },
+    {
+      "id": "constructed-groundedness-fail-blue-light-fabrication",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that none of the listed rimless frames meets an approximately -6.00D prescription is supported: the catalog lists maximum compatibility of 4.00D or 3.50D for all five frames.\n2. The individual compatibility figures for Orbit&Co Line 482, Orbit&Co Type 282, Basalt Form 448, Sundial Series 103, and Halcyon Type 404 are accurately supported by the catalog.\n3. The explanation that rimless lenses are drilled and attached directly to the bridge and temples is a permissible plain-language explanation of drilled rimless mounting.\n4. The statements that smaller lenses generally reduce thickness and that larger or irregular shapes can increase thickness are supported by A1.\n5. The statements about material selection for drilled mounting, 1.74 being marked for high prescriptions, and 1.74 having lower tensile strength than 1.60 and 1.67 are supported by A2 and A3. The brief explanation of tensile strength is acceptable terminology clarification.\n6. Calling the Halcyon the nearest option by shape and size is a derived, subjective comparison, but its described supporting attributes—a small, regular, round shape and its 47 mm lens height/width—are present in the catalog. This is not the main grounding problem.\n7. The final claim that rimless frames like these block blue light from screens is ungrounded and partly contradicted by the catalog. Only Sundial Series 103 and Halcyon Type 404 are listed as blue-light ready; the other three are explicitly not blue-light ready. Rimless construction itself is not given as a basis for blue-light blocking, and no context supports that it would help digital eye strain.\n\nBecause at least one checkable factual claim is unsupported, the answer fails groundedness."
+      }
+    },
+    {
+      "id": "constructed-citation-fail-swapped-frame-numbers",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "1. The Kestrel is listed at ₹1,350, is good for daytime driving, has polarized lenses and UV400 protection, fits medium face widths, supports prescriptions up to 6D, and has 20 units in stock. Each of these claims is supported by retrieved catalog frame [1]. It is therefore correctly described as an under-₹3,000 recommendation.\n2. The Sable is listed at ₹2,200 and is good for daytime driving, supports prescriptions up to 6.5D, is not polarized, fits wide face widths, and has one unit in stock. All of these claims are supported by catalog frame [3], regardless of the answer's citation number.\n3. The Wren is listed at ₹2,150, is good for daytime driving, is not Rx-compatible, has UV400 protection, and has a grey tint. These claims are supported by catalog frame [2], again regardless of the citation number used.\n4. Both alternatives are within the ₹3,000 budget based on their listed prices. No unsupported technical or comparative claims are made.\n\nverdict: pass"
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The Kestrel sentence is correctly cited [1]: the catalog entry supports its ₹1,350 price, polarization, UV400 protection, medium fit, prescription compatibility up to 6D, and stock quantity. The Sable alternative is cited [2], but [2] describes the Wren frame, not Sable; therefore its price, driving suitability, prescription compatibility, wide fit, and one-unit stock claims are misattributed. The Wren alternative is cited [3], but [3] describes Sable, not Wren, so its driving suitability, lack of prescription compatibility, UV400 protection, and grey tint claims are also misattributed. Because at least one cited claim has the wrong source, the answer fails."
+      }
+    },
+    {
+      "id": "constructed-citation-fail-swapped-advice-refs",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "1. The statement that progressive lenses can fit in a small frame with the right fit is supported by the advice to select a well-fitting frame, and by the catalog listing narrow-face frames that are progressive-ready.\n2. The recommendations and all listed specifications for Nira Series 863 and Meridian Form 420 are supported by catalog entries [4] and [2]: widths, narrow-face fit, lens heights, progressive readiness, prescription limits, prices, and stock counts.\n3. The statement about frame-depth guidance around 25–30 mm or more is supported somewhere in the retrieved advice by [A3], which describes OptiCampus's 25–30 mm figure as a general-purpose frame-depth/B-height minimum and notes longer designs can require more. The answer cites [A2], but citation placement is separate from groundedness.\n4. The statement about minimum fitting heights of approximately 16–20 mm is supported by [A2], which gives 16, 18, and 20 mm depending on progression length, and is also corroborated by [A4]. Although the answer cites [A3], the claim is still present in the retrieved context.\n5. The answer does not explicitly equate the listed lens heights with fitting height or claim that those lens-height numbers alone satisfy a fitting-height requirement.\n\nAll checkable claims are supported by the provided catalog or advice context."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The frame recommendations are accurately cited: [4] supports Nira Series 863’s 114mm width, narrow-face fit, 34mm lens height, progressive readiness, 8D limit, price, and stock; [2] supports the corresponding Meridian Form 420 details. However, the statement that progressive frames are commonly around 25–30mm or more is cited as [A2], which only discusses minimum progressive fitting heights of 16mm, 18mm, and 20mm—not frame depth. That information is addressed in [A3]. The subsequent statement about minimum fitting heights of 16–20mm is cited as [A3], but [A3] discusses frame depth/B-height figures and explicitly distinguishes them from fitting-height figures; [A2] supports the 16–20mm fitting-height claim. Therefore, both advice citations are misattributed."
+      }
+    },
+    {
+      "id": "constructed-citation-fail-hallucinated-statistic",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that adjustable nose pads should help with glasses sliding is reasonably supported by [A1], which says adjustable nose-pad arms allow small fitting corrections, though the source does not specifically discuss nose slippage. 2. The claim that studies show 73% of wearers improve within a week is not supported anywhere in the retrieved context. [A1] contains no study, percentage, or one-week improvement timeframe. 3. The recommendation of Truss Series 377 and its adjustable nose pads, 20.2g weight, Rx compatibility up to 6D, and 37 units in stock is fully supported by catalog entry [2]. Because the answer includes the unsupported 73% statistic and timeframe, the overall answer fails groundedness."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that “studies show 73% of wearers with nose-slippage issues see improvement within a week of switching to adjustable pads” is cited to [A1], but [A1] only states that adjustable nose-pad arms allow small fitting-height corrections later. It provides no study, 73% statistic, one-week timeframe, or specific evidence about reducing nose slippage. This citation is misattributed. 2. The recommendation of the Truss Series 377 and its listed facts—adjustable nose pads, 20.2g weight, Rx compatibility up to 6D, and 37 units in stock—are supported by catalog source [2]. However, the incorrect [A1] citation is sufficient for failure."
+      }
+    },
+    {
+      "id": "constructed-groundedness-fail-invented-product",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that a Zeiss Precision Superb 1.74 index lens is available is unsupported: the retrieved catalog only lists frames, and no Zeiss lens or availability information appears in the context. 2. The claim that it would be “perfect” for a strong prescription is also unsupported. The advice says 1.74 is recommended for a high prescription for lens-thinness benefits, but it does not establish that this specific lens is perfect. 3. The claim that it is “our thinnest option” is not grounded in the provided context. While 1.74 is the highest index listed in the rimless-material table and is associated with lens-thinness benefits, the context does not identify a product lineup or confirm this is the assistant’s thinnest available option. 4. The claim that it pairs well with any of the frames is unsupported and overbroad. The context contains no compatibility statement for this lens across all listed frames, and the rimless advice specifically discusses material considerations rather than universal compatibility. Therefore, at least one checkable claim is ungrounded."
+      }
+    },
+    {
+      "id": "constructed-hedging-fail-convention-stated-as-requirement",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The claim that a round-faced customer will “need” angular or rectangular frames is not grounded. The advice says angular or rectangular frames are conventionally suggested as a style contrast, but explicitly states this is a preference rather than a requirement and that any frame shape can work optically if it fits.\n2. The reference to rectangular options is supported by catalog frames [2] and [4], both of which are rectangular and fit narrow face widths.\n3. The statement that these options would work well for progressive lenses is supported by both [2] and [4] being marked progressive-ready and Rx-compatible.\nBecause the answer contains the unsupported/overstated “need” claim, the overall verdict is fail."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The answer cites [A1] for the claim that a round-faced customer will “need” angular or rectangular frames. A1 says angular or rectangular frames are conventionally suggested as a style preference, explicitly not an optical fitting requirement, and that round-faced customers can use any frame shape that fits. Thus [A1] does not support the necessity claim and the wording overstates the source. The uncited reference to narrow-fit rectangular options is not evaluated here. Since at least one cited claim is overstated relative to its source, the verdict is fail."
+      },
+      "hedging_match": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The answer cites [A1] for the claim that a person with a round face “will need” angular or rectangular frames. [A1] labels this as a convention: angular/rectangular frames are conventionally suggested as a style contrast, not required for optical fitting. The answer presents it as a requirement and plain fact (“you’ll need”), without identifying it as a style convention or hedging it. Therefore the confidence register does not match the convention claim type. The progressive-lens statement is not the cited convention claim at issue."
+      }
+    },
+    {
+      "id": "constructed-hedging-pass-convention-correctly-hedged",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "1. The claim that angular or rectangular frames are commonly suggested for round faces is directly supported by [A1].\n2. The qualification that this is a style convention rather than an optical fitting rule is also directly supported by [A1].\n3. Nira Series 863 and Meridian Form 420 are both rectangular frames in the catalog ([4] and [2]) and both are listed as fitting narrow face widths, so describing them as rectangular options from the narrow-fit range is grounded.\n4. Both frames are explicitly listed as progressive-ready in the catalog, so the progressive-ready claim is grounded.\n5. The reference to trying them on and the conditional phrase about needing progressive lenses are conversational/recommendation language and do not introduce unsupported factual claims.\nAll checkable claims are supported by the provided context."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "1. The claim that angular or rectangular frames are commonly suggested for round faces, and that this is a style convention rather than a fitting rule, is directly supported by [A1].\n2. Meridian Form 420 is identified in [2] as a rectangular frame from the narrow-fit range and as progressive-ready.\n3. Nira Series 863 is identified in [4] as a rectangular frame from the narrow-fit range and as progressive-ready.\nAll cited claims are correctly supported by their attached citations."
+      },
+      "hedging_match": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The answer’s advice-sourced claim is that angular or rectangular frames are a suggestion for rounder faces. It cites [A1], which is labeled a convention claim, and correctly hedges it as a “common style suggestion,” explicitly calls it a “style convention,” and says it is not a fitting rule. The remaining claims about the specific frames being rectangular, narrow-fit, and progressive-ready come from the catalog citations [2] and [4], not the advice references, so they do not create a convention-confidence issue."
+      }
+    },
+    {
+      "id": "constructed-hedging-pass-physical-only-plain",
+      "source": "constructed",
+      "groundedness": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "1. The answer states that none of the five rimless frames meet an approximately -6.00D prescription. The catalog lists maximum Rx compatibility of 4D for [1] and [4], and 3.5D for [2], [3], and [5]. Thus, the stated -3.50D to -4.00D limits and conclusion that -6.00D exceeds all of them are supported by the catalog.\n2. The answer states that 1.74 high-index material is recommended for thinness at high prescriptions. [A3] explicitly identifies 1.74 as recommended for a high Rx and explains that this recommendation is for lens-thinness benefit.\n3. It states that 1.74 has lower tensile strength than 1.60 and 1.67. [A3] gives 31.6 kgf for 1.74, versus 80.5 kgf for 1.60 and 67.3 kgf for 1.67, directly supporting the comparison.\n4. It states that the lower tensile strength matters for a drilled mount. The advice specifically concerns drilled rimless lens material recommendations and distinguishes thinness from strength for drill mounting, so this claim is supported by [A2] and [A3].\n\nAll checkable claims are grounded in the retrieved catalog or advice."
+      },
+      "citation_accuracy": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The first sentence correctly states that all five frames have prescription limits below approximately -6.00D: [1] supports 4D, [2], [3], and [5] support 3.5D, and [4] supports 4D. Therefore, the conclusion that none meet a -6 prescription is supported by the attached frame citations. The second sentence correctly attributes the high-index material guidance to [A2] and [A3]: [A3] identifies 1.74 as recommended for a high Rx and gives its lower tensile strength compared with 1.60 and 1.67, while [A2] specifically explains why tensile strength matters for rimless drilled mounting and does not automatically favor 1.74. All cited claims are accurately supported."
+      },
+      "hedging_match": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The answer makes two advice-sourced claims. First, it states that 1.74 high-index material is recommended for thinness at high prescriptions and has lower tensile strength than 1.60 or 1.67, citing [A2][A3]. Both [A2] and [A3] are labeled physical, so a plain, confident statement is appropriate. Second, it says the lower tensile strength matters for a drilled mount; this is also a physical implication of the drilled-rimless material data in [A2][A3], not a convention or style preference. The statement about the frames' prescription limits is supported by the catalog citations [1]-[5], not advice citations. No convention claims are present, and no physical claim is improperly hedged."
+      }
+    },
+    {
+      "id": "real-7-round-face-skin-tone",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The opening recommendation is grounded: A1 explicitly recommends square and rectangular frames for round faces, and the catalog identifies the geometric options as suitable for round faces. The qualification that this is a styling convention rather than a fitting requirement is explicitly supported by A1.\n\nThe frame descriptions are supported by the catalog. Meridian Form 420 is rectangular, acetate, tortoise, suitable for round and oval faces, fits narrow widths, has a 47 mm lens width, a 19 mm bridge, and costs ₹1,150. Sundial Type 312 is square, acetate, tortoise, suitable for round and oval faces, fits narrow widths, has a 49 mm lens width, and costs ₹1,250. Halcyon Type 165 and Orbit&Co Line 323 are geometric olive TR90 frames suitable for round and oval faces and fitting medium widths. The stated prices, stock counts, and Orbit&Co's 18.4 g weight are also supported. The narrow-versus-medium recommendations are reasonable conclusions from the listed fit categories and face-shape suitability.\n\nThe statement that no metal-finish frame is included is supported by the retrieved catalog, whose listed frames are acetate or TR90 and whose colors are olive, tortoise, or havana. The skin-tone and metal guidance accurately follows A2, including the tortoise contrast guidance and the wrist-vein/metal associations.\n\nHowever, the final characterization that tortoise and havana are 'warmer, patterned colors' and olive is a 'more muted alternative' is not stated in the catalog or advice. The context supplies the color names but does not provide those specific warmth, pattern, or mutedness descriptions. This is an unsupported factual styling characterization, so the answer fails groundedness."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The cited face-shape advice is correctly supported by [A1]: it recommends square, rectangular, or boxy frames for round faces and explicitly frames this as a styling heuristic rather than a fitting requirement. The product details cited to [2], [5], [1], and [4] accurately match the catalog, including shapes, materials, colors, face-width fit, prices, weights, and stock counts. The catalog-based statement about the available colors and lack of a metal-finish option is also consistent with [1]-[5]. The complexion and undertone guidance is accurately attributed to [A2], including the tortoise contrast guidance and the vein-color associations for metals. However, the final cited claim that tortoise and havana are “warmer, patterned colors” and olive is “a more muted alternative” is not actually stated or specifically supported by the catalog sources, which only provide the color names. This is a styling characterization attached to [1]-[5], not merely a neutral gloss of the listed facts, so that citation is misattributed."
+      },
+      "hedging_match": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The answer uses [A1] to recommend square, rectangular, or geometric frames for a round face, but explicitly labels this as a style convention rather than a fitting requirement and notes personal preference, matching A1's convention claim type. It uses [A2] for complexion and metal-color guidance, and explicitly describes that guidance as a styling convention, using hedged language such as “can guide,” “conventionally suggested,” and “starting point.” The remaining claims are supported by catalog citations [1]-[5], not advice sources. No physical advice claim is improperly hedged or overstated, and no convention claim is presented as a plain physical fact."
+      }
+    },
+    {
+      "id": "real-8-multiple-pairs-eyewear-wardrobe",
+      "source": "real_pipeline_run",
+      "groundedness": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "1. The statement that an eyewear wardrobe is a style/convenience convention is broadly supported by A1's “eyewear wardrobe” framing and its categorization of different use situations. However, the stronger statement that owning more than one pair is not a medical requirement is not explicitly supported by the retrieved context.\n2. The claim that one pair can be enough if it is comfortable, fits the prescription, and covers usual activities is a recommendation. A2 supports selecting a well-fitting frame, and the catalog provides Rx limits and use tags, but the context does not establish that those conditions make one pair sufficient.\n3. The outdoor example is grounded: [3] is a sunglasses frame, is intended for outdoor use, has UV400 protection, and is Rx-compatible up to 10D.\n4. The different-work-demands examples are grounded: [2] is listed for computer work, night driving, everyday wear, and reading; [1] is listed for computer, everyday, and formal work. Characterizing these as different use patterns is supported by those purpose tags and A1's separate-use-category framing.\n5. The backup recommendation—that a second pair avoids being without glasses if the first is damaged or unavailable—is sensible, but the retrieved context contains no support for backup or damage/unavailability considerations.\n6. The recommendation to start with one everyday pair and add another for outdoor time, a different work setup, or backup is partly grounded in the catalog's purpose categories and A1, but the specific sufficiency and backup recommendations are not established by the evidence.\n7. The final description of [2] as covering the widest range of the listed indoor activities is supported by its listed computer, night-driving, everyday, and reading uses. Its narrow-face-width fit is also directly supported. The need to check prescription and face fit is supported by the catalog's Rx limits and A2's well-fitting-frame guidance, and the stated assumption about the prescription is appropriately qualified.\n\nBecause at least the “not a medical requirement,” one-pair-sufficiency, and backup claims are not supported by the provided context, the answer fails groundedness."
+      },
+      "citation_accuracy": {
+        "hand": "fail",
+        "judge": "fail",
+        "agrees": true,
+        "reasoning": "The citation [A1] correctly supports the existence of an “eyewear wardrobe” concept and the idea of using different glasses for different situations. However, the cited source does not support the stronger claim that this is merely a style/convenience convention and “not a medical requirement.” Its quoted language instead characterizes relying on one pair for all uses as a “fallacy” leading to visual fatigue and systemic failure. Thus [A1] is misapplied to part of the sentence. The other citations are accurate: [3] supports Meridian Series 147’s outdoor use, UV400 protection, and Rx limit; [2] supports Meridian Form 420’s listed use cases and narrow fit; and [1] supports Halcyon Type 165’s listed use cases. Because at least one cited claim is overstated or unsupported by its attached source, the answer fails."
+      },
+      "hedging_match": {
+        "hand": "pass",
+        "judge": "pass",
+        "agrees": true,
+        "reasoning": "The only advice citation used for the multiple-pairs recommendation is [A1], which is labeled a convention claim. The answer explicitly characterizes the “eyewear wardrobe” as a “style and convenience convention, not a medical requirement,” and uses conditional language such as “can be enough,” “becomes useful,” and “if you would value a backup.” It does not present owning multiple pairs as a physical or medical necessity. The cited catalog claims [1]–[3] are product facts, not advice citations, and are stated appropriately. Therefore, the confidence register matches the cited advice claim type."
+      }
+    }
+  ]
+}

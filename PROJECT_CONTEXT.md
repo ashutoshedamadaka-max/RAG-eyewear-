@@ -19,11 +19,38 @@ complete — catalog → SQL half built and A/B'd against Phase 1
 (`docs/phase3-hybrid-ab.md`). **Phase 4 complete** — advice → RAG built
 and orchestrated with the catalog half in one pipeline
 (`app/lib/pipelines/orchestrated.ts`), evaluated with three validated LLM
-judges (`docs/phase4-advice-rag.md`); `data/advice/` still has only 6
-documents (nowhere near the ~40–60 target) and is 100%
-`claim_type: physical` (no `convention` source yet), both flagged
-honestly rather than papered over. Phase 5 (retrieval quality) or
-finishing Phase 2's golden sets are next — see §2.
+judges (`docs/phase4-advice-rag.md`); `data/advice/` has 8 documents
+(still nowhere near the ~40–60 target, flagged honestly rather than
+papered over) — 6 vendor/CE documents plus one authored optician guide
+split into two files by `claim_type` (2026-08-31, see decisions.md and
+§5) — and is no longer 100% `physical`: 25 `physical` chunks, 3
+`convention` chunks, the corpus's first real (non-synthetic) convention
+content. **Phase 5 complete** — the multi-turn conversation layer
+(`app/lib/conversation/`, demo at `/conversation`) built as a shell around
+Phases 3–4's retrieval, unchanged: STATED→DERIVED→QUERY, partial slot
+updates, the five-question cap with stated assumptions, a safety
+interrupt checked every turn, and `StructuredFilter` (catalog-db.ts)
+extended to expose several catalog columns (`lens_height_mm`,
+`max_power_supported`, `weight_g`, `nose_pad_type`, `face_width_fit`,
+`wrap_angle`, `tint_color`) that existed in the DB since Phase 3 but had
+never actually been wired into a filter until §3's derivation table
+needed them for real — see decisions.md 2026-08-31. Four golden
+conversation cases in `evals/golden/conversation.json`, graded
+programmatically (`npm run eval-conversation`), now re-run three times
+after being reported as a single roll first time -- **22/22 all three
+runs**, genuinely stable (decisions.md 2026-08-31). The `/conversation`
+UI also now has a "show the machinery" toggle (off by default) tracing
+every turn's extraction, derivation, compiled SQL with true match count,
+relaxation-ladder detail, retrieved advice chunks, citation map, and
+per-stage latency — presentation of data the pipeline already computed,
+not new capability, per §7's demo-scope requirement. **This is not the
+same thing as the numbered "Phase 6" row in §2** (retrieval-technique
+comparison: chunking strategy, hybrid search, reranking) — that phase is
+still not started; the machinery toggle was UI/demo work completing
+Phase 5's own §7 requirement, informally called "Phase 6" in the request
+that produced it, and is noted here as such to avoid the two being
+conflated. §2's numbered Phase 6, or finishing Phase 2's golden sets, are
+next.
 
 ---
 
@@ -74,10 +101,11 @@ Do not skip or reorder these. The reasons are in each line.
 | 2 (started) | **Eval harness + three golden sets** | Before any optimisation. Without it every later "improvement" is superstition. |
 | 3 ✅ | **Catalog → SQL tool** | The A/B table against Phase 1 justifies the structured half of the architecture |
 | 4 ✅ | **Advice → RAG, orchestrated with Phase 3's SQL tool in one pipeline** | Renumbered 2026-08-31 to its own row — this turned out to be a genuinely separate build (chunking, embedding, claim_type runtime behavior, LLM judges), not a sub-step of Phase 3, and was blocked on the advice corpus existing at all (§5), which Phase 3 wasn't. The original plan bundled these as one "Phase 3"; splitting the row after the fact rather than pretending the plan predicted two sessions. |
-| 5 | Retrieval quality: chunking strategy, hybrid search, reranking — measured separately | Report which techniques helped and which didn't, with numbers. Distinct from Phase 4: that phase built the RAG pipeline; this phase compares alternative retrieval techniques against it |
-| 6 | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it — and measure the catalog/advice freshness asymmetry surfaced 2026-08-31 (SQL needs no re-embedding on a catalog change; advice does) |
-| 7 | Latency: instrument per stage, parallelise, stream | Budget before/after |
-| 8 | Write-up | Assemble from `decisions.md` |
+| 5 ✅ | **Conversation layer**: multi-turn slot-filling shell (STATED → DERIVED → QUERY, §3) over Phase 3+4's retrieval, unchanged | Renumbered 2026-08-31, same reason as Phase 4's split above — every prior phase answered one query at a time; this is a genuinely separate concern (turn-by-turn slot state, sufficiency/question-cap rules, safety interrupts) layered on top of retrieval that Phases 3–4 already built and this phase does not modify |
+| 6 | Retrieval quality: chunking strategy, hybrid search, reranking — measured separately | Report which techniques helped and which didn't, with numbers. Distinct from Phase 4: that phase built the RAG pipeline; this phase compares alternative retrieval techniques against it |
+| 7 | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it — and measure the catalog/advice freshness asymmetry surfaced 2026-08-31 (SQL needs no re-embedding on a catalog change; advice does) |
+| 8 | Latency: instrument per stage, parallelise, stream | Budget before/after |
+| 9 | Write-up | Assemble from `decisions.md` |
 
 **Start `decisions.md` on day one and log as you go, including reversals and dead
 ends.** Post-hoc decision logs read as fabricated because they usually are — they
@@ -361,41 +389,61 @@ recall numbers will be flattered by easy questions.
 ## 5. The advice corpus — started, nowhere near complete
 
 This is what RAG actually runs on. Target is roughly 40–60 documents; as of
-2026-08-29 there are 7, in `data/advice/`, each fetched and read directly
-rather than written from memory (Rodenstock ×2, Zeiss, HOYA, Vision
-Council EPIC, OptiCampus, TTUHSC — see decisions.md 2026-08-29 for how each
-was sourced and verified, including two dead links recovered via
-web.archive.org). They exist because Phase 3's threshold work needed them,
-not because corpus-building started as its own effort — the advice → RAG
-pipeline itself is still not built (§1, §2).
+2026-08-31 there are 8, in `data/advice/`, each fetched or otherwise
+obtained and read directly rather than written from memory (Rodenstock ×2,
+Zeiss, HOYA, Vision Council EPIC, OptiCampus, TTUHSC — decisions.md
+2026-08-29 for how each was sourced and verified, including two dead links
+recovered via web.archive.org — plus one authored optician guide, below).
+They exist because Phase 3's threshold work needed them, not because
+corpus-building started as its own effort.
 
 **Do not generate this content with an LLM.** If the sources aren't real, the
 system launders model output back to itself, citations point at nothing, and
 faithfulness evals become circular. A sharp interviewer will name that. This
 has held for every document added so far — see each file's frontmatter for
-`source_url` and `verification_method`.
+`source_url` (or `source_provenance` for a non-URL source, added 2026-08-31)
+and `verification_method`.
 
 Sources with clean licensing: American Academy of Ophthalmology patient
 material; Zeiss and Essilor technical lens guides; The Vision Council; optometry
 school extension material; Wikipedia for lens-index physics.
 
-**Highest-value source: an interview with a practising optician.** Record,
-transcribe, chunk. It is original primary material, licensing-clean, contains
-tacit knowledge that isn't written down, and reads well in a PM write-up. Ask
-specifically about the questions customers ask that websites answer badly — that
-conversation also produces the Phase 2 golden set.
+**Highest-value source, obtained: a written guide authored by a practising
+optician** (`data/advice/optician-guide-anatomical-fit.md` and
+`optician-guide-style-and-complexion.md`, raw source preserved at
+`data/advice/raw/optician-guide-raw.md`). Correction, 2026-08-31: earlier
+drafts of this section described the plan as booking an *interview* to
+record and transcribe. What actually arrived was different in kind, not
+just in scheduling — an already-authored guide, privately shared via
+Google Docs on 2026-08-27, single-source and not peer-reviewed, not an
+interview transcript. The distinction matters for the write-up's
+provenance section: this is one optician's own written material, not a
+conversation this project elicited and shaped with its own questions —
+see decisions.md 2026-08-31 for the full sourcing history and the
+breakdown of what was kept, tagged, and excluded from it (including a
+technical claim — an unsupported >44mm progressive-height figure — that
+this document was itself the origin of, and that was deliberately not
+carried into the physical-tagged file once vendor documentation didn't
+support it).
 
-Topics to cover: PD and frame width; lens index and edge thickness; progressive
-and bifocal height requirements; material properties and skin sensitivity; sport
-and occupational needs; common fit complaints and causes; face-shape convention;
-when to refer to a professional.
+Topics covered: frame width formula, DBL ranges, nose-profile rules,
+temple-tension (splaying/pressing), cheekbone alignment, long-face ratio
+(all `physical`); face-shape-to-frame-style pairing, complexion/undertone
+metal selection, the "eyewear wardrobe" purpose framing (all `convention`,
+see §11 for the boundary between this being retrievable and it being
+solicited in conversation). Not covered by this document, still needed
+from elsewhere: sport/occupational needs, skin-sensitivity material
+properties, when to refer to a professional. A second interview or guide
+covering those gaps, plus the volume target below, remains open.
 
 Tag every document `claim_type: physical | convention | opinion` at ingest.
 **Exclude `opinion` documents from the corpus at ingest, not at retrieval** —
-see decisions.md 2026-08-28 for why (the practising-optician source is ~40%
-advocacy for independent opticians over volume retail, which is real content
-but the author's commercial interest, and it would surface in recommendations
-as unearned editorializing if it reached the corpus at all).
+see decisions.md 2026-08-28 for why (the optician guide is ~40% advocacy for
+independent opticians over volume retail, which is real content but the
+author's commercial interest, and it would surface in recommendations as
+unearned editorializing if it reached the corpus at all — confirmed and
+excluded per this rule once the actual document arrived, decisions.md
+2026-08-31).
 
 ---
 
@@ -478,7 +526,11 @@ eyewear-rag/
 1. `git init`, commit the catalog and this file
 2. Write the first `decisions.md` entries: why eyewear, why hybrid over pure RAG,
    why a synthetic catalog, what is explicitly not being built
-3. Book the optician session — longest lead time, blocks Phase 2
+3. ~~Book the optician session — longest lead time, blocks Phase 2~~ Resolved
+   2026-08-27/31: rather than a booked interview, an already-authored optician
+   guide was privately shared and has since been split, tagged, and chunked
+   into the corpus (§5, decisions.md 2026-08-31). This item is done, by a
+   different path than originally planned.
 4. Begin Phase 1: the deliberately naive pure-vector baseline
 
 ## 10. Companion skill
@@ -489,18 +541,38 @@ concerns. Install it so this architecture doesn't need re-explaining.
 
 ## 11. Deferred and future work
 
-**Deferred (not scheduled): complexion/undertone styling advice** — e.g. light
-tortoise reading better against dark skin, the wrist-vein test for gold vs
-silver metal tone. Real content in the optician source, and it's
-`claim_type: opinion`, but adopting it means introducing a skin-tone question
-into the conversation flow, and that's a product decision that hasn't been
-made deliberately yet. Do not add it opportunistically because the source
-material happens to cover it — see decisions.md 2026-08-28.
+**Retrievable but deliberately not conversational: complexion/undertone
+styling advice** — e.g. light tortoise reading better against dark skin, the
+wrist-vein test for gold vs silver metal tone. Correction, 2026-08-31: this
+was originally logged (2026-08-28, before the source document existed in
+this repo) as `claim_type: opinion` and deferred outright. Now that the
+actual optician guide is in the corpus, this content tags `convention`, not
+`opinion` — it's the guide's own styling heuristic, not advocacy against a
+competitor, and the earlier tag was a guess made without the source in
+hand. It is now chunked and retrievable
+(`data/advice/optician-guide-style-and-complexion.md`).
+
+**The boundary that's still deliberately not crossed:** retrievable is not
+the same as solicited. This content may inform an explanation if a
+customer's own query makes it relevant (e.g. someone asks whether skin
+tone matters for metal color, as in `evals/golden/judge_validation.json`'s
+`real-7-round-face-skin-tone` case) — but the conversation layer (§3, Phase
+5) does not ask the customer their skin tone as a slot to fill. Introducing
+a skin-tone *question* into the flow is a distinct product decision that
+still hasn't been made deliberately, and bringing the content into the
+retrievable corpus must not be read as having made it by accident. See
+decisions.md 2026-08-28 and 2026-08-31.
 
 **Future work (not scheduled): the "eyewear wardrobe" framing.** The
 optician's observation that one pair for everything is itself a common failure
 mode maps cleanly onto the existing `purpose_tags[]` slot. Possible feature:
 recommend a primary pair, then explicitly name the second use case it *won't*
 cover ("great for everyday and formal work — for actual sports use you'd want
-a wrap frame with polarized lenses, which this isn't"). Not built; flagging so
-it isn't lost. See decisions.md 2026-08-28.
+a wrap frame with polarized lenses, which this isn't"). Not built as a
+feature; the underlying content is now retrievable as citable `convention`
+content (`optician-guide-style-and-complexion.md`, §5) rather than a
+paraphrased idea, and the pipeline already surfaces it correctly when asked
+directly (`real-8-multiple-pairs-eyewear-wardrobe` in
+`evals/golden/judge_validation.json`) — but the *proactive* feature
+(recommending a second pair unprompted) is still not built. Flagging so it
+isn't lost. See decisions.md 2026-08-28, 2026-08-31.

@@ -44,7 +44,7 @@ export async function runHybridPipeline(query: string): Promise<PipelineResult> 
     }));
   } else {
     relaxed = true;
-    const alternatives = findNearestAlternatives(filter, 1);
+    const { alternatives } = findNearestAlternatives(filter, 1);
     alternativesUsed = alternatives.map((a) => ({ droppedClause: a.droppedClause, frame_id: a.frame.frame_id }));
     hits = alternatives.map((a) => ({
       frame_id: a.frame.frame_id,

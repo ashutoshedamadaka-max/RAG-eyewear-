@@ -1,0 +1,74 @@
+{
+  "_comment": "Phase 5: multi-turn conversation-layer golden set (PROJECT_CONTEXT.md §3, decisions.md 2026-08-31, 2026-09-01). Graded PROGRAMMATICALLY, not by an LLM judge -- slot state is structured data, the same reason app/lib/constraints.ts uses a deterministic check for catalog facts (PROJECT_CONTEXT.md §6), not prose needing a judge's read. Run via `npm run eval-conversation` (app/scripts/run-conversation-eval.ts), which drives each case's turns through the real app/lib/conversation/converse.ts pipeline (real extraction LLM calls, real catalog/advice retrieval) and asserts on the resulting ConversationState after each turn -- assertion logic lives in the runner, not this file. REWRITTEN 2026-09-01 after a live-transcript review found the face-shape opener and the `style` topic were structurally unreachable in every normal multi-turn flow (purpose is always answered first and virtually always satisfies its half of the sufficiency rule, so budget -- asked right before `style` -- always completed sufficiency first and short-circuited straight to a recommendation). Fixed: face shape is now asked unconditionally at turn 0, outside ASK_ORDER and the question cap; the sufficiency short-circuit is now gated to only fire at the very first decision point (askedTopics.length <= 1), so a genuinely mid-flow conversation goes through the full ask order instead of stopping the moment sufficiency happens to be met. Every existing case's turn script grew by one turn at the start (the face-shape opener's reply) and, for the two multi-turn cases that used to stop right at budget, one turn at the end (style, now actually reachable). Three new cases (budget-*) were added for the budget-extraction fix logged the same day: approximate language must produce a real min/max range, not a point constraint; a stated floor produces an exact range; a bare ceiling sets no minimum at all.",
+  "cases": [
+    {
+      "id": "mind-change-partial-update",
+      "description": "Mid-conversation mind-change: customer states a purpose, answers a question, then explicitly changes an earlier answer (computer glasses -> reading glasses instead) while also answering the currently-pending question in the same message. Tests that a partial update overwrites only the field it addresses -- the corrected purpose/product_type must replace the stale one, while fit_issues (answered in the same turn) and every other previously-known slot must survive untouched. Also exercises the post-fix flow: sufficiency is met at the budget turn but the conversation continues to the now-reachable `style` topic before recommending.",
+      "turns": [
+        "Not sure about my face shape, let's skip that.",
+        "I'm looking for computer glasses.",
+        "No, I don't wear glasses currently.",
+        "Actually, change of plans -- make it reading glasses instead of computer. Also, my current pair keeps sliding down my nose.",
+        "My budget is up to ₹1200.",
+        "I like a more minimal look, nothing flashy."
+      ],
+      "expected_behavior": "After the computer-glasses turn: purpose includes 'computer', product_type='computer'. After the change-of-plans turn: purpose no longer includes 'computer' and instead reflects reading; product_type='reading'; fit_issues includes 'slipping' (new information from the same turn, must not be lost alongside the correction). After the budget turn: budget_max=1200, sufficiency is met, but because 2+ topics have already been asked the conversation does NOT stop here -- it asks `style` next rather than recommending immediately. Only after the style turn does status become 'done', with the compiled QUERY filter reflecting product_type='reading', not the earlier 'computer'."
+    },
+    {
+      "id": "volunteers-everything-upfront",
+      "description": "Customer answers the very first opening reply (to the face-shape opener) with enough information to satisfy the sufficiency rule outright, including explicitly skipping face shape. Tests that the system recognizes sufficiency at the first decision point and does not proceed through the remaining ask-order topics just because they haven't been reached yet.",
+      "turns": [
+        "Not sure about my face shape -- skip that. I need everyday eyeglasses, budget up to ₹6000, and I don't currently wear glasses."
+      ],
+      "expected_behavior": "Zero ASK_ORDER topics are ever asked (askedTopics stays empty -- the face-shape opener isn't tracked in askedTopics at all) -- prescription, fit_issues, budget, and style are never separately asked because product_type, budget, and purpose are all satisfied by this single reply, and askedTopics.length (0) is still within the <=1 short-circuit gate. Status moves straight to 'done' with a recommendation after just one user turn."
+    },
+    {
+      "id": "never-gives-prescription",
+      "description": "Customer answers every question except giving an actual prescription number -- when asked, they say they don't know it. Tests that the system does not block on the missing number and that the moderate-Rx assumption used to compile the query is explicitly surfaced. Also exercises the post-fix flow: sufficiency is met at the budget turn but continues to `style` before recommending, same as mind-change-partial-update.",
+      "turns": [
+        "Not sure, let's skip that.",
+        "Eyeglasses for everyday wear.",
+        "I do wear glasses but honestly I have no idea what my prescription is.",
+        "No real fit issues so far.",
+        "My budget is up to ₹3000.",
+        "Something minimal would be nice."
+      ],
+      "expected_behavior": "rx_status becomes 'unknown' (not a guessed rx_power) after the prescription turn. Sufficiency is reached at the budget turn but the conversation continues to `style` (now reachable) before recommending. The compiled query still runs a rimless/edge-thickness safety check using an assumed moderate power (PROJECT_CONTEXT.md §3's 'honest tension' section), and that assumption is both present in the derived-facts list AND stated in the generated answer's prose."
+    },
+    {
+      "id": "safety-interrupt-turn-four",
+      "description": "Customer proceeds through three completely ordinary shopping turns (face-shape skip, purpose, prescription all answered normally) before, on the fourth message, reporting a vision symptom instead of answering the pending fit_issues question. Tests that the safety interrupt is a per-turn check, not a first-turn special case, and that it fires even with the face-shape opener now in front of everything else.",
+      "turns": [
+        "Not sure, skip.",
+        "Eyeglasses for everyday wear, mainly office work.",
+        "Yes I wear glasses, about -2.50, just single vision.",
+        "Actually, I've been seeing flashes of light in my peripheral vision the last couple days -- is that something these glasses would help with?"
+      ],
+      "expected_behavior": "Turns 1-3 proceed as an entirely normal conversation (face-shape skip, then purpose and prescription topics asked and answered in order, fit_issues never reached). On turn 4, safety_flag='vision_symptom' is detected regardless of the pending topic and status immediately becomes 'safety_interrupt' -- the assistant declines to recommend a product, refers to an optometrist, and does not continue toward fit_issues/budget/recommendation. Slots gathered in turns 2-3 (purpose, rx_power, lens_type) remain intact in state afterward."
+    },
+    {
+      "id": "budget-approximate-produces-range",
+      "description": "Added 2026-09-01 after the live-transcript review found 'somewhere around ₹3000' was extracted as budget_min=budget_max=3000 -- a point constraint that only 'worked' in that transcript because a frame happened to be priced at exactly ₹3,000. Any other approximate figure would return zero matches and wrongly trigger the relaxation ladder over a budget that was never meant to be a hard boundary. Tests that approximate language ('somewhere around') produces a genuine min/max RANGE, not equal bounds.",
+      "turns": [
+        "Not sure on my face shape. I need everyday eyeglasses, and my budget is somewhere around ₹3000."
+      ],
+      "expected_behavior": "budget_min and budget_max are both set, roughly 15-20% below/above ₹3000 respectively (e.g. budget_min in [2350,2700], budget_max in [3300,3650]) -- and critically, budget_min != budget_max. Sufficiency is met at the first decision point (single volunteered turn), so the conversation recommends immediately. The compiled SQL's WHERE clause includes both `price_frame_only <= ?` and `price_frame_only >= ?` with genuinely different bound values, not the same number twice."
+    },
+    {
+      "id": "budget-stated-floor-produces-exact-range",
+      "description": "Companion to budget-approximate-produces-range: when the customer states a genuine floor and ceiling, use their exact stated numbers, not a computed approximate range.",
+      "turns": [
+        "Not sure on my face shape. I need everyday eyeglasses, budget between ₹2000 and ₹3000."
+      ],
+      "expected_behavior": "budget_min=2000 and budget_max=3000 exactly -- the customer's own stated numbers, not a ±15-20% computed band around either figure."
+    },
+    {
+      "id": "budget-bare-ceiling-no-minimum",
+      "description": "Companion to the above two: a bare ceiling ('under ₹X') must set budget_max only, with no minimum at all -- not a point constraint, not a computed floor.",
+      "turns": [
+        "Not sure on my face shape. I need everyday eyeglasses, keep it under ₹3000."
+      ],
+      "expected_behavior": "budget_max=3000, budget_min is unset entirely (not present in slots). The compiled SQL's WHERE clause includes `price_frame_only <= ?` but does NOT include `price_frame_only >= ?` at all."
+    }
+  ]
+}
