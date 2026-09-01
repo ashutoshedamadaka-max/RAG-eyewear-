@@ -380,7 +380,12 @@ def _purpose_compatible(f, purpose):
 if __name__ == "__main__":
     from render import render_frame
 
-    out_dir = "/home/claude/eyewear/out"
+    # Relative to this file, not the cloud-sandbox path this script was
+    # originally authored in (/home/claude/eyewear/out) -- fixed 2026-09-01
+    # (decisions.md, Phase 7) so this script and validate.py actually run
+    # against this repo's real layout (data/catalog/out/) instead of a path
+    # that only ever existed in the environment that first wrote this file.
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
     img_dir = os.path.join(out_dir, "images")
     os.makedirs(img_dir, exist_ok=True)
 

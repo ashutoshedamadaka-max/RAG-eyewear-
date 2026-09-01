@@ -62,8 +62,8 @@ not a physical necessity.
 > "The 'Contrast Rule' dictates that light tortoise shell pops on dark
 > skin, while dark tortoise provides definition for light skin. For
 > metals, we use the Wrist Vein Test to determine undertones:"
-> "Green Veins (Warm): Use High-grade Ion-Plated Gold Titanium or bronze."
-> "Blue Veins (Cool): Use Silver, pewter, or stainless steel finishes."
+> "Green Veins (Warm): Use Platinum-Finish Silver or brushed pewter."
+> "Blue Veins (Cool): Use High-grade Ion-Plated Gold or rose gold finishes."
 
 This is the complexion/undertone guidance this project previously deferred
 (decisions.md 2026-08-28, "Deferred: complexion/undertone styling

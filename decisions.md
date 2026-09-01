@@ -2116,4 +2116,331 @@ and a coherent, correctly-hedged, vocabulary-policy-compliant answer.
 Nothing committed to git.
 
 ---
+
+## 2026-09-01 · The `assumedRx` recurrence is a fourth "documented ≠ implemented" instance, and a different mechanism from the first three
+
+Logged separately from the three named 2026-08-31, because the shape is
+genuinely different, not just another repetition:
+
+**Instances 1-3** were rules that existed in prose and never reached the
+code at all -- the B-height/fitting-height distinction was correctly
+researched and written up, but no system-prompt constraint enforced it
+until a live transcript tripped it; most of §3's derivation table was
+carefully specified but never compiled into a `StructuredFilter` clause
+until Phase 5 needed it; `findNearestAlternatives` had no code-level
+concept of "never relax" at all, just a documented list of fields that
+were supposed to be exempt. In all three, the gap was between the
+document and the code -- nothing enforced the rule anywhere.
+
+**Instance 4 is different.** The `rimless_rx_cap` rule DID exist in code,
+correctly, in exactly one place: `deriveQuery`'s `effectiveRx`
+computation. The bug wasn't that the rule was unimplemented -- it's that
+the guard against showing it prematurely (before prescription had been
+asked) was implemented in a CALLER, not in the rule's own state model.
+The first fix (2026-09-01, earlier this session) discarded
+`deriveQuery`'s `assumptions` return value at the ask/interrupt call
+sites in `converse.ts`, rather than changing what `deriveQuery` itself
+computed. That fix held for exactly the thing it was written to
+suppress -- the `assumptions` array -- and nothing else. When ruleId-
+tagging added a NEW, previously-nonexistent `facts.push()` for the same
+rule (so stage 2's "N of M fired" count could dedupe it), that new
+`facts` entry reached the same premature "-4.00D assumed" state through
+a call path the first fix never touched, because the first fix was never
+really a fix to the rule -- it was a fix to one caller's display of one
+of the rule's two outputs (`assumptions`), and the rule's underlying
+`effectiveRx` computation was still unconditionally assuming on every
+call the whole time. `allowRxAssumption` (the eventual real fix) holds
+where the display patch didn't because it changes what `deriveQuery`
+itself computes, for every caller and every field the rule ever produces
+-- not what one caller does with one part of the output afterward.
+
+**The general lesson, stated directly because it's the point:** a rule
+enforced at one call site isn't enforced -- it's suppressed at that call
+site. The distinction only shows up once a second call site exists, which
+is exactly what happened here: the rule looked fixed for as long as
+`assumptions` was the only place it could leak, and stopped looking fixed
+the moment a second, independent path (`facts`) to the same underlying
+state was added. A rule is only actually enforced when it's correct in
+the function that computes the state, not in whichever caller happened to
+be the first one that needed it filtered.
+
+**Four instances, three distinct mechanisms, in one project, across one
+session:** prose that never became code (1, 2, 3 by one mechanism each --
+a missing constraint, a missing compiled clause, a missing exemption
+list) and code that existed but was guarded in the wrong layer (4). That
+spread is well past coincidence and is one of the stronger threads for
+the case study's write-up -- not "we found a bug," but "the same root
+cause keeps recurring in different disguises, and here's what each
+disguise looked like and why the fix that worked for one didn't
+generalize to the next."
+
+---
+
+## 2026-09-01 · Phase 7: knowledge-base freshness, measured
+
+Built as a measured experiment throughout, per the instruction -- every
+number below is from a real, executed run, not estimated, including the
+ones that complicate the story this project has been telling about
+itself.
+
+### 7a. The freshness asymmetry, measured -- and it's more complicated than the headline
+
+Timed both refresh paths twice each, cleanly (a single Windows dev-box
+run, `tsx` cold-start overhead included in every number since that's the
+real cost of running these scripts as they exist today):
+
+| operation | run 1 | run 2 |
+|---|---|---|
+| catalog: edit one price (JSON write) + rebuild `catalog.db` + confirm via query | ~8.3s | ~8.0s |
+| advice: edit one doc + re-chunk + re-embed (real OpenAI API call) + confirm via query | ~5.3s (1.86s chunk + 3.40s embed) | ~5.7s (2.27s chunk + 3.48s embed) |
+
+**The naive expectation -- SQL cheap, RAG expensive -- does NOT show up
+in wall-clock time at this corpus's actual size, and reporting that
+honestly matters more than reporting a clean story.** Advice refresh was
+measurably FASTER than catalog refresh in both runs. Investigated rather
+than smoothed over: both operations are dominated by `tsx`'s own
+per-invocation startup cost (~1.5-2s just to boot and load modules)
+at this scale, which swamps the actual per-row/per-chunk work --
+101 catalog rows and 28 advice chunks are both small enough that
+neither operation's real cost is the bottleneck; the process startup is.
+
+**The real asymmetry is structural, not a timing artifact, and shows up
+in what each path DEPENDS ON, not how long it took this one run:**
+
+- Catalog refresh: **zero external calls.** `build-catalog-db.ts` reads
+  local JSON, writes local SQLite. No network, no rate limit, no
+  per-request cost, nothing that can be down or slow.
+- Advice refresh: **one real network call to OpenAI's embeddings API**
+  every time, regardless of how much changed -- a genuine external
+  dependency the catalog path simply doesn't have, with real latency,
+  real cost (small at this scale, non-zero), and a real failure mode
+  (the API being unreachable) the catalog path can't experience at all.
+- **A separate, real inefficiency, found while measuring this:**
+  `embed-advice.ts` re-embeds ALL 28 chunks on every run, even when a
+  single document changed one paragraph. There is no incremental/
+  selective re-embedding. At this corpus's current tiny size that costs
+  a few seconds and a fraction of a cent; at the ~40-60 document target
+  size (§5) it would mean every single-document edit re-pays the full
+  corpus's embedding cost, every time -- a cost that scales with total
+  corpus size, not with what changed. The catalog path has no equivalent
+  scaling problem: rebuilding all 101 rows from JSON is cheap regardless
+  of how many changed, because it was never network-bound to begin with.
+
+**Honest conclusion:** the architectural argument (SQL is the cheap half
+to keep fresh; the corpus is the expensive half) is correct and falls out
+of the SQL/RAG split, exactly as claimed -- but it's a claim about
+*external dependency and scaling*, not about wall-clock seconds at demo
+scale, and this measurement would have overstated it by cherry-picking a
+comparison that doesn't hold at the size this project actually built.
+Reported as measured, including the part that doesn't flatter the
+argument.
+
+### 7b. The staleness bug, demonstrated live before being fixed -- and a second, more interesting finding underneath it
+
+**Baseline (before any edit):** live query, "Does my skin tone matter for
+choosing metal color? I have warmer undertones" -- correctly answered
+"warmer undertones with gold or bronze finishes... cooler undertones...
+silver, pewter, or stainless steel" [A1], matching
+`optician-guide-style-and-complexion.md`'s real text at the time.
+
+**Edited the source document** (`data/advice/optician-guide-style-and-complexion.md`):
+inverted the Wrist Vein Test mapping -- "Green Veins (Warm)" now reads
+"Platinum-Finish Silver or brushed pewter" (was gold/bronze); "Blue Veins
+(Cool)" now reads "High-grade Ion-Plated Gold or rose gold" (was silver/
+pewter/steel). A clean, unambiguous, easily-verified change.
+
+**Did NOT re-chunk or re-embed.** Ran the identical live query again.
+**The system confidently repeated the OLD mapping** ("gold-toned titanium
+or bronze for warmer undertones... silver, pewter, or stainless-steel
+finishes are suggested for cooler undertones [A1]") -- a real, captured,
+live citation of content that no longer matched its own source document,
+with no indication anything was wrong. This is the bug this phase exists
+to demonstrate, not a hypothetical.
+
+**Built the fix:** `source_content_hash` (new field, `build-advice-chunks.ts`,
+a SHA-256 of each source `.md` file's full raw content, same value on
+every chunk from that document) plus `check-advice-freshness.ts`
+(`npm run check-advice-freshness`) -- compares each source file's current
+hash against what's recorded in `chunks.json`, reports any mismatch,
+exits non-zero if any document is stale. Same mechanism the catalog
+already had (`content_hash` per frame, `generate_catalog.py`), applied to
+the half of the system that was missing it. Ran it against the edited-
+but-not-rebuilt state: **correctly flagged
+`optician-guide-style-and-complexion.md` as stale**, correctly reported
+every other document fresh.
+
+**Rebuilt for real** (`advice-chunks` + `embed-advice`) and re-ran the
+freshness check: all documents fresh, as expected.
+
+**Re-ran the live query a third time, expecting the corrected mapping to
+now appear -- and found a second, more interesting bug instead.** The
+answer still said "gold or bronze metal finishes for warmer undertones"
+-- the OLD mapping, even though `chunks.json` was directly verified to
+contain the corrected text (confirmed by reading the actual chunk
+content, not assumed). Re-ran the identical query a second time to check
+this wasn't sampling noise: **reproduced identically both times.** The
+model was not citing stale data -- the retrieved context was genuinely
+current -- it was overriding a specific, correctly-retrieved, unusual
+fact with its own strong prior about a very common real-world styling
+convention ("warm undertones pair with gold" is common knowledge; the
+edited source said the opposite, and the model reported the common-
+knowledge version instead of the source's actual, specific claim).
+
+**Checked this against the machinery this project already built to catch
+exactly this: ran `judgeGroundedness` and `judgeCitationAccuracy`
+(`app/lib/judges.ts`) against the real transcript.** Both correctly
+failed it -- groundedness: "this claim therefore conflicts with the
+retrieved advice"; citation_accuracy: "the cited source does not support
+the specific claim and instead contradicts it." **The detection mechanism
+for this exact failure mode already exists and works; it simply isn't
+wired into the live conversation path, only into the offline eval
+harness.** Noted as a real, unresolved gap -- not fixed this session,
+since closing it means deciding whether/how to run a judge post-
+generation in the live path (added latency and cost on every real
+answer), a real product tradeoff worth its own decision, not something to
+bolt on unreflectively at the end of an already-large session. Flagged
+here so it isn't lost, not silently left for someone to rediscover.
+
+**The `content_hash` staleness check and the groundedness judge catch two
+different, non-overlapping problems, and this session accidentally
+demonstrated both in one experiment:** `content_hash` catches "the served
+index doesn't match its own source" (fixed here); the judges catch "the
+generated answer doesn't match what was actually retrieved" (already
+built, already validated, not yet load-bearing in production). Freshness
+alone -- the thing this sub-phase set out to fix -- is necessary but was
+just shown, live, not to be sufficient.
+
+### 7c. Catalog churn, simulated and reported honestly
+
+Fixed two Python scripts' hardcoded cloud-sandbox paths first
+(`generate_catalog.py`, `validate.py` both referenced
+`/home/claude/eyewear/out`, a path that only ever existed in the
+environment these were originally authored in -- neither could run
+against this repo's actual layout until this fix) -- now relative to the
+scripts' own location, with `validate.py` additionally taking an optional
+catalog-path argument so it can validate a variant without touching the
+real `out/catalog.json`.
+
+**A real, separate bug found while fixing these:** `validate.py`'s
+image_seed-uniqueness check compared `len(set(...))` against a
+**hardcoded `100`** rather than `len(frames)` -- the exact "count must be
+computed from the data, never hardcoded" failure class this session's
+interface work already named as a hard rule, now found in Python
+validation tooling too. It fired the instant the catalog had 101 frames
+with 101 genuinely unique seeds: reported FAIL for a property that was
+actually true, because the check was really testing "are there exactly
+100 distinct seeds," which only ever meant "are they unique" by
+coincidence, back when the catalog was guaranteed to have exactly 100
+rows. Fixed to compare against `len(frames)`; also corrected two
+now-inaccurate "100" literals in adjacent status-message strings for the
+same reason.
+
+**Simulated a plausible "next week"**
+(`data/catalog/simulate_churn.py`, backs up the pre-churn catalog to
+`out/catalog.pre-churn-2026-09-01.json` first): 4 real price changes (one
+deliberately a clearance discount on the cheapest titanium frame,
+FR100, ₹4,600 → ₹4,200 -- chosen specifically to test whether the
+titanium-under-₹4,500 gap survives ordinary churn, not avoiding the
+question), 4 stock-outs, 3 new frames generated through the SAME seeded
+generator used for the original 100 (not hand-typed clones -- real
+images rendered for them via `render.py`, so they pass the same
+byte-uniqueness check as everything else), 2 discontinuations (removed
+from the catalog entirely, not just marked out of stock). Net: 100 -> 101
+frames.
+
+**Reported honestly, as asked:**
+
+- **The titanium-under-₹4,500 gap did NOT survive.** FR100 at ₹4,200 now
+  satisfies both `material == titanium` and `price <= 4500`
+  simultaneously -- confirmed three independent ways: `validate.py`
+  reports `LEAKED 1`; `npm run eval-gap-handling` drops to **2/3**
+  (the titanium case now has a real, non-empty exact match, so there's
+  no gap left to decline); `npm run nearest-miss`'s regeneration for
+  `gap3-titanium-under-4500` printed its own warning --
+  `"satisfies all constraints (shouldn't happen if the case is genuinely
+  empty)"` -- the tooling built for a different purpose (ground-truth
+  regeneration) caught the same real problem independently, unprompted.
+  The other two intentional gaps (polarized sports, progressive-ready
+  rimless) survived -- both still genuinely empty, both still resolve to
+  a real, named nearest alternative.
+- **Which golden cases broke, and which didn't, and why the difference
+  is itself informative:** `npm run eval-conversation` -- **36/36,
+  completely unaffected.** These cases assert on slot/state mechanics
+  (does a partial update overwrite correctly, does the safety interrupt
+  fire, does a budget phrase parse into a range) and never reference
+  specific catalog content, so they're structurally immune to catalog
+  churn by design, not by luck. `npm run eval -- --pipeline=hybrid`
+  against `physical.json`: mechanically fine (no crashes, constraint
+  checks still run correctly against whatever's actually in the
+  catalog), but the `titanium-under-4500` case's own PREMISE changed --
+  it used to demonstrate the relaxation ladder (no exact match, a named
+  alternative offered) and now demonstrates a successful exact match
+  instead, because the gap it was built to exercise is gone. Not a
+  crash, not a failure in the mechanical sense -- a golden case that
+  quietly stopped testing what it was written to test, which is its own
+  kind of breakage and arguably the more dangerous kind, since nothing
+  makes it loud on its own.
+- **Ordered-domain coverage: no gap found.** New check,
+  `check-ordered-domains.ts` (`npm run check-ordered-domains`), confirmed
+  every distinct `rim_type`/`material`/`face_width_fit` value in the
+  churned catalog is still covered by `ORDERED_DOMAINS`
+  (`config/domains.ts`). Expected, not a coincidence: the 3 new frames
+  were generated through `build_frame()`, the same function that produces
+  every value these domains were built to cover, so this check couldn't
+  have caught anything new from generator-driven churn by construction.
+  What it WOULD catch -- and hasn't yet been tested against -- is a
+  catalog change from a different source (real product data import,
+  hand-entered rows) introducing a genuinely new value. Worth naming as
+  the actual boundary of what this run proves, not overclaiming a check
+  that passed for a structural reason as if it were a stress test.
+
+**`npm run catalog:update`** (`catalog-update.ts`): rebuild `catalog.db`
+-> regenerate `nearest_miss` ground truth -> run `validate.py`
+(informational only -- deliberately not gating, since its "100 frames" /
+"45/25/15/15 type mix" checks are Phase 0's one-time generation contract,
+not an ongoing invariant a legitimate future catalog change should be
+blocked by; explained inline in the script, not just here) -> check
+ordered-domain coverage (this one DOES gate, since a domain gap is a real
+problem regardless of catalog size). Run successfully against the churned
+catalog; all four steps executed, output shown in full. Deliberately
+excludes `blurbs`/`embed` (the naive baseline's vector index) --
+nothing in the real pipeline depends on it staying fresh, and including
+it would misrepresent 7a's own finding about which half of the system
+actually needs re-embedding.
+
+### Corpus limitation, named rather than left for someone else to notice
+
+The advice corpus is lens-technical-heavy (progressive fitting height
+alone spans roughly 5 of the 8 source documents) and the `convention`
+tier is single-source (`optician-guide-style-and-complexion.md` is the
+only document contributing any `convention`-tagged content at all) --
+`PROJECT_CONTEXT.md` §5's ~40-60 document target was never reached; this
+project has 8. Every fit/styling claim this system hedges as "conventional
+guidance" ultimately traces back to one practising optician's authored
+guide, not a second, independent authority that could corroborate or
+contest it the way the six vendor/CE documents cross-check each other on
+the physical side. Adding real fit and styling sources from a second
+authority is the next corpus improvement, not a hypothetical one -- named
+here so it's a known, tracked gap rather than something a reader of the
+case study notices before this project does.
+
+### Verification
+
+`npx tsc --noEmit` clean. `npm run build` clean. `npm run eval-conversation`:
+36/36 (unaffected by churn, as explained above). `npm run eval-never-relax`:
+10/10 (unaffected -- tests impossible thresholds, not real catalog content).
+`npm run eval-gap-handling`: 2/3 (down from 3/3, honestly, for the reason
+given above). `npm run check-advice-freshness`: all documents fresh
+(post-fix). `npm run check-ordered-domains`: all covered.
+`npm run catalog:update`: all four steps ran successfully end to end
+against the churned catalog. The catalog now reflects this session's
+churn simulation plus one additional isolated price edit made for the 7a
+timing measurement (FR005, ₹7,900 -> ₹7,950) -- both are real,
+intentional, documented changes now part of the working catalog, not
+reverted, consistent with treating this as an ongoing system rather than
+a demo frozen at Phase 0. A pre-churn snapshot is preserved at
+`data/catalog/out/catalog.pre-churn-2026-09-01.json` if a reviewer wants
+to diff against the original 100.
+
+---
 <!-- next entry here -->

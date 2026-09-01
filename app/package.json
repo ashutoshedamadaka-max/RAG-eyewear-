@@ -17,7 +17,10 @@
     "validate-judges": "tsx scripts/validate-judges.ts",
     "eval-conversation": "tsx scripts/run-conversation-eval.ts",
     "eval-never-relax": "tsx scripts/run-never-relax-eval.ts",
-    "eval-gap-handling": "tsx scripts/run-gap-handling-eval.ts"
+    "eval-gap-handling": "tsx scripts/run-gap-handling-eval.ts",
+    "check-ordered-domains": "tsx scripts/check-ordered-domains.ts",
+    "catalog:update": "tsx scripts/catalog-update.ts",
+    "check-advice-freshness": "tsx scripts/check-advice-freshness.ts"
   },
   "dependencies": {
     "next": "16.3.3",

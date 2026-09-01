@@ -49,7 +49,23 @@ comparison: chunking strategy, hybrid search, reranking) — that phase is
 still not started; the machinery toggle was UI/demo work completing
 Phase 5's own §7 requirement, informally called "Phase 6" in the request
 that produced it, and is noted here as such to avoid the two being
-conflated. §2's numbered Phase 6, or finishing Phase 2's golden sets, are
+conflated. **Phase 7 complete** — freshness, measured: the catalog/
+advice refresh asymmetry (2026-09-01, decisions.md) turned out to be
+structural (external API dependency, no incremental re-embedding) rather
+than visible in wall-clock time at this corpus's small scale, reported
+honestly rather than as the cleaner story expected going in; a live
+staleness bug was demonstrated (a stale citation, captured verbatim),
+fixed with a new `source_content_hash` check
+(`npm run check-advice-freshness`), and a second, unfixed finding
+surfaced underneath it — the generation step can override a freshly-
+corrected fact with its own prior, which `judges.ts`'s existing
+groundedness/citation judges correctly catch but which isn't wired into
+the live path yet; a simulated catalog churn (`simulate_churn.py`)
+intentionally broke the titanium-under-₹4,500 gap and the report says so,
+along with a real `len(frames)`-vs-hardcoded-`100` bug this session's
+own "never hardcode a count" rule caught in Python tooling too;
+`npm run catalog:update` now wires the four-step regeneration into one
+command. §2's numbered Phase 6, or finishing Phase 2's golden sets, are
 next.
 
 ---
@@ -103,7 +119,7 @@ Do not skip or reorder these. The reasons are in each line.
 | 4 ✅ | **Advice → RAG, orchestrated with Phase 3's SQL tool in one pipeline** | Renumbered 2026-08-31 to its own row — this turned out to be a genuinely separate build (chunking, embedding, claim_type runtime behavior, LLM judges), not a sub-step of Phase 3, and was blocked on the advice corpus existing at all (§5), which Phase 3 wasn't. The original plan bundled these as one "Phase 3"; splitting the row after the fact rather than pretending the plan predicted two sessions. |
 | 5 ✅ | **Conversation layer**: multi-turn slot-filling shell (STATED → DERIVED → QUERY, §3) over Phase 3+4's retrieval, unchanged | Renumbered 2026-08-31, same reason as Phase 4's split above — every prior phase answered one query at a time; this is a genuinely separate concern (turn-by-turn slot state, sufficiency/question-cap rules, safety interrupts) layered on top of retrieval that Phases 3–4 already built and this phase does not modify |
 | 6 | Retrieval quality: chunking strategy, hybrid search, reranking — measured separately | Report which techniques helped and which didn't, with numbers. Distinct from Phase 4: that phase built the RAG pipeline; this phase compares alternative retrieval techniques against it |
-| 7 | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it — and measure the catalog/advice freshness asymmetry surfaced 2026-08-31 (SQL needs no re-embedding on a catalog change; advice does) |
+| 7 ✅ | Freshness: simulate catalog churn, incremental re-index | Demonstrate the stale-stock bug, then fix it — and measure the catalog/advice freshness asymmetry surfaced 2026-08-31 (SQL needs no re-embedding on a catalog change; advice does) |
 | 8 | Latency: instrument per stage, parallelise, stream | Budget before/after |
 | 9 | Write-up | Assemble from `decisions.md` |
 

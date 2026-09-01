@@ -11,6 +11,7 @@
 // ARE the safe split points.
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const ADVICE_DIR = path.join(ROOT, "data", "advice");
@@ -115,6 +116,17 @@ export interface AdviceChunk {
   source_provenance?: string;
   verified: string;
   verification_method: string;
+  /**
+   * Phase 7b (decisions.md, 2026-09-01): a hash of the SOURCE .md file's
+   * full raw content (frontmatter + body) as of this build -- same value
+   * on every chunk from the same document, since staleness is a per-
+   * document property. Lets `check-advice-freshness.ts` detect a source
+   * file edited since the last `advice-chunks`/`embed-advice` run without
+   * needing a separate manifest file to keep in sync -- the hash travels
+   * with the chunks it describes, in the one artifact retrieval actually
+   * reads.
+   */
+  source_content_hash: string;
 }
 
 function main() {
@@ -130,6 +142,7 @@ function main() {
   for (const file of files.sort()) {
     const docId = file.replace(/\.md$/, "");
     const raw = fs.readFileSync(path.join(ADVICE_DIR, file), "utf-8");
+    const contentHash = crypto.createHash("sha256").update(raw).digest("hex").slice(0, 16);
     const { data, body } = parseFrontmatter(raw);
 
     for (const required of ["title", "claim_type", "source_org", "verified"]) {
@@ -175,6 +188,7 @@ function main() {
         claim_type: data.claim_type,
         source_org: data.source_org,
         source_document: data.source_document ?? "",
+        source_content_hash: contentHash,
         ...(data.source_url ? { source_url: data.source_url } : {}),
         ...(data.source_url_secondary ? { source_url_secondary: data.source_url_secondary } : {}),
         ...(data.source_url_note ? { source_url_note: data.source_url_note } : {}),

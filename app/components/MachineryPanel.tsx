@@ -234,31 +234,37 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     stages.push({
       key: "cost",
       name: "What it cost",
-      headline: `₹${totalCostInr.toFixed(2)} for this answer`,
+      headline: `~₹${totalCostInr.toFixed(2)} est.`,
       render: () => (
         <>
-          <Note>
-            Token counts are read directly from each API response. The per-token rate for the
-            embedding model is OpenAI&apos;s real published price; the chat model&apos;s rate is an
-            illustrative estimate (this project&apos;s model has no public price list) — the token
-            counts are exact, the ₹ figure is a reasonable approximation built from them.
-          </Note>
+          {/* Token counts get the visual weight here -- they're the real, verifiable number
+              (read directly off each API response). The ₹ total is one arithmetic step removed
+              from that, at a rate this project can't verify, so it's deliberately smaller and
+              carries its caveat inline rather than in a footnote a reader could miss. */}
           <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-1.5 border-b border-[#26332E]">
             <span className="text-[10.5px] font-medium text-[#7B9089]">Model call</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[62px] text-right">Tokens in</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[62px] text-right">Tokens out</span>
+            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[70px] text-right">Tokens in</span>
+            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[70px] text-right">Tokens out</span>
           </div>
           {entry.modelCalls.map((c, i) => (
-            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-4 py-1.5 border-b border-[#26332E]">
-              <span className="text-[12.5px] text-[#C4D2CB]">{c.label}</span>
-              <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[62px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
-              <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[62px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
+            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-4 py-2 border-b border-[#26332E] items-baseline">
+              <span className="text-[13px] text-[#C4D2CB]">{c.label}</span>
+              <span className="font-mono text-[15px] font-medium text-[#E4EEE8] min-w-[70px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
+              <span className="font-mono text-[15px] font-medium text-[#E4EEE8] min-w-[70px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
             </div>
           ))}
-          <div className="flex gap-3 pt-2">
-            <span className="text-[12.5px] font-medium text-[#C4D2CB] flex-1">Cost of this recommendation</span>
-            <span className="font-mono text-[12.5px] font-medium text-[#9FE0C0] tabular-nums">₹{totalCostInr.toFixed(2)}</span>
+          <div className="flex gap-2.5 items-baseline pt-2.5 flex-wrap">
+            <span className="text-[12px] text-[#7B9089] flex-1">Cost of this recommendation</span>
+            <span className="font-mono text-[12.5px] text-[#9FE0C0] tabular-nums">~₹{totalCostInr.toFixed(2)}</span>
+            <span className="text-[10.5px] font-medium text-[#E8CF9B] bg-[#26332E] px-1.5 py-0.5 rounded whitespace-nowrap">
+              estimated — no public rate published for this model
+            </span>
           </div>
+          <p className="text-[11px] leading-relaxed text-[#5E7269] mt-2 max-w-[72ch]">
+            The token counts above are exact, read directly off each API response. The embedding
+            call&apos;s rate is OpenAI&apos;s real published price; the chat model&apos;s rate has
+            no public list to cite, so the ₹ total is a labelled estimate, not a verified cost.
+          </p>
         </>
       ),
     });

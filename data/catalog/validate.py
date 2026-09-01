@@ -6,8 +6,18 @@ from collections import Counter, defaultdict
 ALL_PURPOSES = ["everyday", "computer", "reading", "driving_day", "driving_night",
                 "outdoor", "sports", "dust_travel", "formal_work"]
 
-frames = json.load(open("/home/claude/eyewear/out/catalog.json"))
-img_dir = "/home/claude/eyewear/out/images"
+import sys
+
+# Relative to this file (2026-09-01, decisions.md, Phase 7) -- see the same
+# fix in generate_catalog.py for why. An optional CLI arg overrides the
+# catalog path so this can validate a churned/simulated variant without
+# touching the real out/catalog.json.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_catalog_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_HERE, "out", "catalog.json")
+_img_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.join(_HERE, "out", "images")
+
+frames = json.load(open(_catalog_path))
+img_dir = _img_dir
 fails, warns, notes = [], [], []
 
 
@@ -36,8 +46,9 @@ for f in frames:
     if h in hashes:
         dupes.append((f["frame_id"], hashes[h]))
     hashes[h] = f["frame_id"]
-check(not dupes, f"all 100 images byte-unique ({len(hashes)} distinct)")
-check(len({f["image_seed"] for f in frames}) == 100, "all image_seeds unique")
+check(not dupes, f"all images byte-unique ({len(hashes)} distinct of {len(frames)} frames)")
+check(len({f["image_seed"] for f in frames}) == len(frames),
+      f"all image_seeds unique ({len({f['image_seed'] for f in frames})} distinct of {len(frames)} frames)")
 
 # --- purpose coverage
 cov = defaultdict(lambda: defaultdict(int))

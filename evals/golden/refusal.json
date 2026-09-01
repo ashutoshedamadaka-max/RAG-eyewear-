@@ -162,8 +162,8 @@
           "sku": "NIR-100",
           "brand": "Nira",
           "model": "Edition 292",
-          "price_frame_only": 4600,
-          "violation": "price <= 4500 fails (actual: 4600)"
+          "price_frame_only": 4200,
+          "violation": "satisfies all constraints (shouldn't happen if the case is genuinely empty)"
         },
         {
           "relaxed": "material == titanium",
@@ -256,6 +256,15 @@
           "model": "Series 147",
           "price_frame_only": 1200,
           "violation": "price <= 1100 fails (actual: 1200)"
+        },
+        {
+          "relaxed": "product_type == sunglasses",
+          "frame_id": "FR013",
+          "sku": "HAL-013",
+          "brand": "Halcyon",
+          "model": "Type 165",
+          "price_frame_only": 1050,
+          "violation": "product_type == sunglasses fails (actual: \"eyeglasses\")"
         }
       ]
     },
