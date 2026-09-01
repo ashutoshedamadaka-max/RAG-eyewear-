@@ -200,6 +200,9 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
           {entry.timingsMs.adviceSearch !== undefined && (
             <div title={`Similarity search — ${entry.timingsMs.adviceSearch}ms`} className="h-[7px] rounded-sm bg-[#26332E]" style={{ flexGrow: Math.max(entry.timingsMs.adviceSearch, 1) }} />
           )}
+          {entry.timingsMs.relaxationSearch !== undefined && (
+            <div title={`Relaxation search — ${entry.timingsMs.relaxationSearch}ms`} className="h-[7px] rounded-sm bg-[#26332E]" style={{ flexGrow: Math.max(entry.timingsMs.relaxationSearch, 1) }} />
+          )}
         </div>
         {entry.modelCalls.map((c, i) => (
           <div key={i} className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
@@ -220,6 +223,13 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
             <span className="text-[12.5px] text-[#C4D2CB] flex-1">Finding matching guidance</span>
             <span className="text-[10.5px] font-medium text-[#7B9089]">similarity search</span>
             <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{entry.timingsMs.adviceSearch} ms</span>
+          </div>
+        )}
+        {entry.timingsMs.relaxationSearch !== undefined && (
+          <div className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
+            <span className="text-[12.5px] text-[#C4D2CB] flex-1">Searching for the nearest alternative</span>
+            <span className="text-[10.5px] font-medium text-[#7B9089]">relaxation ladder</span>
+            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{entry.timingsMs.relaxationSearch} ms</span>
           </div>
         )}
         <div className="flex gap-3 pt-2 mt-1 border-t border-[#26332E]">

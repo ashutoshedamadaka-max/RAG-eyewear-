@@ -2,6 +2,9 @@
   "name": "app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,7 +23,9 @@
     "eval-gap-handling": "tsx scripts/run-gap-handling-eval.ts",
     "check-ordered-domains": "tsx scripts/check-ordered-domains.ts",
     "catalog:update": "tsx scripts/catalog-update.ts",
-    "check-advice-freshness": "tsx scripts/check-advice-freshness.ts"
+    "check-advice-freshness": "tsx scripts/check-advice-freshness.ts",
+    "measure-latency": "tsx scripts/measure-latency.ts",
+    "generate-replay-fixtures": "tsx scripts/generate-replay-fixtures.ts"
   },
   "dependencies": {
     "next": "16.3.3",

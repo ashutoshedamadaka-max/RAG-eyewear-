@@ -1,0 +1,1552 @@
+{
+  "id": "straightforward",
+  "label": "Straightforward: everyday eyeglasses",
+  "description": "A clean, ordinary conversation from opener to recommendation, no surprises.",
+  "turns": [
+    {
+      "state": {
+        "slots": {},
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          }
+        ],
+        "askedTopics": [],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          }
+        ],
+        "askedTopics": [
+          "purpose"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday",
+              "formal_work"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses for the office."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses for the office.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday",
+                  "formal_work"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1323,
+                "completionTokens": 35,
+                "costInr": 0.30357249999999997,
+                "ms": 1234
+              }
+            ],
+            "timingsMs": {
+              "total": 1235,
+              "extraction": 1234
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday",
+              "formal_work"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "has_rx",
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_power": {
+            "value": -1.75,
+            "source": "stated",
+            "confidence": 1
+          },
+          "lens_type": {
+            "value": "single",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses for the office."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "Yes I wear glasses, about -1.75, single vision."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses for the office.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday",
+                  "formal_work"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1323,
+                "completionTokens": 35,
+                "costInr": 0.30357249999999997,
+                "ms": 1234
+              }
+            ],
+            "timingsMs": {
+              "total": 1235,
+              "extraction": 1234
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "Yes I wear glasses, about -1.75, single vision.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "has_rx",
+                "source": "stated",
+                "confidence": 1
+              },
+              "rx_power": {
+                "value": -1.75,
+                "source": "stated",
+                "confidence": 1
+              },
+              "lens_type": {
+                "value": "single",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1401,
+                "completionTokens": 38,
+                "costInr": 0.32224749999999996,
+                "ms": 1592
+              }
+            ],
+            "timingsMs": {
+              "total": 1592,
+              "extraction": 1592
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday",
+              "formal_work"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "has_rx",
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_power": {
+            "value": -1.75,
+            "source": "stated",
+            "confidence": 1
+          },
+          "lens_type": {
+            "value": "single",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses for the office."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "Yes I wear glasses, about -1.75, single vision."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues really, my current pair is fine."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses for the office.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday",
+                  "formal_work"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1323,
+                "completionTokens": 35,
+                "costInr": 0.30357249999999997,
+                "ms": 1234
+              }
+            ],
+            "timingsMs": {
+              "total": 1235,
+              "extraction": 1234
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "Yes I wear glasses, about -1.75, single vision.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "has_rx",
+                "source": "stated",
+                "confidence": 1
+              },
+              "rx_power": {
+                "value": -1.75,
+                "source": "stated",
+                "confidence": 1
+              },
+              "lens_type": {
+                "value": "single",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1401,
+                "completionTokens": 38,
+                "costInr": 0.32224749999999996,
+                "ms": 1592
+              }
+            ],
+            "timingsMs": {
+              "total": 1592,
+              "extraction": 1592
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues really, my current pair is fine.",
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1455,
+                "completionTokens": 19,
+                "costInr": 0.3176825,
+                "ms": 1220
+              }
+            ],
+            "timingsMs": {
+              "total": 1220,
+              "extraction": 1220
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's your budget for the frame?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday",
+              "formal_work"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "has_rx",
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_power": {
+            "value": -1.75,
+            "source": "stated",
+            "confidence": 1
+          },
+          "lens_type": {
+            "value": "single",
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 4000,
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses for the office."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "Yes I wear glasses, about -1.75, single vision."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues really, my current pair is fine."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Budget up to ₹4000."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses for the office.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday",
+                  "formal_work"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1323,
+                "completionTokens": 35,
+                "costInr": 0.30357249999999997,
+                "ms": 1234
+              }
+            ],
+            "timingsMs": {
+              "total": 1235,
+              "extraction": 1234
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "Yes I wear glasses, about -1.75, single vision.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "has_rx",
+                "source": "stated",
+                "confidence": 1
+              },
+              "rx_power": {
+                "value": -1.75,
+                "source": "stated",
+                "confidence": 1
+              },
+              "lens_type": {
+                "value": "single",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1401,
+                "completionTokens": 38,
+                "costInr": 0.32224749999999996,
+                "ms": 1592
+              }
+            ],
+            "timingsMs": {
+              "total": 1592,
+              "extraction": 1592
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues really, my current pair is fine.",
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1455,
+                "completionTokens": 19,
+                "costInr": 0.3176825,
+                "ms": 1220
+              }
+            ],
+            "timingsMs": {
+              "total": 1220,
+              "extraction": 1220
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Budget up to ₹4000.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 4000,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1479,
+                "completionTokens": 25,
+                "costInr": 0.32764250000000006,
+                "ms": 1506
+              }
+            ],
+            "timingsMs": {
+              "total": 1507,
+              "extraction": 1506
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday",
+              "formal_work"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "has_rx",
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_power": {
+            "value": -1.75,
+            "source": "stated",
+            "confidence": 1
+          },
+          "lens_type": {
+            "value": "single",
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 4000,
+            "source": "stated",
+            "confidence": 1
+          },
+          "style_prefs": {
+            "value": [
+              "minimal"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Not sure about my face shape, let's skip that."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses for the office."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "Yes I wear glasses, about -1.75, single vision."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues really, my current pair is fine."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Budget up to ₹4000."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          },
+          {
+            "role": "user",
+            "content": "Something classic, nothing too bold."
+          },
+          {
+            "role": "assistant",
+            "content": "Based on your office use, classic preference, and ₹4,000 frame budget, I’d start with these two:\n\n1. **Nira Series 863 — ₹1,300**  \n   Rectangle shape, meaning the lens outline has straighter sides; **full rim**, meaning the rim surrounds each lens; crystal acetate, a plastic-based frame material; and plain temples, the arms that extend over the ears. It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [1]  \n   **Why it matches your request:** its catalog style is minimal and professional, with no bold temple pattern. [1]\n\n2. **Sundial Mark 866 — ₹1,800**  \n   Rectangle shape and full rim, with acetate construction and patterned temples. It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [3]  \n   **Why it matches your request:** it remains cataloged as minimal and professional, while the patterned temples add more detail than the Nira. [3]\n\nBoth are within budget and listed as compatible with your approximate **-1.75D single-vision prescription**, meaning correction for one viewing distance rather than both distance and near. [1][3]\n\n**My practical order:** try the **Nira first** if you want the quieter option; try the **Sundial** if you want a classic frame with a little more temple detail. I’m not treating either as guaranteed to fit: you skipped face shape, and we don’t have your current frame measurements. If your current glasses are narrow, that would support prioritizing these two; otherwise, we should compare their measurements in-store.\n\nI’m assuming your stated prescription is approximately **-1.75D in both eyes** and that you want standard clear everyday lenses. If either assumption is wrong—especially if the prescription differs between eyes—we should verify the prescription before finalizing the frame."
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "done",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 3
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Not sure about my face shape, let's skip that.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1285,
+                "completionTokens": 25,
+                "costInr": 0.28738749999999996,
+                "ms": 1596
+              }
+            ],
+            "timingsMs": {
+              "total": 1597,
+              "extraction": 1596
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses for the office.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday",
+                  "formal_work"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1323,
+                "completionTokens": 35,
+                "costInr": 0.30357249999999997,
+                "ms": 1234
+              }
+            ],
+            "timingsMs": {
+              "total": 1235,
+              "extraction": 1234
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "Yes I wear glasses, about -1.75, single vision.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "has_rx",
+                "source": "stated",
+                "confidence": 1
+              },
+              "rx_power": {
+                "value": -1.75,
+                "source": "stated",
+                "confidence": 1
+              },
+              "lens_type": {
+                "value": "single",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1401,
+                "completionTokens": 38,
+                "costInr": 0.32224749999999996,
+                "ms": 1592
+              }
+            ],
+            "timingsMs": {
+              "total": 1592,
+              "extraction": 1592
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues really, my current pair is fine.",
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1455,
+                "completionTokens": 19,
+                "costInr": 0.3176825,
+                "ms": 1220
+              }
+            ],
+            "timingsMs": {
+              "total": 1220,
+              "extraction": 1220
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Budget up to ₹4000.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 4000,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1479,
+                "completionTokens": 25,
+                "costInr": 0.32764250000000006,
+                "ms": 1506
+              }
+            ],
+            "timingsMs": {
+              "total": 1507,
+              "extraction": 1506
+            }
+          },
+          {
+            "turnIndex": 6,
+            "userMessage": "Something classic, nothing too bold.",
+            "extractedPartial": {
+              "style_prefs": {
+                "value": [
+                  "minimal"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "rimless/edge-thickness safety check applied at -1.75D (max_power_supported >= 1.75).",
+                "ruleId": "rimless_rx_cap"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 46mm lens, rx -1.75D, 46mm lens, full rim -> adjusted severity 1.75D (no adjustments), tier=standard -- suggested index 1.5.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 55mm lens, rx -1.75D, 55mm lens, full rim -> adjusted severity 2.75D (large lens (55mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 46mm lens, rx -1.75D, 46mm lens, full rim -> adjusted severity 1.75D (no adjustments), tier=standard -- suggested index 1.5.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 55mm lens, rx -1.75D, 55mm lens, full rim -> adjusted severity 2.75D (large lens (55mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 47mm lens, rx -1.75D, 47mm lens, semi rim -> adjusted severity 2.25D (semi mount exposes edge thickness on a minus lens, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1523,
+                "completionTokens": 26,
+                "costInr": 0.33760249999999997,
+                "ms": 1339
+              },
+              {
+                "label": "Turning the question into a vector",
+                "kind": "embedding",
+                "promptTokens": 15,
+                "completionTokens": 0,
+                "costInr": 0.000024900000000000002,
+                "ms": 890
+              },
+              {
+                "label": "Writing the answer",
+                "kind": "chat",
+                "promptTokens": 2911,
+                "completionTokens": 926,
+                "costInr": 1.3726125,
+                "ms": 11810
+              }
+            ],
+            "recommendation": {
+              "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND max_power_supported >= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+              "sqlMatchCount": 13,
+              "catalogTotalCount": 101,
+              "relaxed": false,
+              "adviceHits": [
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#2",
+                  "score": 0.3536106334448193,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Complexion and metal selection"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#0",
+                  "score": 0.3488425730173897,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "The \"eyewear wardrobe\" framing"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#1",
+                  "score": 0.32447133136368994,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Face shape architecture"
+                }
+              ],
+              "adviceNearMisses": [
+                {
+                  "chunk_id": "optician-guide-anatomical-fit#4",
+                  "score": 0.22011334374009078,
+                  "claim_type": "physical",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-anatomical-fit",
+                  "section_heading": "Nose bridge and profile"
+                },
+                {
+                  "chunk_id": "opticampus-progressive-lens-dispensing#1",
+                  "score": 0.2173481152976152,
+                  "claim_type": "physical",
+                  "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+                  "doc_id": "opticampus-progressive-lens-dispensing",
+                  "section_heading": "Frame selection guidance"
+                },
+                {
+                  "chunk_id": "vision-council-epic-progressive-identifier#1",
+                  "score": 0.2111295867493012,
+                  "claim_type": "physical",
+                  "source_org": "The Vision Council",
+                  "doc_id": "vision-council-epic-progressive-identifier",
+                  "section_heading": "Sample entries (real, as fetched — not representative of the full 3,326-page catalog, which was not read exhaustively)"
+                },
+                {
+                  "chunk_id": "zeiss-precision-progressive-fitting-heights#0",
+                  "score": 0.21099780545250654,
+                  "claim_type": "physical",
+                  "source_org": "Carl Zeiss Vision",
+                  "doc_id": "zeiss-precision-progressive-fitting-heights",
+                  "section_heading": "Product-line fitting heights"
+                },
+                {
+                  "chunk_id": "vision-council-epic-progressive-identifier#2",
+                  "score": 0.20771325210853225,
+                  "claim_type": "physical",
+                  "source_org": "The Vision Council",
+                  "doc_id": "vision-council-epic-progressive-identifier",
+                  "section_heading": "Application to this project"
+                }
+              ],
+              "citations": [
+                {
+                  "sentence": "It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [1]  \n   **Why it matches your request:** its catalog style is minimal and professional, with no bold temple pattern. [1]\n\n2.",
+                  "citedMarkers": [
+                    "[1]",
+                    "[1]"
+                  ]
+                },
+                {
+                  "sentence": "It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [3]  \n   **Why it matches your request:** it remains cataloged as minimal and professional, while the patterned temples add more detail than the Nira. [3]\n\nBoth are within budget and listed as compatible with your approximate **-1.75D single-vision prescription**, meaning correction for one viewing distance rather than both distance and near. [1][3]\n\n**My practical order:** try the **Nira first** if you want the quieter option; try the **Sundial** if you want a classic frame with a little more temple detail.",
+                  "citedMarkers": [
+                    "[3]",
+                    "[3]",
+                    "[1]",
+                    "[3]"
+                  ]
+                }
+              ]
+            },
+            "timingsMs": {
+              "total": 14109,
+              "extraction": 1339,
+              "sqlQuery": 66,
+              "adviceEmbedding": 890,
+              "adviceSearch": 1,
+              "generation": 11810
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Based on your office use, classic preference, and ₹4,000 frame budget, I’d start with these two:\n\n1. **Nira Series 863 — ₹1,300**  \n   Rectangle shape, meaning the lens outline has straighter sides; **full rim**, meaning the rim surrounds each lens; crystal acetate, a plastic-based frame material; and plain temples, the arms that extend over the ears. It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [1]  \n   **Why it matches your request:** its catalog style is minimal and professional, with no bold temple pattern. [1]\n\n2. **Sundial Mark 866 — ₹1,800**  \n   Rectangle shape and full rim, with acetate construction and patterned temples. It is listed for everyday and formal work, fits narrow face widths, and supports prescriptions up to 8D. [3]  \n   **Why it matches your request:** it remains cataloged as minimal and professional, while the patterned temples add more detail than the Nira. [3]\n\nBoth are within budget and listed as compatible with your approximate **-1.75D single-vision prescription**, meaning correction for one viewing distance rather than both distance and near. [1][3]\n\n**My practical order:** try the **Nira first** if you want the quieter option; try the **Sundial** if you want a classic frame with a little more temple detail. I’m not treating either as guaranteed to fit: you skipped face shape, and we don’t have your current frame measurements. If your current glasses are narrow, that would support prioritizing these two; otherwise, we should compare their measurements in-store.\n\nI’m assuming your stated prescription is approximately **-1.75D in both eyes** and that you want standard clear everyday lenses. If either assumption is wrong—especially if the prescription differs between eyes—we should verify the prescription before finalizing the frame.",
+      "recommendation": {
+        "frames": [
+          {
+            "frame_id": "FR087",
+            "text": "Nira Series 863 (SKU NIR-087) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in crystal. It has plain temples. Lens width 46mm, bridge 16mm, temple length 145mm, lens height 34mm, frame width 114mm, fits narrow face widths, weighs 27.4g. Priced at INR 1300 (frame only). Good for everyday, formal work, reading. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (4 units).",
+            "boost": 0.05,
+            "reasons": [
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 46mm lens, rx -1.75D, 46mm lens, full rim -> adjusted severity 1.75D (no adjustments), tier=standard -- suggested index 1.5.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR099",
+            "text": "Terra Optics Type 118 (SKU TER-099) is a eyeglasses frame with a oval shape, made of tr90 with a full rim, in signal red. It has tapered temples. Lens width 55mm, bridge 18mm, temple length 142mm, lens height 38mm, frame width 135mm, fits medium face widths, weighs 19g. Priced at INR 1750 (frame only). Good for driving night, everyday, formal work, reading. Style: minimal, professional. Suits square, rectangle, heart face shapes. Rx compatible up to 6D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (9 units).",
+            "boost": 0.05,
+            "reasons": [
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 55mm lens, rx -1.75D, 55mm lens, full rim -> adjusted severity 2.75D (large lens (55mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR048",
+            "text": "Sundial Mark 866 (SKU SUN-048) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in havana. It has patterned temples. Lens width 46mm, bridge 16mm, temple length 140mm, lens height 31mm, frame width 115mm, fits narrow face widths, weighs 23.5g. Priced at INR 1800 (frame only). Good for driving night, everyday, formal work. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, silicone nose pads. no UV400 rating, not polarized, none tint, no wrap, not blue-light ready. In stock (27 units).",
+            "boost": 0.05,
+            "reasons": [
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "at -1.75D in this frame's 46mm lens, rx -1.75D, 46mm lens, full rim -> adjusted severity 1.75D (no adjustments), tier=standard -- suggested index 1.5.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR013",
+            "text": "Halcyon Type 165 (SKU HAL-013) is a eyeglasses frame with a geometric shape, made of tr90 with a full rim, in olive. It has two tone temples. Lens width 55mm, bridge 15mm, temple length 135mm, lens height 45mm, frame width 131mm, fits medium face widths, weighs 21.3g. Priced at INR 1150 (frame only). Good for computer, everyday, formal work. Style: bold, playful. Suits round, oval face shapes. Rx compatible up to 6D, progressive-ready, fixed integrated nose pads. no UV400 rating, not polarized, photochromic, none tint, no wrap, blue-light ready. In stock (21 units).",
+            "boost": 0,
+            "reasons": [
+              {
+                "explanation": "at -1.75D in this frame's 55mm lens, rx -1.75D, 55mm lens, full rim -> adjusted severity 2.75D (large lens (55mm >= 55mm) -- sag depth scales ~diameter^2, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR015",
+            "text": "Orbit&Co Series 396 (SKU ORB-015) is a eyeglasses frame with a round shape, made of tr90 with a semi rim, in slate. It has two tone temples. Lens width 47mm, bridge 21mm, temple length 145mm, lens height 47mm, frame width 122mm, fits narrow face widths, weighs 17.4g. Priced at INR 1550 (frame only). Good for computer, driving night, everyday, formal work, reading. Style: playful, retro. Suits square, rectangle, heart face shapes. Rx compatible up to 6D, progressive-ready, silicone nose pads. no UV400 rating, not polarized, none tint, no wrap, not blue-light ready. In stock (35 units).",
+            "boost": 0,
+            "reasons": [
+              {
+                "explanation": "at -1.75D in this frame's 47mm lens, rx -1.75D, 47mm lens, semi rim -> adjusted severity 2.25D (semi mount exposes edge thickness on a minus lens, recommend earlier), tier=consider -- suggested index 1.6.",
+                "source": "ttuhsc-rimless-lens-materials",
+                "ruleId": "lens_index_annotation"
+              }
+            ]
+          }
+        ],
+        "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND max_power_supported >= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+        "relaxed": false
+      }
+    }
+  ]
+}

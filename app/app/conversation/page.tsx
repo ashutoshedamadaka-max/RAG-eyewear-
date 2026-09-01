@@ -11,6 +11,18 @@
 // Kept as a separate route from the root page rather than replacing it --
 // the root page is Phase 1's deliberately-naive baseline, kept intact as
 // the case study's "here's the failure we're measuring against" evidence.
+//
+// Deployment readiness (decisions.md, 2026-09-02): if /api/conversation
+// signals `{ fallback: true, reason }` (missing key, our own per-IP cap,
+// or the live call erroring/rate-limiting upstream -- see that route),
+// this page switches into a labelled replay of one of four real recorded
+// conversations (app/lib/conversation/fixtures/*.json, captured by
+// actually running the live pipeline once -- see
+// app/scripts/generate-replay-fixtures.ts) instead of showing an error.
+// Replay reuses every existing rendering path unmodified: a recorded
+// TurnResult is applied via the exact same setState/setRecommendation
+// calls a real network response goes through, so the machinery panel
+// renders identically either way.
 import { useState } from "react";
 import { Newsreader, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import FaceShapePicker from "@/components/FaceShapePicker";
@@ -20,9 +32,36 @@ import EvalSection from "@/components/EvalSection";
 import { parseFrameBlurb } from "@/components/conversation-types";
 import type { ConversationState, TurnResult, Slots, RecommendedFrame } from "@/components/conversation-types";
 
+import straightforwardFixture from "@/lib/conversation/fixtures/straightforward.json";
+import intentionalGapFixture from "@/lib/conversation/fixtures/intentional-gap.json";
+import safetyInterruptFixture from "@/lib/conversation/fixtures/safety-interrupt.json";
+import conventionHeavyFixture from "@/lib/conversation/fixtures/convention-heavy.json";
+
 const serif = Newsreader({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-serif" });
 const sans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400"], variable: "--font-mono" });
+
+interface ReplayFixture {
+  id: string;
+  label: string;
+  description: string;
+  turns: TurnResult[];
+}
+
+const REPLAY_SCENARIOS = [
+  straightforwardFixture,
+  intentionalGapFixture,
+  safetyInterruptFixture,
+  conventionHeavyFixture,
+] as unknown as ReplayFixture[];
+
+const FALLBACK_REASON_LABELS: Record<string, string> = {
+  missing_api_key: "no model API key is configured on this deployment",
+  rate_limited_local: "this demo has a per-visitor limit and you've reached it for now",
+  upstream_rate_limited: "the model API is rate-limiting requests right now",
+  invalid_api_key: "the configured model API key isn't valid",
+  upstream_error: "the live model call failed",
+};
 
 function cumulativeSlotsAt(history: ConversationState["history"], index: number, finalSlots: Slots): Slots {
   if (index === history.length - 1) return finalSlots;
@@ -40,6 +79,19 @@ export default function ConversationPage() {
   const [started, setStarted] = useState(false);
   const [selectedFaceShape, setSelectedFaceShape] = useState<string | undefined>();
 
+  // Replay mode: set once /api/conversation signals fallback:true. `null`
+  // reason = live mode (default). Non-null = show the labelled banner;
+  // `replayScenario` is which of the 4 recordings the visitor picked, and
+  // `replayStep` is how many of its turns have been played so far.
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const [replayScenario, setReplayScenario] = useState<ReplayFixture | null>(null);
+  const [replayStep, setReplayStep] = useState(0);
+
+  function applyTurnResult(result: TurnResult) {
+    setState(result.state);
+    if (result.recommendation) setRecommendation(result.recommendation);
+  }
+
   async function post(message?: string) {
     setLoading(true);
     setError(null);
@@ -53,9 +105,13 @@ export default function ConversationPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `Request failed (${res.status})`);
       }
-      const result: TurnResult = await res.json();
-      setState(result.state);
-      if (result.recommendation) setRecommendation(result.recommendation);
+      const body = await res.json();
+      if (body && body.fallback) {
+        setFallbackReason(body.reason ?? "upstream_error");
+        setStarted(true);
+        return;
+      }
+      applyTurnResult(body as TurnResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -80,10 +136,39 @@ export default function ConversationPage() {
     send(message);
   }
 
+  function chooseReplayScenario(fixture: ReplayFixture) {
+    setError(null);
+    setReplayScenario(fixture);
+    setReplayStep(1);
+    applyTurnResult(fixture.turns[0]);
+  }
+
+  function advanceReplay() {
+    if (!replayScenario) return;
+    const next = replayScenario.turns[replayStep];
+    if (!next) return;
+    applyTurnResult(next);
+    setReplayStep((i) => i + 1);
+  }
+
+  function restartReplayPicker() {
+    setReplayScenario(null);
+    setReplayStep(0);
+    setState(null);
+    setRecommendation(null);
+  }
+
   const turns = state?.turns ?? [];
-  const waitingForFaceShapeReply = state?.status === "in_progress" && turns.length === 1;
+  const waitingForFaceShapeReply = !fallbackReason && state?.status === "in_progress" && turns.length === 1;
   const recommendedFrames: (RecommendedFrame & { parsed: ReturnType<typeof parseFrameBlurb> })[] =
     (recommendation?.frames ?? []).map((f) => ({ ...f, parsed: parseFrameBlurb(f.frame_id, f.text) }));
+
+  const inReplay = fallbackReason !== null;
+  const replayNextUserLine =
+    replayScenario && replayStep < replayScenario.turns.length
+      ? replayScenario.turns[replayStep].state.turns.at(-2)?.content
+      : undefined;
+  const replayExhausted = Boolean(replayScenario) && replayStep >= (replayScenario?.turns.length ?? 0);
 
   return (
     <div
@@ -106,13 +191,38 @@ export default function ConversationPage() {
       </header>
 
       <main className="max-w-[800px] mx-auto px-6 pt-6">
-        {!started && (
+        {inReplay && (
+          <div className="mb-5 rounded-md border border-[#E3C989] bg-[#FBF3DF] px-3.5 py-2.5 text-[12.8px] text-[#6B4E14]">
+            <strong>Replaying a recorded conversation.</strong> The live model isn&apos;t
+            available right now ({FALLBACK_REASON_LABELS[fallbackReason ?? ""] ?? "the live call failed"}).
+            Everything below — including the machinery panel — is real data from an actual run of
+            this pipeline, captured earlier, not a live response.
+          </div>
+        )}
+
+        {!started && !inReplay && (
           <button
             onClick={start}
             className="rounded-md bg-[#14201C] text-white px-4 py-2 text-[13px] font-medium"
           >
             Start
           </button>
+        )}
+
+        {inReplay && !replayScenario && (
+          <div className="space-y-2">
+            <p className="text-[13px] text-[#5F6F68] mb-2">Pick a recorded conversation to replay:</p>
+            {REPLAY_SCENARIOS.map((fixture) => (
+              <button
+                key={fixture.id}
+                onClick={() => chooseReplayScenario(fixture)}
+                className="block w-full text-left rounded-md border border-[#DFE6E2] bg-[#FDFEFD] px-3.5 py-2.5 hover:border-[#14201C]"
+              >
+                <div className="text-[13.5px] font-medium text-[#14201C]">{fixture.label}</div>
+                <div className="text-[12px] text-[#5F6F68] mt-0.5">{fixture.description}</div>
+              </button>
+            ))}
+          </div>
         )}
 
         {started && state && (
@@ -187,7 +297,7 @@ export default function ConversationPage() {
               </p>
             )}
 
-            {state.status === "done" && (
+            {state.status === "done" && !inReplay && (
               <div className="mt-8">
                 <div className="text-[13.5px] font-semibold text-[#14201C] mb-2.5">
                   How this is evaluated
@@ -196,7 +306,26 @@ export default function ConversationPage() {
               </div>
             )}
 
-            {state.status !== "done" &&
+            {inReplay && replayScenario && !replayExhausted && (
+              <button
+                onClick={advanceReplay}
+                className="rounded-md bg-[#14201C] text-white px-4 py-2 text-[13px] font-medium mt-2"
+              >
+                Continue{replayNextUserLine ? `: "${replayNextUserLine}"` : ""} →
+              </button>
+            )}
+
+            {inReplay && replayExhausted && (
+              <button
+                onClick={restartReplayPicker}
+                className="rounded-md border border-[#14201C] text-[#14201C] px-4 py-2 text-[13px] font-medium mt-2"
+              >
+                ← Try a different recorded conversation
+              </button>
+            )}
+
+            {!inReplay &&
+              state.status !== "done" &&
               state.status !== "safety_interrupt" &&
               !(waitingForFaceShapeReply) && (
                 <form

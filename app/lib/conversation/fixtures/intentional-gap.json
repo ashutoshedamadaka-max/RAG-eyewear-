@@ -1,0 +1,1412 @@
+{
+  "id": "intentional-gap",
+  "label": "Intentional gap: the relaxation ladder fires",
+  "description": "A budget tight enough that nothing satisfying it also clears the never-relax UV400 requirement -- the system drops price (relaxable), keeps UV400 (never relaxed), and names exactly what it dropped instead of pretending or refusing outright. Cheapest real outdoor/UV400 sunglasses in the catalog is ₹1,200 (verified directly against catalog.db, not assumed), so a ₹800 ceiling guarantees a real gap.",
+  "turns": [
+    {
+      "state": {
+        "slots": {},
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          }
+        ],
+        "askedTopics": [],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          }
+        ],
+        "askedTopics": [
+          "purpose"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "sunglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "outdoor"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Sunglasses for outdoor use."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Sunglasses for outdoor use.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "sunglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "outdoor"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1314,
+                "completionTokens": 32,
+                "costInr": 0.299215,
+                "ms": 1659
+              }
+            ],
+            "timingsMs": {
+              "total": 1660,
+              "extraction": 1659
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "sunglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "outdoor"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Sunglasses for outdoor use."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Sunglasses for outdoor use.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "sunglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "outdoor"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1314,
+                "completionTokens": 32,
+                "costInr": 0.299215,
+                "ms": 1659
+              }
+            ],
+            "timingsMs": {
+              "total": 1660,
+              "extraction": 1659
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1383,
+                "completionTokens": 24,
+                "costInr": 0.3068925,
+                "ms": 1462
+              }
+            ],
+            "timingsMs": {
+              "total": 1462,
+              "extraction": 1462
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "sunglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "outdoor"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Sunglasses for outdoor use."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Sunglasses for outdoor use.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "sunglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "outdoor"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1314,
+                "completionTokens": 32,
+                "costInr": 0.299215,
+                "ms": 1659
+              }
+            ],
+            "timingsMs": {
+              "total": 1660,
+              "extraction": 1659
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1383,
+                "completionTokens": 24,
+                "costInr": 0.3068925,
+                "ms": 1462
+              }
+            ],
+            "timingsMs": {
+              "total": 1462,
+              "extraction": 1462
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1417,
+                "completionTokens": 24,
+                "costInr": 0.31394750000000005,
+                "ms": 1138
+              }
+            ],
+            "timingsMs": {
+              "total": 1138,
+              "extraction": 1138
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's your budget for the frame?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "sunglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "outdoor"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 800,
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Sunglasses for outdoor use."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Keep it under ₹800."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Sunglasses for outdoor use.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "sunglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "outdoor"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1314,
+                "completionTokens": 32,
+                "costInr": 0.299215,
+                "ms": 1659
+              }
+            ],
+            "timingsMs": {
+              "total": 1660,
+              "extraction": 1659
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1383,
+                "completionTokens": 24,
+                "costInr": 0.3068925,
+                "ms": 1462
+              }
+            ],
+            "timingsMs": {
+              "total": 1462,
+              "extraction": 1462
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1417,
+                "completionTokens": 24,
+                "costInr": 0.31394750000000005,
+                "ms": 1138
+              }
+            ],
+            "timingsMs": {
+              "total": 1138,
+              "extraction": 1138
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Keep it under ₹800.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 800,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1440,
+                "completionTokens": 24,
+                "costInr": 0.31872000000000006,
+                "ms": 1417
+              }
+            ],
+            "timingsMs": {
+              "total": 1418,
+              "extraction": 1417
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "unsure",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "sunglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "outdoor"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 800,
+            "source": "stated",
+            "confidence": 1
+          },
+          "style_prefs": {
+            "value": [
+              "minimal"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "Skip face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Sunglasses for outdoor use."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Keep it under ₹800."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          },
+          {
+            "role": "user",
+            "content": "Minimal look."
+          },
+          {
+            "role": "assistant",
+            "content": "Nothing in the retrieved options meets **all** your requirements: the available match is above your ₹800 frame budget.\n\n**Nearest alternative**\n- **Meridian Series 147 — ₹1,200 frame only** [1]\n- **Minimal style** and intended for outdoor use [1]\n- **UV400 protection**, meaning the lenses are rated to block ultraviolet light [1]\n- Oval acetate frame in havana, with a full rim [1]\n- Not polarized, so it does not provide polarization’s glare-reduction feature [1]\n- Available in stock [1]\n\nThis keeps your **outdoor-use and minimal-style preferences**, but drops only the **under-₹800 budget** requirement. I’m not applying face-shape guidance because you chose to skip face shape; if that changes, it could serve only as a styling nudge, not a fit requirement [A2]."
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "done",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "Skip face shape.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "unsure",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1278,
+                "completionTokens": 25,
+                "costInr": 0.285935,
+                "ms": 1144
+              }
+            ],
+            "timingsMs": {
+              "total": 1145,
+              "extraction": 1144
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Sunglasses for outdoor use.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "sunglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "outdoor"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1314,
+                "completionTokens": 32,
+                "costInr": 0.299215,
+                "ms": 1659
+              }
+            ],
+            "timingsMs": {
+              "total": 1660,
+              "extraction": 1659
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1383,
+                "completionTokens": 24,
+                "costInr": 0.3068925,
+                "ms": 1462
+              }
+            ],
+            "timingsMs": {
+              "total": 1462,
+              "extraction": 1462
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1417,
+                "completionTokens": 24,
+                "costInr": 0.31394750000000005,
+                "ms": 1138
+              }
+            ],
+            "timingsMs": {
+              "total": 1138,
+              "extraction": 1138
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Keep it under ₹800.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 800,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1440,
+                "completionTokens": 24,
+                "costInr": 0.31872000000000006,
+                "ms": 1417
+              }
+            ],
+            "timingsMs": {
+              "total": 1418,
+              "extraction": 1417
+            }
+          },
+          {
+            "turnIndex": 6,
+            "userMessage": "Minimal look.",
+            "extractedPartial": {
+              "style_prefs": {
+                "value": [
+                  "minimal"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "outdoor/daytime-driving use requires UV400-rated lenses -- never relaxed, even if nothing else in budget has it.",
+                "ruleId": "uv400_outdoor"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1479,
+                "completionTokens": 26,
+                "costInr": 0.3284725,
+                "ms": 1137
+              },
+              {
+                "label": "Turning the question into a vector",
+                "kind": "embedding",
+                "promptTokens": 6,
+                "completionTokens": 0,
+                "costInr": 0.000009960000000000001,
+                "ms": 281
+              },
+              {
+                "label": "Writing the answer",
+                "kind": "chat",
+                "promptTokens": 1976,
+                "completionTokens": 511,
+                "costInr": 0.83415,
+                "ms": 7494
+              }
+            ],
+            "recommendation": {
+              "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND uv400 = 1 AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+              "sqlMatchCount": 0,
+              "catalogTotalCount": 101,
+              "relaxed": true,
+              "relaxedDetails": [
+                {
+                  "droppedClause": "price <= 800",
+                  "frame_id": "FR006"
+                }
+              ],
+              "adviceHits": [
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#2",
+                  "score": 0.33867055653060124,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Complexion and metal selection"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#1",
+                  "score": 0.3297348686343778,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Face shape architecture"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#0",
+                  "score": 0.3010959812881403,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "The \"eyewear wardrobe\" framing"
+                },
+                {
+                  "chunk_id": "ttuhsc-rimless-lens-materials#3",
+                  "score": 0.2600800280816076,
+                  "claim_type": "physical",
+                  "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+                  "doc_id": "ttuhsc-rimless-lens-materials",
+                  "section_heading": "Application to this project"
+                }
+              ],
+              "adviceNearMisses": [
+                {
+                  "chunk_id": "vision-council-epic-progressive-identifier#2",
+                  "score": 0.2471289856390617,
+                  "claim_type": "physical",
+                  "source_org": "The Vision Council",
+                  "doc_id": "vision-council-epic-progressive-identifier",
+                  "section_heading": "Application to this project"
+                },
+                {
+                  "chunk_id": "ttuhsc-rimless-lens-materials#2",
+                  "score": 0.24321131839899962,
+                  "claim_type": "physical",
+                  "source_org": "Texas Tech University Health Sciences Center (TTUHSC), ABO-NCLE continuing education",
+                  "doc_id": "ttuhsc-rimless-lens-materials",
+                  "section_heading": "Mounting practice (context, not load-bearing for the derivation rule)"
+                },
+                {
+                  "chunk_id": "opticampus-progressive-lens-dispensing#3",
+                  "score": 0.24206913044538791,
+                  "claim_type": "physical",
+                  "source_org": "OptiCampus (opti.vision), course author Darryl J Meister",
+                  "doc_id": "opticampus-progressive-lens-dispensing",
+                  "section_heading": "Application to this project"
+                }
+              ],
+              "citations": [
+                {
+                  "sentence": "**Nearest alternative**\n- **Meridian Series 147 — ₹1,200 frame only** [1]\n- **Minimal style** and intended for outdoor use [1]\n- **UV400 protection**, meaning the lenses are rated to block ultraviolet light [1]\n- Oval acetate frame in havana, with a full rim [1]\n- Not polarized, so it does not provide polarization’s glare-reduction feature [1]\n- Available in stock [1]\n\nThis keeps your **outdoor-use and minimal-style preferences**, but drops only the **under-₹800 budget** requirement.",
+                  "citedMarkers": [
+                    "[1]",
+                    "[1]",
+                    "[1]",
+                    "[1]",
+                    "[1]",
+                    "[1]"
+                  ]
+                },
+                {
+                  "sentence": "I’m not applying face-shape guidance because you chose to skip face shape; if that changes, it could serve only as a styling nudge, not a fit requirement [A2].",
+                  "citedMarkers": [
+                    "[A2]"
+                  ]
+                }
+              ]
+            },
+            "timingsMs": {
+              "total": 8916,
+              "extraction": 1137,
+              "sqlQuery": 1,
+              "relaxationSearch": 2,
+              "adviceEmbedding": 281,
+              "adviceSearch": 1,
+              "generation": 7494
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Nothing in the retrieved options meets **all** your requirements: the available match is above your ₹800 frame budget.\n\n**Nearest alternative**\n- **Meridian Series 147 — ₹1,200 frame only** [1]\n- **Minimal style** and intended for outdoor use [1]\n- **UV400 protection**, meaning the lenses are rated to block ultraviolet light [1]\n- Oval acetate frame in havana, with a full rim [1]\n- Not polarized, so it does not provide polarization’s glare-reduction feature [1]\n- Available in stock [1]\n\nThis keeps your **outdoor-use and minimal-style preferences**, but drops only the **under-₹800 budget** requirement. I’m not applying face-shape guidance because you chose to skip face shape; if that changes, it could serve only as a styling nudge, not a fit requirement [A2].",
+      "recommendation": {
+        "frames": [
+          {
+            "frame_id": "FR006",
+            "text": "Meridian Series 147 (SKU MER-006) is a sunglasses frame with a oval shape, made of acetate with a full rim, in havana. It has plain temples. Lens width 51mm, bridge 21mm, temple length 148mm, lens height 35mm, frame width 129mm, fits medium face widths, weighs 25.9g. Priced at INR 1200 (frame only). Good for outdoor. Style: minimal, professional. Suits square, rectangle, heart face shapes. Rx compatible up to 10D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, brown tint, 6 degree wrap, not blue-light ready. In stock (24 units).",
+            "boost": 0.05,
+            "reasons": [
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              }
+            ],
+            "droppedClause": "price <= 800"
+          }
+        ],
+        "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND uv400 = 1 AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+        "relaxed": true
+      }
+    }
+  ]
+}

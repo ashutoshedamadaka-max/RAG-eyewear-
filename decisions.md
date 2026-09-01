@@ -2443,4 +2443,482 @@ a demo frozen at Phase 0. A pre-churn snapshot is preserved at
 to diff against the original 100.
 
 ---
+
+## 2026-09-01 · Phase 8 prediction, written before measuring anything
+
+Per the instruction: the prediction goes in the log first, with a
+timestamp, before any Phase 8 measurement runs. This entry was written
+and saved before `measure-latency.ts` existed or ran once.
+
+**An honesty caveat, stated up front rather than left implicit:** this
+isn't a perfectly blind prediction. Building and testing the conversation
+layer this session involved dozens of real live queries, and several
+`TurnMachinery.timingsMs` payloads were read in passing while verifying
+other things (the "22-day gap" smoke test, the tortoise-conflation
+staleness demo, and others) -- so I've seen fragments of real timing data
+before writing this, not none. What I have NOT seen, and what this
+prediction is genuinely blind on: generation time-to-first-token
+specifically (the pipeline doesn't stream today, so no TTFT number has
+ever been produced by anything in this project); relaxation-search timing
+in isolation (never separately instrumented until this phase); the
+parallelization delta (8c, not attempted); the hybrid-vs-naive latency
+comparison (8d, naive pipeline has never been timed against hybrid); and
+whether query-embedding results are practically cacheable across turns.
+Those five are the genuinely blind parts of this prediction. The
+stage-proportion prediction below draws on the fragments already seen,
+named as such rather than pretending otherwise.
+
+**Prediction: generation dominates total wall time for a recommend turn,
+by a wide margin -- roughly 55-70% of the total.** Reasoning: it's the
+one stage doing real language-model work on both ends -- a large prompt
+(full conversation history, up to 5 catalog frames' full blurb text, up
+to 4 advice chunks' full text, the derived-facts block) AND a long
+completion (multi-paragraph structured answers with citations, commonly
+several hundred completion tokens based on the fragments already seen).
+Extraction is a real second-place stage -- also a full model round trip,
+but a much smaller completion (a handful of structured fields) against a
+smaller-but-growing prompt (conversation history so far) -- predicted at
+roughly 15-25% of total. SQL (`queryFrames`/`countMatches`, pure local
+SQLite over 101 rows) and advice similarity search (pure local compute
+over 28 vectors) should both be negligible, well under 1% combined --
+these aren't language-model calls and aren't operating on enough data to
+matter. Query embedding is the one real unknown among the stages I've
+seen fragments of: a genuine network round trip, but on a tiny amount of
+input text (a handful of words) -- predicted at roughly 5-10% of total,
+mostly fixed network/request overhead rather than compute.
+
+**On the specifically blind questions:**
+
+- **Relaxation search**, when it fires: predicted to add a small but
+  non-trivial amount versus a non-relaxed SQL stage, since
+  `findNearestAlternatives` runs one additional query PER compiled
+  clause (trying each relaxation independently) rather than one query
+  total -- still local SQLite, still predicted well under 100ms even in
+  the worst case, but a real, measurable multiple of the non-relaxed
+  SQL stage's own time, not equal to it.
+- **Parallelizing SQL and advice retrieval (8c):** predicted to save
+  close to nothing in absolute terms, and this is the prediction I'd
+  bet most confidently on being right rather than wrong. SQL is
+  predicted at low single-digit milliseconds; even a full serial
+  SQL-then-embedding chain is dominated by the embedding call's network
+  latency either way, so removing SQL's contribution to the critical
+  path removes a number too small to move the total meaningfully. If
+  this prediction holds, that itself is worth reporting plainly rather
+  than presenting the change as an improvement it wasn't.
+- **Hybrid vs. naive (8d):** predicted hybrid is slower, specifically by
+  roughly the extraction call's own latency, since hybrid does
+  everything naive does (one generation call over retrieved context)
+  PLUS the upfront extraction call naive skips entirely. Predicted
+  naive wins on raw latency by construction, and hybrid's case was
+  never that it's faster -- it's that it's correct on constraints naive
+  silently gets wrong (Phase 3, `docs/phase3-hybrid-ab.md`). If hybrid
+  is faster instead, or the naive pipeline turns out to have its own
+  unexpected overhead, that would be the more interesting finding and
+  should be reported as such, not reconciled with this prediction after
+  the fact.
+- **Query-embedding cacheability:** predicted yes, mechanically --
+  OpenAI's embeddings endpoint takes no temperature/sampling parameter,
+  so identical input text should produce a bit-identical output vector,
+  making an exact-string cache trivially correct if implemented. The
+  real open question isn't correctness, it's HIT RATE -- whether real
+  conversational phrasing repeats often enough across turns/customers
+  for a cache to matter, which this session's synthetic single-user
+  testing can't actually answer and shouldn't pretend to.
+
+Measurement follows in the next entry. Written here first, unedited
+afterward -- if the numbers disagree with any of the above, the disagreement
+gets reported next to this prediction, not folded into it.
+
+---
+
+## 2026-09-01 · Phase 8e: perceived vs. actual latency (written while 8b-8d's measurement runs in the background)
+
+A product observation, not an engineering one, and worth stating as such
+for a PM portfolio specifically: everything measured elsewhere in this
+phase is *actual* latency -- wall-clock milliseconds a stopwatch would
+agree on. None of it is what a customer would report if asked "did that
+feel slow." Those two numbers are not the same thing, and this system
+currently only controls the first one.
+
+**Today, the customer sees nothing between sending a message and the
+complete answer appearing at once.** The generation call
+(`converse.ts`) is non-streaming by default -- `measureTTFT`/
+`stream: true` exist now, but only as an opt-in benchmark flag added for
+this phase's own measurement (see the code comment on `runTurn`), not as
+the production default. Whatever the measured total turns out to be, the
+customer experiences the FULL total as dead air, then the whole answer
+at once. A generation call that measures at, say, 2 seconds total but
+produces its first token at 300ms feels categorically different from one
+that produces nothing until 2 seconds are up, even though "generation
+took 2 seconds" is the identical, true, correctly-measured fact in both
+cases. Turning on streaming in production would very likely change
+almost nothing about the ACTUAL total latency this phase measured (the
+model still has to generate the same number of tokens either way) while
+plausibly changing a great deal about how slow the interaction feels --
+this is a case where a UX change and a performance change are
+genuinely different levers, and conflating them (assuming "make it feel
+faster" requires "make it be faster") would misdirect real engineering
+effort at the wrong problem.
+
+**The machinery panel makes this tension especially visible, not just
+theoretically present.** It renders collapsed and after the fact --
+someone can open it once a turn completes and see, correctly, that
+extraction took 1.2s and generation took 4s. But during the turn itself,
+before it's rendered, the customer has no equivalent signal -- no "reading
+your answer," no "checking the catalogue," nothing that would tell them
+which of several very different things is currently happening (a fast
+local SQL query vs. a slower network-bound model call). The exact
+stage-by-stage breakdown this phase went to real effort to measure and
+label in plain language already exists, per-turn, as real data --
+it's just not exposed DURING the wait, only after it's over, which is
+backwards from where it would do the most good for perceived latency
+specifically. A progressive reveal of those same stage labels as they
+happen (a lightweight step indicator, not the full panel) would cost
+comparatively little given the instrumentation already exists, and is a
+concrete, scoped next step this phase's own measurement points at
+directly -- not built this session, since it's a real interface change
+and this phase was scoped to measurement, but flagged here rather than
+left unnoticed.
+
+**The asymmetry worth naming plainly:** this project has now measured
+actual latency carefully (this phase) and actual freshness carefully
+(Phase 7) -- both real engineering properties with real numbers attached.
+Perceived latency has no equivalent number anywhere in this project, and
+arguably can't get one without user research this solo project was never
+going to run. That's a genuine limit on what "measured, not assumed" can
+cover here, worth being explicit about rather than letting the carefully
+measured numbers elsewhere imply more rigor on this axis than actually
+exists.
+
+---
+
+## 2026-09-01 · Phase 8b/8c/8d + cacheability: the real numbers, checked against the prediction above
+
+`npm run measure-latency` run once against the live pipeline (real OpenAI
+calls throughout, `gpt-5.6-luna` for chat, `text-embedding-3-small` for
+embeddings). Raw output kept verbatim below the summary. Sample sizes are
+modest (n=6-12 per stage) -- this is one run, not a repeated-and-averaged
+study, so treat single-percentage-point differences as noise; the gaps
+called out below are all large enough that they aren't.
+
+**Stage breakdown, main sample (n=12, sequential/non-streaming -- the
+actual production path today):**
+
+| stage | p50 | p95 | mean | share of total (p50) |
+|---|---|---|---|---|
+| extraction | 1629ms | 2409ms | 1668ms | 11.3% |
+| sqlQuery | 1ms | 30ms | 4ms | ~0% |
+| adviceEmbedding | 258ms | 558ms | 297ms | 1.8% |
+| adviceSearch | 0ms | 2ms | 0ms | ~0% |
+| generation | 12624ms | 16298ms | 12528ms | **87.5%** |
+| **TOTAL** | **14425ms** | **18059ms** | **14497ms** | 100% |
+
+**Checked against the 2026-09-01 prediction, item by item:**
+
+- *"Generation dominates the total, 55-70% of it."* **Wrong, and not
+  close.** Generation is 87-88% of the total, both by p50 and by mean --
+  a full 17-33 percentage points past the top of the predicted range.
+  The direction was right; the magnitude badly underestimated how total
+  everything else's insignificance would be.
+- *"Extraction is the second-largest cost, 15-25%."* **Wrong, same
+  direction as above.** Extraction is real (1.6s p50 is not nothing) but
+  it lands at 11.3-11.5%, below the predicted floor -- because generation
+  ate more of the pie than expected, not because extraction was faster
+  than expected in absolute terms.
+- *"SQL query execution and advice vector search are both negligible,
+  under 1% each."* **Correct.** sqlQuery and adviceSearch both round to
+  ~0% of the total; sqlQuery's own p95 (30ms) is still two orders of
+  magnitude below the total's p50.
+- *"Query embedding sits in a middle tier, 5-10%."* **Wrong, in the same
+  direction as extraction.** It measured at 1.8-2.0%, real but far
+  smaller than predicted, again because generation's share left less room
+  for everything else than assumed.
+
+The pattern across all four misses is the same one: I correctly ranked
+every stage relative to every other stage, and correctly called SQL and
+vector search negligible, but I structurally underestimated just how
+completely a ~12-second generation call would flatten every other stage's
+percentage contribution, no matter how each of those stages compared to
+each other. Being wrong about a *ratio* while being right about an
+*ordering* is a more specific and more useful failure to name than "the
+prediction was off."
+
+**The four blind questions:**
+
+- *Relaxation search:* fired on only 1 of the 3 deliberately-tight
+  queries used to provoke it (the other 2 apparently still matched
+  something without relaxing -- the catalog is more forgiving at these
+  particular constraint combinations than the query set assumed). That
+  leaves n=1 for `relaxationSearch` itself: p50=p95=1ms, against a
+  same-run `sqlQuery` (non-relaxed) of p50=p95=1ms. Predicted "a
+  measurable multiple of non-relaxed SQL time, but still under 100ms."
+  The "under 100ms" half is correct and by a wide margin. The "measurable
+  multiple" half isn't really testable on n=1 -- both numbers are 1ms,
+  i.e. below this timer's effective resolution at this scale, not a
+  multiple of anything. Calling this one confirmed would overstate what a
+  single sub-millisecond sample can support.
+- *Parallelizing SQL + advice retrieval:* predicted "saves close to
+  nothing, since SQL is single-digit milliseconds." **Correct, and the
+  data makes the reason visible directly.** The retrieval critical path
+  itself (the only piece parallelization can touch) is p50=273ms
+  sequential vs. p50=272ms parallel -- a 1ms difference, i.e. no
+  measurable saving. The end-to-end TOTAL numbers actually show parallel
+  running *slower* (p50 14194ms vs. 13305ms sequential) -- but that gap
+  (889ms) is smaller than the natural spread of the ~12.6s generation
+  call alone (p50-to-p95 is already a 3.6s range on n=12), so this reads
+  as sampling noise sitting on top of a genuinely negligible effect, not
+  as parallelization making anything worse. The honest statement: this
+  optimization is not worth shipping, and the reason is exactly the one
+  predicted going in.
+- *Hybrid vs. naive baseline:* predicted "hybrid slower by roughly the
+  extraction call's latency." Hybrid p50=5080ms, naive p50=3822ms -- a
+  1258ms gap. Extraction alone measured at 1629ms p50 in the main
+  sample. Same order of magnitude, same direction, not an exact match
+  (the two pipelines were sampled on different query subsets, n=6 here
+  vs. n=12 for extraction, and naive's own generation call has a
+  different prompt shape) -- close enough to call the mechanism correctly
+  identified, not close enough to call the number confirmed. Framed the
+  way the prediction asked it to be framed: hybrid buys structured
+  correctness (a real SQL floor/ceiling on budget, a real UV400/Rx/lens-
+  height check) for roughly one extra network round trip worth of
+  latency. That is a legible, defensible trade, not a flaw to explain
+  away.
+- *Query-embedding cacheability:* predicted "mechanically correct --
+  deterministic, no temperature parameter -- but real-world hit rate is
+  the open question." Two separate API calls on identical input text
+  returned bit-identical vectors: `true`. Mechanical correctness
+  confirmed exactly as predicted. Hit rate remains exactly as
+  unanswerable as predicted -- this project has no production traffic to
+  measure repeat-query frequency against, so caching this would be
+  "correct to build, unverified to matter" until there's real usage to
+  check it against.
+
+**An unplanned finding, inside generation itself:** the streaming pass
+(n=8, same first-8 queries as the main sample) split generation into
+time-to-first-token and total: TTFT p50=6208ms against a streaming-call
+total p50=10086ms. Over 60% of the generation stage's own wall time
+elapses *before the first token is streamed back* -- token-by-token
+output only accounts for the remaining ~3.9s. This wasn't one of the
+prediction's blind questions, so there's no forecast to grade it
+against, but it sharpens the 8e observation considerably: streaming
+would not shorten the ~12s generation call, but it would let the
+customer see something for the ~6s that currently is pure silence with
+nothing shown, then a further ~4s of visible, incrementally arriving
+text instead of one more block of silence. That is a real, specific
+number behind what 8e argued qualitatively.
+
+**Raw output** (kept verbatim, not summarized, per this project's
+evidence standard):
+
+```
+=== 8b: per-stage p50/p95, main sample (sequential, non-streaming -- default production path) ===
+  extraction: p50=1629ms  p95=2409ms  mean=1668ms  n=12
+  sqlQuery: p50=1ms  p95=30ms  mean=4ms  n=12
+  adviceEmbedding: p50=258ms  p95=558ms  mean=297ms  n=12
+  adviceSearch: p50=0ms  p95=2ms  mean=0ms  n=12
+  generation (total): p50=12624ms  p95=16298ms  mean=12528ms  n=12
+  TOTAL (whole recommend turn): p50=14425ms  p95=18059ms  mean=14497ms  n=12
+
+=== 8b continued: relaxation-search stage (deliberately unsatisfiable queries) ===
+  sqlQuery (non-relaxed portion): p50=1ms  p95=1ms  mean=1ms  n=2
+  relaxationSearch: p50=1ms  p95=1ms  mean=1ms  n=1
+  (relaxation fired on 1/3 of these deliberately-tight queries)
+
+=== 8b continued: generation time-to-first-token vs total (streaming variant) ===
+  generation TTFT: p50=6208ms  p95=7269ms  mean=6193ms  n=8
+  generation total (streaming call): p50=10086ms  p95=13624ms  mean=10845ms  n=8
+
+=== 8c: parallelize SQL + advice retrieval, before/after, same queries ===
+  TOTAL, sequential (before): p50=13305ms  p95=17131ms  mean=13314ms  n=8
+  TOTAL, parallel (after): p50=14194ms  p95=17898ms  mean=13835ms  n=8
+  retrieval critical path, sequential (sql+embed+search summed): p50=273ms  p95=393ms  mean=313ms  n=8
+  retrieval critical path, parallel (max of the two halves): p50=272ms  p95=381ms  mean=295ms  n=8
+
+=== 8d: hybrid (this pipeline) vs naive baseline, wall-clock ===
+  hybrid pipeline, total wall time: p50=5080ms  p95=6264ms  mean=5089ms  n=6
+  naive pipeline, total wall time: p50=3822ms  p95=4537ms  mean=4046ms  n=6
+
+=== Query-embedding cacheability check ===
+  same input text, two separate API calls -- vectors bit-identical: true
+```
+
+**Bottom line for the case study:** the single biggest lever on this
+system's latency is not in this codebase at all -- it's the chat model's
+own generation time, at 87-88% of total. Every optimization this phase
+tested inside the codebase (parallelizing retrieval) touches the
+remaining ~12%, and inside that 12%, over 90% of it is the extraction
+call, itself another model call. The two genuinely engineerable levers
+this measurement points at are (1) a faster or shorter-output generation
+call, and (2) streaming, which doesn't shrink the total but changes 6+
+seconds of silence into visible progress -- which is exactly 8e's point,
+now with a number attached.
+
+---
+
+## 2026-09-02 · Deployment readiness for Vercel: audited, not assumed
+
+Before pushing, audited what a serverless deployment actually needs rather
+than guessing. Four findings, all fixed and locally verified against a
+real `next build` output (not just reasoned about from the docs):
+
+**1. Path resolution was the real risk, and it was invisible locally.**
+`app/lib/retrieval.ts`, `advice-retrieval.ts`, and `catalog-db.ts` all read
+their data via `fs.readFileSync(path.resolve(process.cwd(), "..", "data",
+...))` -- correct for local dev (`npm run dev`'s cwd is `app/`, `data/` is
+one level up), but a deployed serverless function's filesystem is built
+from Next's *output file tracing*, not a live copy of the repo. Tracing
+only follows files it can find via static import/require analysis, and a
+dynamically-built `path.resolve(process.cwd(), "..", ...)` string is
+exactly the kind of path tracing can't resolve on its own. Worse: with no
+lockfile at the true repo root (only `app/package-lock.json`), Next's
+*automatic* tracing root would default to `app/` itself -- one level too
+shallow to even consider `../data` in scope, regardless of what tracing
+could resolve. Fixed with both halves of the documented mechanism
+together, in `next.config.ts`: `outputFileTracingRoot` widens the
+in-bounds directory to the monorepo root, `outputFileTracingIncludes`
+force-includes the exact files each API route needs
+(`catalog.db`/`catalog.json`/`blurbs.json`/`embeddings.json` for
+`/api/conversation` and `/api/query`, plus `chunks.json`/`embeddings.json`
+for advice on the conversation route). **Verified, not assumed**: ran a
+real `next build` and inspected `.next/server/app/api/*/route.js.nft.json`
+directly -- `catalog.db` and both advice JSON files are genuinely present
+in both routes' trace output.
+
+**2. Nothing is computed at startup -- this was already correct, just
+undocumented as a deliberate property.** `catalog.db`, `catalog.json`,
+`blurbs.json`, `embeddings.json` (catalog) and `chunks.json`,
+`embeddings.json` (advice) are all committed to git (confirmed via `git
+ls-files`) -- every one of them is a precomputed build artifact, generated
+by the existing `npm run build-catalog-db` / `embed` / `advice-chunks` /
+`embed-advice` scripts and checked in, not built at request time or cold
+start. A serverless cold start reads static files already in the bundle;
+it does not call OpenAI to re-embed anything. This means the "recomputed
+per cold start, slow and expensive" failure mode named in the brief simply
+doesn't apply here -- worth stating plainly since it's a real risk this
+architecture happens to avoid by a decision made back in Phase 0-3, not
+something this pass had to newly engineer.
+
+**3. `node:sqlite` and the Node version, checked against Vercel's current
+docs rather than assumed from training-data recall.** This project runs
+Node 24 locally (`DatabaseSync` from `node:sqlite`, opened `readOnly:
+true`, which also sidesteps any concern about a read-only serverless
+filesystem). Fetched Vercel's live docs directly
+(`vercel.com/docs/functions/runtimes/node-js/node-js-versions`, dated
+2026-08-11/2026-02-27) rather than relying on stale knowledge: **Node
+24.x is Vercel's current default** for both builds and functions (22.x
+and 20.x also available). Pinned `"engines": {"node": "24.x"}` in
+`app/package.json` anyway -- not strictly required since it's already the
+default, but it stops a future Vercel default-version change from
+silently changing what this app runs on. Genuine remaining unknown, stated
+as such rather than papered over: I cannot verify `DatabaseSync` behaves
+identically inside an actual Vercel function instance without a real
+deployment: the read-only-file case is the well-supported one (unlike
+SQLite-as-a-writable-database, which Vercel's own docs actively steer
+people away from on ephemeral storage grounds -- not our case here, we
+never write), but "should work" is a step short of "confirmed working."
+If the first deploy's function logs show a `node:sqlite` error, that's the
+first thing to check.
+
+**4. Frame images are not a deployment concern.** Checked before assuming:
+`data/catalog/out/images/*.svg` are Python-tooling artifacts (the catalog
+browser), never read by the Next app at runtime --
+`app/components/FrameIllustration.tsx` is a pure client-side parametric SVG
+renderer driven entirely by catalog fields already in `catalog.json`, not
+a file loader. One less thing to trace or worry about.
+
+### Fallback replay mode
+
+Built per the brief: if `/api/conversation` can't reach OpenAI for any
+reason, serve a labelled recorded conversation instead of an error.
+Reasons collapsed into one signal so the client only has to handle one
+case: missing `OPENAI_API_KEY`, the live call itself erroring or being
+rate-limited by OpenAI, and this deployment's own per-IP cap (below) all
+return the same `{ fallback: true, reason }` shape (see
+`app/app/api/conversation/route.ts`) instead of a 4xx/5xx. Deliberately
+routing the per-IP cap into the same fallback rather than a bare "you're
+rate limited" error: a visitor who explores heavily lands on an honestly
+labelled recorded walkthrough instead of a dead end, which serves "don't
+show a recruiter a broken demo" better than a blunt block message would.
+This is a deliberate scope call, not the only valid reading of the brief
+-- flagging it explicitly in case a plain rate-limit error is actually
+preferred.
+
+**The four recorded scenarios are real, not written.** No saved transcript
+existed from the earlier live-transcript review session to reuse, so
+`app/scripts/generate-replay-fixtures.ts` was built to run four scripted
+conversations through the actual `runTurn` pipeline (real extraction,
+retrieval, and generation calls) and capture the exact `TurnResult`
+sequence each one produces -- the same anti-fabrication discipline this
+project has applied to every golden set. Picking realistic inputs took two
+tries for the intentional-gap case: an initial "titanium eyeglasses under
+₹3,500" script produced a confusing result -- the generated prose claimed
+"nothing is titanium" while the compiled SQL never actually contained a
+material clause at all (`material`/`rim_type` are DERIVED-only per the
+vocabulary policy and the conversation layer's `deriveQuery` has no path
+that turns a volunteered material preference into a filter clause), so
+`relaxed` was `false` and the prose was narrating a constraint that was
+never really queried. **This is a real, previously-undiscovered
+groundedness gap, logged here and left unfixed** -- out of scope for a
+deployment-readiness pass, flagged rather than silently avoided. Swapped
+to a verified-real gap instead: cheapest UV400 outdoor sunglasses in the
+catalog is ₹1,200 (checked directly against `catalog.db`, not assumed), so
+a stated ₹800 ceiling guarantees a genuine zero-match query where price
+(relaxable) gets dropped and UV400 (never-relax) is correctly kept --
+`relaxed: true`, `droppedClause: "price <= 800"`, confirmed in the actual
+captured output. The other three scenarios (straightforward, a safety
+interrupt arriving on turn four rather than turn one, and a convention-heavy
+case pulling hedged style advice) all produced clean, correct output on
+the first real run. Fixtures are static JSON (~183KB total across all
+four) imported directly into `app/app/conversation/page.tsx` -- no runtime
+file path or tracing risk at all, since Next bundles imported JSON as part
+of the client chunk.
+
+**Replay reuses the real rendering path, not a parallel one.** The page's
+existing `post()` already does nothing but `setState(result.state)` /
+`setRecommendation(result.recommendation)` per turn; replay mode just
+calls the exact same two setters with a recorded `TurnResult` instead of a
+network response, so `MachineryToggle`, `RecommendationCard`, and every
+other component render identically whether the data came from a live call
+or a recording -- there is no second code path to keep in sync. A visible
+amber banner names the reason in plain language; the free-text input and
+face-shape picker are replaced with a single "Continue" button previewing
+the next scripted line, so replay reads as an honest step-through, not a
+disguised live chat.
+
+### Per-IP rate limit
+
+`app/lib/rate-limit.ts`: in-memory, per-lambda-instance sliding window, 30
+requests/IP/hour by default (`RATE_LIMIT_PER_HOUR` env var to override),
+applied to both `/api/conversation` and `/api/query` -- the brief scoped
+this to the conversation endpoint, but `/api/query` (the Phase 1
+naive-baseline page at `/`) was found equally uncapped and equally live
+during this audit, so the same limiter was applied there too rather than
+leaving a known, equivalent cost exposure unaddressed. `/api/query`
+degrades to its existing plain-text error UI rather than a scripted
+replay -- it has no machinery-panel state to replay into, and a one-shot
+Phase 1 demo page doesn't carry the same "don't show a broken demo" stakes
+as the flagship conversation interface.
+
+**Explicitly not a distributed rate limiter, and said so in the code
+comment, not just here:** no Redis/Upstash/Vercel KV -- the same
+judgment call this project has made about infrastructure scale
+repeatedly (no vector DB for 100 catalog rows, decisions.md 2026-08-27).
+Consequence stated plainly: the count resets on cold start and isn't
+shared across concurrent instances, so this is a soft, best-effort
+ceiling against a runaway script or repeated refresh, not a hard
+guarantee against a determined distributed abuser. Verified live against
+a production build (`next start`): fired exactly at request 31 on both
+routes, in the correct order relative to the other checks (rate limit
+checked before the missing-key check, so a rate-limited visitor never
+even reaches the "is the key configured" branch).
+
+### Verification performed this pass
+`npx tsc --noEmit` clean; `npm run build` succeeds and its trace output was
+directly inspected (not just trusted); `npm run eval-conversation` still
+36/36 after all route/config changes; a real production server
+(`next start`) was started three times locally to confirm, respectively:
+normal live-mode operation, the missing-key fallback response shape, and
+the rate limiter tripping on both routes at the configured threshold.
+
+---
 <!-- next entry here -->

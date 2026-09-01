@@ -1,0 +1,1409 @@
+{
+  "id": "convention-heavy",
+  "label": "Convention-heavy: face shape and style",
+  "description": "A customer who picks a real face shape and leans on style preference -- pulls hedged, convention-tagged advice (a soft nudge, never a filter) alongside the physical constraints.",
+  "turns": [
+    {
+      "state": {
+        "slots": {},
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          }
+        ],
+        "askedTopics": [],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          }
+        ],
+        "askedTopics": [
+          "purpose"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses, and I'd like something that suits my face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses, and I'd like something that suits my face shape.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1324,
+                "completionTokens": 32,
+                "costInr": 0.30129000000000006,
+                "ms": 1206
+              }
+            ],
+            "timingsMs": {
+              "total": 1206,
+              "extraction": 1206
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses, and I'd like something that suits my face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses, and I'd like something that suits my face shape.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1324,
+                "completionTokens": 32,
+                "costInr": 0.30129000000000006,
+                "ms": 1206
+              }
+            ],
+            "timingsMs": {
+              "total": 1206,
+              "extraction": 1206
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1393,
+                "completionTokens": 24,
+                "costInr": 0.3089675,
+                "ms": 1194
+              }
+            ],
+            "timingsMs": {
+              "total": 1194,
+              "extraction": 1194
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          },
+          "fit_issues": {
+            "value": [],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses, and I'd like something that suits my face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses, and I'd like something that suits my face shape.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1324,
+                "completionTokens": 32,
+                "costInr": 0.30129000000000006,
+                "ms": 1206
+              }
+            ],
+            "timingsMs": {
+              "total": 1206,
+              "extraction": 1206
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1393,
+                "completionTokens": 24,
+                "costInr": 0.3089675,
+                "ms": 1194
+              }
+            ],
+            "timingsMs": {
+              "total": 1194,
+              "extraction": 1194
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "fit_issues": {
+                "value": [],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1427,
+                "completionTokens": 24,
+                "costInr": 0.31602250000000004,
+                "ms": 1249
+              }
+            ],
+            "timingsMs": {
+              "total": 1249,
+              "extraction": 1249
+            }
+          }
+        ]
+      },
+      "assistantMessage": "What's your budget for the frame?"
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          },
+          "fit_issues": {
+            "value": [],
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 5000,
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses, and I'd like something that suits my face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Budget up to ₹5000."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "in_progress",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses, and I'd like something that suits my face shape.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1324,
+                "completionTokens": 32,
+                "costInr": 0.30129000000000006,
+                "ms": 1206
+              }
+            ],
+            "timingsMs": {
+              "total": 1206,
+              "extraction": 1206
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1393,
+                "completionTokens": 24,
+                "costInr": 0.3089675,
+                "ms": 1194
+              }
+            ],
+            "timingsMs": {
+              "total": 1194,
+              "extraction": 1194
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "fit_issues": {
+                "value": [],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1427,
+                "completionTokens": 24,
+                "costInr": 0.31602250000000004,
+                "ms": 1249
+              }
+            ],
+            "timingsMs": {
+              "total": 1249,
+              "extraction": 1249
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Budget up to ₹5000.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 5000,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1455,
+                "completionTokens": 25,
+                "costInr": 0.32266249999999996,
+                "ms": 1229
+              }
+            ],
+            "timingsMs": {
+              "total": 1229,
+              "extraction": 1229
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+    },
+    {
+      "state": {
+        "slots": {
+          "face_shape": {
+            "value": "round",
+            "source": "stated",
+            "confidence": 1
+          },
+          "product_type": {
+            "value": "eyeglasses",
+            "source": "stated",
+            "confidence": 1
+          },
+          "purpose": {
+            "value": [
+              "everyday"
+            ],
+            "source": "stated",
+            "confidence": 1
+          },
+          "rx_status": {
+            "value": "none",
+            "source": "stated",
+            "confidence": 1
+          },
+          "fit_issues": {
+            "value": [],
+            "source": "stated",
+            "confidence": 1
+          },
+          "budget_max": {
+            "value": 5000,
+            "source": "stated",
+            "confidence": 1
+          },
+          "style_prefs": {
+            "value": [
+              "bold"
+            ],
+            "source": "stated",
+            "confidence": 1
+          }
+        },
+        "turns": [
+          {
+            "role": "assistant",
+            "content": "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement."
+          },
+          {
+            "role": "user",
+            "content": "My face shape is round."
+          },
+          {
+            "role": "assistant",
+            "content": "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?"
+          },
+          {
+            "role": "user",
+            "content": "Everyday eyeglasses, and I'd like something that suits my face shape."
+          },
+          {
+            "role": "assistant",
+            "content": "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?"
+          },
+          {
+            "role": "user",
+            "content": "No, I don't wear glasses currently."
+          },
+          {
+            "role": "assistant",
+            "content": "Have your current glasses been sliding down, feeling tight, or leaving marks?"
+          },
+          {
+            "role": "user",
+            "content": "No fit issues."
+          },
+          {
+            "role": "assistant",
+            "content": "What's your budget for the frame?"
+          },
+          {
+            "role": "user",
+            "content": "Budget up to ₹5000."
+          },
+          {
+            "role": "assistant",
+            "content": "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional."
+          },
+          {
+            "role": "user",
+            "content": "I like a bold, statement look -- maybe tortoiseshell."
+          },
+          {
+            "role": "assistant",
+            "content": "Based on your round face and preference for a bold, statement style with tortoiseshell, **Meridian Form 420** is the closest match:\n\n- **Tortoise acetate frame** with a rectangular outline, **₹1,150 frame-only**, and listed for narrow faces. [3]\n- Rectangular frames are **conventionally suggested** for round faces because they add visual structure; this is a styling guideline, not a fitting requirement. [A1]\n- The catalog labels it **minimal and professional**, so it may not deliver the full bold statement effect you requested. [3]\n\n### Other options\n\n- **Halcyon Type 165** — catalog-labeled **bold and playful**, with a geometric outline and medium-face fit, **₹1,150**; however, it is olive rather than tortoise. [1]\n- **Orbit&Co Line 323** — also catalog-labeled **bold and playful**, geometric, medium-face fit, **₹1,200**; it is olive rather than tortoise. [2]\n- **Sundial Mark 866** — havana acetate with patterned temples, **₹1,800**, and listed for narrow faces; the catalog labels it minimal and professional rather than bold. [5]\n\n**Nothing in this catalog fully combines all three preferences: a bold statement style, tortoiseshell coloring, and a round-face styling match.** Meridian is the closest option but drops some of the boldness; Halcyon and Orbit&Co preserve the bold style but drop the tortoiseshell color.\n\n**Assumption:** your face width is still unknown, so I’m relying only on each frame’s catalog category—narrow or medium—not confirming your actual fit. If your face is medium rather than narrow, Halcyon or Orbit&Co may be the more relevant options; an in-store measurement would settle that. Also, since you do not yet know your prescription, the listed “Rx compatible” limits—meaning the prescription strength the frame is designed to accept—should be checked after your eye examination. [1][2][3][5]"
+          }
+        ],
+        "askedTopics": [
+          "purpose",
+          "prescription",
+          "fit_issues",
+          "budget",
+          "style"
+        ],
+        "assumedAtCap": [],
+        "status": "done",
+        "history": [
+          {
+            "turnIndex": 0,
+            "extractedPartial": {},
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [],
+            "timingsMs": {
+              "total": 0
+            }
+          },
+          {
+            "turnIndex": 1,
+            "userMessage": "My face shape is round.",
+            "extractedPartial": {
+              "face_shape": {
+                "value": "round",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "purpose",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1280,
+                "completionTokens": 24,
+                "costInr": 0.28552000000000005,
+                "ms": 1696
+              }
+            ],
+            "timingsMs": {
+              "total": 1696,
+              "extraction": 1696
+            }
+          },
+          {
+            "turnIndex": 2,
+            "userMessage": "Everyday eyeglasses, and I'd like something that suits my face shape.",
+            "extractedPartial": {
+              "product_type": {
+                "value": "eyeglasses",
+                "source": "stated",
+                "confidence": 1
+              },
+              "purpose": {
+                "value": [
+                  "everyday"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "prescription",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1324,
+                "completionTokens": 32,
+                "costInr": 0.30129000000000006,
+                "ms": 1206
+              }
+            ],
+            "timingsMs": {
+              "total": 1206,
+              "extraction": 1206
+            }
+          },
+          {
+            "turnIndex": 3,
+            "userMessage": "No, I don't wear glasses currently.",
+            "extractedPartial": {
+              "rx_status": {
+                "value": "none",
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "fit_issues",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1393,
+                "completionTokens": 24,
+                "costInr": 0.3089675,
+                "ms": 1194
+              }
+            ],
+            "timingsMs": {
+              "total": 1194,
+              "extraction": 1194
+            }
+          },
+          {
+            "turnIndex": 4,
+            "userMessage": "No fit issues.",
+            "extractedPartial": {
+              "fit_issues": {
+                "value": [],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "budget",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1427,
+                "completionTokens": 24,
+                "costInr": 0.31602250000000004,
+                "ms": 1249
+              }
+            ],
+            "timingsMs": {
+              "total": 1249,
+              "extraction": 1249
+            }
+          },
+          {
+            "turnIndex": 5,
+            "userMessage": "Budget up to ₹5000.",
+            "extractedPartial": {
+              "budget_max": {
+                "value": 5000,
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "askedTopic": "style",
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1455,
+                "completionTokens": 25,
+                "costInr": 0.32266249999999996,
+                "ms": 1229
+              }
+            ],
+            "timingsMs": {
+              "total": 1229,
+              "extraction": 1229
+            }
+          },
+          {
+            "turnIndex": 6,
+            "userMessage": "I like a bold, statement look -- maybe tortoiseshell.",
+            "extractedPartial": {
+              "style_prefs": {
+                "value": [
+                  "bold"
+                ],
+                "source": "stated",
+                "confidence": 1
+              }
+            },
+            "safetyFlag": "none",
+            "derivedFacts": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              },
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              }
+            ],
+            "assumptions": [],
+            "fittingRulesTotalCount": 17,
+            "modelCalls": [
+              {
+                "label": "Reading your answers into fields",
+                "kind": "chat",
+                "promptTokens": 1506,
+                "completionTokens": 26,
+                "costInr": 0.334075,
+                "ms": 1316
+              },
+              {
+                "label": "Turning the question into a vector",
+                "kind": "embedding",
+                "promptTokens": 17,
+                "completionTokens": 0,
+                "costInr": 0.00002822,
+                "ms": 394
+              },
+              {
+                "label": "Writing the answer",
+                "kind": "chat",
+                "promptTokens": 2831,
+                "completionTokens": 901,
+                "costInr": 1.3352625,
+                "ms": 11476
+              }
+            ],
+            "recommendation": {
+              "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+              "sqlMatchCount": 31,
+              "catalogTotalCount": 101,
+              "relaxed": false,
+              "adviceHits": [
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#1",
+                  "score": 0.412507964017334,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Face shape architecture"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#2",
+                  "score": 0.40261178098845235,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "Complexion and metal selection"
+                },
+                {
+                  "chunk_id": "optician-guide-style-and-complexion#0",
+                  "score": 0.35824280115467116,
+                  "claim_type": "convention",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-style-and-complexion",
+                  "section_heading": "The \"eyewear wardrobe\" framing"
+                },
+                {
+                  "chunk_id": "optician-guide-anatomical-fit#4",
+                  "score": 0.3087963730176345,
+                  "claim_type": "physical",
+                  "source_org": "Independent practising optician (author not otherwise identified in the source document)",
+                  "doc_id": "optician-guide-anatomical-fit",
+                  "section_heading": "Nose bridge and profile"
+                }
+              ],
+              "adviceNearMisses": [],
+              "citations": [
+                {
+                  "sentence": "Based on your round face and preference for a bold, statement style with tortoiseshell, **Meridian Form 420** is the closest match:\n\n- **Tortoise acetate frame** with a rectangular outline, **₹1,150 frame-only**, and listed for narrow faces. [3]\n- Rectangular frames are **conventionally suggested** for round faces because they add visual structure; this is a styling guideline, not a fitting requirement. [A1]\n- The catalog labels it **minimal and professional**, so it may not deliver the full bold statement effect you requested. [3]\n\n### Other options\n\n- **Halcyon Type 165** — catalog-labeled **bold and playful**, with a geometric outline and medium-face fit, **₹1,150**; however, it is olive rather than tortoise. [1]\n- **Orbit&Co Line 323** — also catalog-labeled **bold and playful**, geometric, medium-face fit, **₹1,200**; it is olive rather than tortoise. [2]\n- **Sundial Mark 866** — havana acetate with patterned temples, **₹1,800**, and listed for narrow faces; the catalog labels it minimal and professional rather than bold. [5]\n\n**Nothing in this catalog fully combines all three preferences: a bold statement style, tortoiseshell coloring, and a round-face styling match.** Meridian is the closest option but drops some of the boldness; Halcyon and Orbit&Co preserve the bold style but drop the tortoiseshell color.",
+                  "citedMarkers": [
+                    "[3]",
+                    "[A1]",
+                    "[3]",
+                    "[1]",
+                    "[2]",
+                    "[5]"
+                  ]
+                },
+                {
+                  "sentence": "Also, since you do not yet know your prescription, the listed “Rx compatible” limits—meaning the prescription strength the frame is designed to accept—should be checked after your eye examination. [1][2][3][5]",
+                  "citedMarkers": [
+                    "[1]",
+                    "[2]",
+                    "[3]",
+                    "[5]"
+                  ]
+                }
+              ]
+            },
+            "timingsMs": {
+              "total": 13187,
+              "extraction": 1316,
+              "sqlQuery": 1,
+              "adviceEmbedding": 394,
+              "adviceSearch": 0,
+              "generation": 11476
+            }
+          }
+        ]
+      },
+      "assistantMessage": "Based on your round face and preference for a bold, statement style with tortoiseshell, **Meridian Form 420** is the closest match:\n\n- **Tortoise acetate frame** with a rectangular outline, **₹1,150 frame-only**, and listed for narrow faces. [3]\n- Rectangular frames are **conventionally suggested** for round faces because they add visual structure; this is a styling guideline, not a fitting requirement. [A1]\n- The catalog labels it **minimal and professional**, so it may not deliver the full bold statement effect you requested. [3]\n\n### Other options\n\n- **Halcyon Type 165** — catalog-labeled **bold and playful**, with a geometric outline and medium-face fit, **₹1,150**; however, it is olive rather than tortoise. [1]\n- **Orbit&Co Line 323** — also catalog-labeled **bold and playful**, geometric, medium-face fit, **₹1,200**; it is olive rather than tortoise. [2]\n- **Sundial Mark 866** — havana acetate with patterned temples, **₹1,800**, and listed for narrow faces; the catalog labels it minimal and professional rather than bold. [5]\n\n**Nothing in this catalog fully combines all three preferences: a bold statement style, tortoiseshell coloring, and a round-face styling match.** Meridian is the closest option but drops some of the boldness; Halcyon and Orbit&Co preserve the bold style but drop the tortoiseshell color.\n\n**Assumption:** your face width is still unknown, so I’m relying only on each frame’s catalog category—narrow or medium—not confirming your actual fit. If your face is medium rather than narrow, Halcyon or Orbit&Co may be the more relevant options; an in-store measurement would settle that. Also, since you do not yet know your prescription, the listed “Rx compatible” limits—meaning the prescription strength the frame is designed to accept—should be checked after your eye examination. [1][2][3][5]",
+      "recommendation": {
+        "frames": [
+          {
+            "frame_id": "FR013",
+            "text": "Halcyon Type 165 (SKU HAL-013) is a eyeglasses frame with a geometric shape, made of tr90 with a full rim, in olive. It has two tone temples. Lens width 55mm, bridge 15mm, temple length 135mm, lens height 45mm, frame width 131mm, fits medium face widths, weighs 21.3g. Priced at INR 1150 (frame only). Good for computer, everyday, formal work. Style: bold, playful. Suits round, oval face shapes. Rx compatible up to 6D, progressive-ready, fixed integrated nose pads. no UV400 rating, not polarized, photochromic, none tint, no wrap, blue-light ready. In stock (21 units).",
+            "boost": 0.2,
+            "reasons": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR086",
+            "text": "Orbit&Co Line 323 (SKU ORB-086) is a eyeglasses frame with a geometric shape, made of tr90 with a full rim, in olive. It has tapered temples. Lens width 53mm, bridge 21mm, temple length 142mm, lens height 43mm, frame width 134mm, fits medium face widths, weighs 18.4g. Priced at INR 1200 (frame only). Good for computer, everyday. Style: bold, playful. Suits round, oval face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (5 units).",
+            "boost": 0.2,
+            "reasons": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              },
+              {
+                "explanation": "matches 1 of your stated style preference -- a soft ranking nudge.",
+                "ruleId": "style_prefs_overlap"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR033",
+            "text": "Meridian Form 420 (SKU MER-033) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in tortoise. It has two tone temples. Lens width 47mm, bridge 19mm, temple length 145mm, lens height 40mm, frame width 120mm, fits narrow face widths, weighs 25.3g. Priced at INR 1150 (frame only). Good for computer, driving night, everyday, reading. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (11 units).",
+            "boost": 0.15,
+            "reasons": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR087",
+            "text": "Nira Series 863 (SKU NIR-087) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in crystal. It has plain temples. Lens width 46mm, bridge 16mm, temple length 145mm, lens height 34mm, frame width 114mm, fits narrow face widths, weighs 27.4g. Priced at INR 1300 (frame only). Good for everyday, formal work, reading. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (4 units).",
+            "boost": 0.15,
+            "reasons": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              }
+            ]
+          },
+          {
+            "frame_id": "FR048",
+            "text": "Sundial Mark 866 (SKU SUN-048) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in havana. It has patterned temples. Lens width 46mm, bridge 16mm, temple length 140mm, lens height 31mm, frame width 115mm, fits narrow face widths, weighs 23.5g. Priced at INR 1800 (frame only). Good for driving night, everyday, formal work. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, silicone nose pads. no UV400 rating, not polarized, none tint, no wrap, not blue-light ready. In stock (27 units).",
+            "boost": 0.15,
+            "reasons": [
+              {
+                "explanation": "conventionally suggested for a round face shape -- a styling nudge, not a fitting requirement.",
+                "source": "optician-guide-style-and-complexion",
+                "ruleId": "face_shape_boost"
+              }
+            ]
+          }
+        ],
+        "sql": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 10",
+        "relaxed": false
+      }
+    }
+  ]
+}

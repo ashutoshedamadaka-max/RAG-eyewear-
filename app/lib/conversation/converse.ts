@@ -176,7 +176,28 @@ export interface TurnResult {
  * Runs one turn. `userMessage` is undefined only for the very first call,
  * to get the opening question without a customer message yet.
  */
-export async function runTurn(state: ConversationState, userMessage: string | undefined): Promise<TurnResult> {
+export async function runTurn(
+  state: ConversationState,
+  userMessage: string | undefined,
+  /**
+   * Phase 8 (decisions.md, 2026-09-01): opt-in only, defaults false, so
+   * production behavior (a single non-streaming completion) is
+   * unchanged. When true, the generation call streams instead, and
+   * `timingsMs.generationTTFT` records time-to-first-token separately
+   * from total generation time -- using the SAME prompt-construction
+   * code path as production, not a duplicated approximation in a
+   * benchmark script, so the number means what it claims to.
+   */
+  measureTTFT = false,
+  /**
+   * Phase 8 (decisions.md, 2026-09-01): opt-in, defaults false (matches
+   * production's existing sequential SQL-then-advice-retrieval order).
+   * When true, the two retrieval halves run concurrently via
+   * Promise.all instead -- the 8c benchmark variant, A/B'd against the
+   * default to measure the actual delta rather than assuming one.
+   */
+  parallelizeRetrieval = false
+): Promise<TurnResult> {
   const turnStart = Date.now();
   const client = new OpenAI();
   let slots = state.slots;
@@ -296,81 +317,141 @@ export async function runTurn(state: ConversationState, userMessage: string | un
 
   const { filter, facts, assumptions } = deriveQuery(slots, true);
 
-  const sqlStart = Date.now();
-  const { frames: sqlFrames, sql } = queryFrames(filter, MAX_FRAMES_SHOWN * 2);
-  const sqlMatchCount = countMatches(filter);
-  const catalogTotalCount = countMatches({});
-  timingsMs.sqlQuery = Date.now() - sqlStart;
-
-  const safeFrames = filterUnsafeRimless(sqlFrames, slots.rx_power?.value);
-
+  // Phase 8 (decisions.md, 2026-09-01): the catalog half (SQL, relaxation if it
+  // fires, ranking) and the advice half (embed the query, similarity search) don't
+  // depend on each other's output -- only on `slots`/`filter`, computed above. Wrapped
+  // as two functions so `runCatalogHalf`/`runAdviceHalf` can be awaited sequentially
+  // (matches production today) or via Promise.all (the `parallelizeRetrieval` opt-in
+  // benchmark variant) from the exact same code, not two hand-maintained copies that
+  // could drift. Both mutate the shared `timingsMs`/`modelCalls` by reference, which is
+  // safe either way since they write to disjoint fields.
   let relaxed = false;
   let relaxedDetails: { droppedClause: string; frame_id: string }[] | undefined;
   let neverRelaxBlockedDetails: { key: string; describe: string }[] | undefined;
-  let candidateFrames = safeFrames;
-  if (candidateFrames.length === 0) {
-    relaxed = true;
-    const { alternatives, neverRelaxBlocked } = findNearestAlternatives(filter, MAX_FRAMES_SHOWN);
-    relaxedDetails = alternatives.map((a) => ({ droppedClause: a.droppedClause, frame_id: a.frame.frame_id }));
-    if (neverRelaxBlocked.length > 0) {
-      // "Fail loudly": surfaced in the machinery panel too, not just the server console warning
-      // catalog-db.ts already emitted -- so declining outright is visibly CORRECT, not silent.
-      neverRelaxBlockedDetails = neverRelaxBlocked.map((b) => ({ key: b.key, describe: b.describe }));
+  let sql = "";
+  let sqlMatchCount = 0;
+  let catalogTotalCount = 0;
+  let ranked: ReturnType<typeof rankCandidates> = [];
+
+  async function runCatalogHalf() {
+    const sqlStart = Date.now();
+    const { frames: sqlFrames, sql: compiledSql } = queryFrames(filter, MAX_FRAMES_SHOWN * 2);
+    sql = compiledSql;
+    sqlMatchCount = countMatches(filter);
+    catalogTotalCount = countMatches({});
+    timingsMs.sqlQuery = Date.now() - sqlStart;
+
+    const safeFrames = filterUnsafeRimless(sqlFrames, slots.rx_power?.value);
+    let candidateFrames = safeFrames;
+    if (candidateFrames.length === 0) {
+      relaxed = true;
+      const relaxStart = Date.now();
+      const { alternatives, neverRelaxBlocked } = findNearestAlternatives(filter, MAX_FRAMES_SHOWN);
+      timingsMs.relaxationSearch = Date.now() - relaxStart;
+      relaxedDetails = alternatives.map((a) => ({ droppedClause: a.droppedClause, frame_id: a.frame.frame_id }));
+      if (neverRelaxBlocked.length > 0) {
+        // "Fail loudly": surfaced in the machinery panel too, not just the server console warning
+        // catalog-db.ts already emitted -- so declining outright is visibly CORRECT, not silent.
+        neverRelaxBlockedDetails = neverRelaxBlocked.map((b) => ({ key: b.key, describe: b.describe }));
+      }
+      candidateFrames = filterUnsafeRimless(alternatives.map((a) => a.frame), slots.rx_power?.value);
     }
-    candidateFrames = filterUnsafeRimless(alternatives.map((a) => a.frame), slots.rx_power?.value);
+
+    ranked = rankCandidates(candidateFrames, slots).slice(0, MAX_FRAMES_SHOWN);
   }
 
-  const ranked = rankCandidates(candidateFrames, slots).slice(0, MAX_FRAMES_SHOWN);
-  const rankedFacts = ranked.flatMap((r) => r.reasons);
+  let adviceHits: AdviceHit[] = [];
+  let adviceNearMisses: AdviceHit[] = [];
 
+  async function runAdviceHalf() {
+    const embeddingStart = Date.now();
+    const queryText = synthesizeQueryText(slots, userMessage ?? "");
+    const embeddingResponse = await client.embeddings.create({ model: getAdviceEmbeddingModel(), input: queryText });
+    timingsMs.adviceEmbedding = Date.now() - embeddingStart;
+    const embeddingUsage = { promptTokens: embeddingResponse.usage?.prompt_tokens ?? 0, completionTokens: 0 };
+    modelCalls.push({
+      label: "Turning the question into a vector",
+      kind: "embedding",
+      promptTokens: embeddingUsage.promptTokens,
+      completionTokens: 0,
+      costInr: costInr(embeddingUsage.promptTokens, 0, "embedding"),
+      ms: timingsMs.adviceEmbedding,
+    });
+
+    const searchStart = Date.now();
+    const result = retrieveAdviceTopKWithNearMisses(embeddingResponse.data[0].embedding, MAX_ADVICE_SHOWN);
+    adviceHits = result.hits;
+    adviceNearMisses = result.nearMisses;
+    timingsMs.adviceSearch = Date.now() - searchStart;
+  }
+
+  if (parallelizeRetrieval) {
+    await Promise.all([runCatalogHalf(), runAdviceHalf()]);
+  } else {
+    await runCatalogHalf();
+    await runAdviceHalf();
+  }
+
+  const rankedFacts = ranked.flatMap((r) => r.reasons);
   const frameContextRows = ranked.map((r) => ({ frame_id: r.frame.frame_id, text: getBlurb(r.frame.frame_id) }));
   const frameContext = formatFrameContext(frameContextRows);
-
-  const embeddingStart = Date.now();
-  const queryText = synthesizeQueryText(slots, userMessage ?? "");
-  const embeddingResponse = await client.embeddings.create({ model: getAdviceEmbeddingModel(), input: queryText });
-  timingsMs.adviceEmbedding = Date.now() - embeddingStart;
-  const embeddingUsage = { promptTokens: embeddingResponse.usage?.prompt_tokens ?? 0, completionTokens: 0 };
-  modelCalls.push({
-    label: "Turning the question into a vector",
-    kind: "embedding",
-    promptTokens: embeddingUsage.promptTokens,
-    completionTokens: 0,
-    costInr: costInr(embeddingUsage.promptTokens, 0, "embedding"),
-    ms: timingsMs.adviceEmbedding,
-  });
-
-  const searchStart = Date.now();
-  const { hits: adviceHits, nearMisses: adviceNearMisses } = retrieveAdviceTopKWithNearMisses(
-    embeddingResponse.data[0].embedding,
-    MAX_ADVICE_SHOWN
-  );
-  timingsMs.adviceSearch = Date.now() - searchStart;
   const adviceContext = formatAdviceContext(adviceHits);
 
   const derivedContext = formatDerivedFacts([...facts, ...rankedFacts], assumptions);
 
+  const generationMessages = [
+    { role: "system" as const, content: PERSONA_AND_RULES },
+    {
+      role: "user" as const,
+      content:
+        `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
+        `${relaxed ? "Nothing matched every requirement -- nearest alternatives shown" : "Matching catalog frames"}:\n${frameContext || "(none found)"}\n\n` +
+        `Retrieved advice (cite as [A#], respecting each one's claim_type):\n${adviceContext || "(none retrieved)"}\n\n` +
+        `${derivedContext}`,
+    },
+  ];
+
   const generationStart = Date.now();
-  const chatResponse = await client.chat.completions.create({
-    model: CHAT_MODEL,
-    temperature: CHAT_TEMPERATURE,
-    messages: [
-      { role: "system", content: PERSONA_AND_RULES },
-      {
-        role: "user",
-        content:
-          `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
-          `${relaxed ? "Nothing matched every requirement -- nearest alternatives shown" : "Matching catalog frames"}:\n${frameContext || "(none found)"}\n\n` +
-          `Retrieved advice (cite as [A#], respecting each one's claim_type):\n${adviceContext || "(none retrieved)"}\n\n` +
-          `${derivedContext}`,
-      },
-    ],
-  });
+  let answer: string;
+  let generationUsage: { promptTokens: number; completionTokens: number };
+
+  if (measureTTFT) {
+    const stream = await client.chat.completions.create({
+      model: CHAT_MODEL,
+      temperature: CHAT_TEMPERATURE,
+      messages: generationMessages,
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+    let firstTokenAt: number | undefined;
+    let text = "";
+    let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) {
+        if (firstTokenAt === undefined) {
+          firstTokenAt = Date.now();
+          timingsMs.generationTTFT = firstTokenAt - generationStart;
+        }
+        text += delta;
+      }
+      if (chunk.usage) usage = chunk.usage;
+    }
+    answer = text;
+    generationUsage = { promptTokens: usage?.prompt_tokens ?? 0, completionTokens: usage?.completion_tokens ?? 0 };
+  } else {
+    const chatResponse = await client.chat.completions.create({
+      model: CHAT_MODEL,
+      temperature: CHAT_TEMPERATURE,
+      messages: generationMessages,
+    });
+    answer = chatResponse.choices[0]?.message?.content ?? "";
+    generationUsage = {
+      promptTokens: chatResponse.usage?.prompt_tokens ?? 0,
+      completionTokens: chatResponse.usage?.completion_tokens ?? 0,
+    };
+  }
   timingsMs.generation = Date.now() - generationStart;
-  const generationUsage = {
-    promptTokens: chatResponse.usage?.prompt_tokens ?? 0,
-    completionTokens: chatResponse.usage?.completion_tokens ?? 0,
-  };
   modelCalls.push({
     label: "Writing the answer",
     kind: "chat",
@@ -380,7 +461,6 @@ export async function runTurn(state: ConversationState, userMessage: string | un
     ms: timingsMs.generation,
   });
 
-  const answer = chatResponse.choices[0]?.message?.content ?? "";
   turns.push({ role: "assistant", content: answer });
   timingsMs.total = Date.now() - turnStart;
 

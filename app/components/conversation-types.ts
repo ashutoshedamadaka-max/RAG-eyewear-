@@ -77,6 +77,7 @@ export interface TurnMachinery {
     sqlQuery?: number;
     adviceEmbedding?: number;
     adviceSearch?: number;
+    relaxationSearch?: number;
     generation?: number;
     total: number;
   };

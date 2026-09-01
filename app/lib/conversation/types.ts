@@ -150,7 +150,11 @@ export interface TurnMachinery {
     adviceEmbedding?: number;
     /** Cosine similarity + floor filter over already-fetched embeddings -- pure compute, no model call, no cost. */
     adviceSearch?: number;
+    /** findNearestAlternatives -- only present when the relaxation ladder actually fires (Phase 8, decisions.md 2026-09-01: previously uncounted, folded silently into nothing). */
+    relaxationSearch?: number;
     generation?: number;
+    /** Only present when runTurn was called with measureTTFT=true (the Phase 8 benchmark) -- the default, non-streaming production path has no first-token event to measure. */
+    generationTTFT?: number;
     total: number;
   };
 }
