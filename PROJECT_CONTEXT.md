@@ -7,11 +7,13 @@ so that work continues from the same premises rather than restarting them.
 Two deliverables, both required: an interactive demo, and a written case study
 covering the eval harness, golden sets, latency, and knowledge-base freshness.
 
-**Live demo:** [rag-eyewear.vercel.app/conversation](https://rag-eyewear.vercel.app/conversation)
-(the interactive demo deliverable above) — [rag-eyewear.vercel.app](https://rag-eyewear.vercel.app/)
-is the root page, the deliberately-naive Phase 1 baseline. Deployed on
-Vercel; see decisions.md 2026-09-02 for the deployment-readiness work and
-what actually broke the first two deploy attempts.
+**Live demo:** [rag-eyewear.vercel.app](https://rag-eyewear.vercel.app/)
+(the interactive demo deliverable above) — the deliberately-naive Phase 1
+baseline it's measured against is kept reachable, clearly labelled as a
+comparison rather than the product, at
+[/baseline](https://rag-eyewear.vercel.app/baseline). Deployed on Vercel;
+see decisions.md 2026-09-02 for the deployment-readiness work and what
+actually broke the first two deploy attempts.
 
 **Status:** Phase 0 (data) and Phase 1 (naive baseline) complete — see
 `docs/phase1-baseline-failures.md`. Phase 2 (eval harness) started —

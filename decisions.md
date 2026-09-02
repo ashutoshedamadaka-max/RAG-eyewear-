@@ -3079,4 +3079,51 @@ directly (as `vercel pull` finally did here), not just at the code and
 its build output.
 
 ---
+
+## 2026-09-02 · Root now serves the product; the naive baseline moved to /baseline
+
+Swapped which route serves which page. `/` now renders the real
+conversational interface (formerly at `/conversation`); the deliberately-
+naive Phase 1 baseline (formerly the root page) moved to `/baseline`,
+with its own nested `layout.tsx` overriding the browser-tab title (it's a
+client component and can't export `metadata` itself) so the distinction
+holds even before the page renders, not just in its own body copy.
+`/conversation` was removed outright rather than kept as an alias --
+nothing has linked to it externally yet (the deployment went live this
+same day), so there was no real cost to a clean removal, and no reason to
+carry a redirect for a URL that was never actually shared. The two API
+routes (`/api/conversation`, `/api/query`) were untouched -- only the
+pages that call them moved, so `next.config.ts`'s
+`outputFileTracingIncludes` (keyed on the API route paths, not the page
+paths) needed no change either.
+
+Each page now visibly links to the other -- the root page's footer points
+to `/baseline` ("see the naive baseline it's measured against"), and
+`/baseline` opens with an amber banner naming itself a "deliberately-
+broken comparison, not the product" with a link back to the root. Neither
+page linked anywhere before this (confirmed by grep before making any
+change); the earlier structure genuinely had no way to discover one page
+from the other.
+
+**Verified past the build log this time, on principle from the prior
+entry's own lesson.** `npm run build` succeeded and printed the corrected
+route table (`/`, `/baseline`, the two API routes, `/conversation` gone
+entirely) -- treated as necessary, not sufficient, evidence. Ran a real
+local production server and checked actual response bodies and status
+codes: `GET /` contains "A fitting conversation" (the product), `GET
+/baseline` contains "Naive Pure-Vector RAG Baseline," `GET /conversation`
+returns a genuine 404 (route actually gone, not just unlinked), both API
+routes still return 200, and both cross-links are present in the real
+rendered HTML (`href="/baseline"` on `/`, `href="/"` on `/baseline`).
+`npm run eval-conversation` re-run afterward, still 36/36 -- the
+conversation pipeline itself is untouched by a page-routing change, this
+was a confirmation, not really a doubt.
+
+README.md and PROJECT_CONTEXT.md's "Live demo" lines updated to match;
+PROJECT_CONTEXT.md's older, dated status-log mentions of "demo at
+`/conversation`" (2026-08-31, Phase 5) were left as-is -- they accurately
+describe what was true when written, and this file's own convention is
+append-only, not retroactively rewritten.
+
+---
 <!-- next entry here -->

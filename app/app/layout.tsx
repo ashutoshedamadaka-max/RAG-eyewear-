@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eyewear RAG — Phase 1 Naive Baseline",
-  description: "Pure vector RAG over the eyewear catalog, deliberately naive.",
+  title: "Eyewear RAG — A Fitting Conversation",
+  description:
+    "A conversational eyewear recommender: structured catalog filters plus cited, hedged optician advice, one agent orchestrating both.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
