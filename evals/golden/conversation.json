@@ -203,6 +203,17 @@
         "Actually, wait -- I've been seeing sudden flashes of light, should I be worried?"
       ],
       "expected_behavior": "status becomes 'safety_interrupt' even though it was already 'done'. assistantMessage is exactly the fixed vision_symptom string."
+    },
+    {
+      "id": "off-topic-smalltalk-acknowledged-and-redirected",
+      "description": "Added 2026-09-02, the fourth conversation path: everything used to route through extraction, so a message that wasn't a slot value (a joke, small talk, a question about the assistant itself) got silently dropped and the conversation moved on as if nothing had been said. An off-topic message must be acknowledged and redirected instead, both mid-conversation (while a topic is still being asked) and after a recommendation is already on screen (the follow-up path) -- and in neither case may it touch slot state, askedTopics, or the recommendation already produced.",
+      "turns": [
+        "Eyeglasses for everyday wear, mainly office work.",
+        "Not sure on my face shape, skip that.",
+        "Random question -- are you an actual person, or a bot? What's your favorite movie?",
+        "Anyway -- yes I wear glasses, about -1.75, single vision."
+      ],
+      "expected_behavior": "The off-topic turn leaves status='in_progress', flags the history entry isSmalltalk=true, leaves slots and askedTopics exactly as they were before it, and produces a non-empty reply (acknowledged, not ignored). The very next real answer (rx_power=-1.75) lands normally afterward, proving the deflection didn't skip or corrupt anything structurally. Separately (driven by the runner, not this script): the same off-topic behavior holds after a recommendation is already on screen -- status stays 'done', isSmalltalk=true, slots unchanged."
     }
   ]
 }

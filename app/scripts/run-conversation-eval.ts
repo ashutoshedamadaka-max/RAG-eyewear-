@@ -460,7 +460,21 @@ async function runFitIssuesAlternateForNonWearer(): Promise<Check[]> {
 
   checks.push(check("fit_issues was actually asked (not silently skipped)", fitIssuesAskText !== undefined, JSON.stringify(state.askedTopics)));
   checks.push(check("fit_issues used the ALTERNATE question (rx_status=\"none\" precondition failed)", fitIssuesUsedAlternate === true, `usedAlternateQuestion=${fitIssuesUsedAlternate}`));
-  checks.push(check("the question asked does not reference CURRENT glasses fitting", !/current glasses/i.test(fitIssuesAskText ?? ""), fitIssuesAskText ?? "(none)"));
+  // Tightened 2026-09-02 (this round's persona pass): the "react to what they said first" rule
+  // now makes the acknowledgment legitimately echo the customer's own words ("No current
+  // glasses to work from -- that's useful to know"), which the old bare `/current glasses/i`
+  // regex flagged as a false positive -- it was never testing "does the phrase 'current
+  // glasses' appear anywhere," it was testing "does the QUESTION presuppose a current pair's
+  // fit." Rewritten to require a fit-related word within the same clause as "current
+  // glasses/pair" (the actual bug shape: "how do your current glasses fit"), not just
+  // co-occurrence anywhere in the turn's text.
+  checks.push(
+    check(
+      "the question asked does not presuppose CURRENT glasses fitting",
+      !/(your|the) current (glasses|pair)\b[^.?!]{0,40}\b(fit|fitting|fits|slip|slipping|tight|loose|comfortable|feel|feels)\b/i.test(fitIssuesAskText ?? ""),
+      fitIssuesAskText ?? "(none)"
+    )
+  );
   checks.push(check("the question asks about past experience instead", /worn glasses before|previous pair|didn.t like|before\?/i.test(fitIssuesAskText ?? ""), fitIssuesAskText ?? "(none)"));
 
   return checks;
@@ -572,6 +586,45 @@ async function runFollowUpSafetyInterrupt(): Promise<Check[]> {
   return checks;
 }
 
+/** Fourth path (decisions.md, 2026-09-02): off-topic input must be acknowledged and redirected, never silently dropped, and must never corrupt slot state -- checked both mid-conversation (a topic is still being asked) and after a recommendation is already on screen (the follow-up path). */
+async function runOffTopicSmalltalk(): Promise<Check[]> {
+  const checks: Check[] = [];
+
+  let state = await opening();
+  let r = await runTurn(state, "Eyeglasses for everyday wear, mainly office work.");
+  state = r.state;
+  r = await runTurn(state, "Not sure on my face shape, skip that.");
+  state = r.state;
+
+  const slotsBeforeJoke = JSON.stringify(state.slots);
+  const askedTopicsBeforeJoke = state.askedTopics.length;
+
+  r = await runTurn(state, "Random question -- are you an actual person, or a bot? What's your favorite movie?");
+  state = r.state;
+
+  checks.push(check("mid-conversation: status stays in_progress", state.status === "in_progress", state.status));
+  const midEntry = state.history[state.history.length - 1];
+  checks.push(check("mid-conversation: turn flagged isSmalltalk", midEntry.isSmalltalk === true, String(midEntry.isSmalltalk)));
+  checks.push(check("mid-conversation: slots unchanged by the off-topic message", JSON.stringify(state.slots) === slotsBeforeJoke, "slots differ from before the off-topic message"));
+  checks.push(check("mid-conversation: askedTopics not advanced by the off-topic message", state.askedTopics.length === askedTopicsBeforeJoke, `before=${askedTopicsBeforeJoke} after=${state.askedTopics.length}`));
+  checks.push(check("mid-conversation: reply is non-empty (acknowledged, not ignored)", r.assistantMessage.trim().length > 0, JSON.stringify(r.assistantMessage)));
+
+  r = await runTurn(state, "Anyway -- yes I wear glasses, about -1.75, single vision.");
+  state = r.state;
+  checks.push(check("mid-conversation: real answer lands normally right after the deflection", state.slots.rx_power?.value === -1.75, JSON.stringify(state.slots.rx_power)));
+
+  const doneState = await reachRecommendation();
+  const slotsBeforeDoneJoke = JSON.stringify(doneState.slots);
+  const postRec = await runTurn(doneState, "Ha, unrelated, but do you ever get tired of talking about glasses all day?");
+  checks.push(check("post-recommendation: status stays done", postRec.state.status === "done", postRec.state.status));
+  const doneEntry = postRec.state.history[postRec.state.history.length - 1];
+  checks.push(check("post-recommendation: turn flagged isSmalltalk", doneEntry.isSmalltalk === true, String(doneEntry.isSmalltalk)));
+  checks.push(check("post-recommendation: slots unchanged", JSON.stringify(postRec.state.slots) === slotsBeforeDoneJoke, "slots differ from before the off-topic message"));
+  checks.push(check("post-recommendation: reply is non-empty (acknowledged, not ignored)", postRec.assistantMessage.trim().length > 0, JSON.stringify(postRec.assistantMessage)));
+
+  return checks;
+}
+
 async function main() {
   const golden = JSON.parse(fs.readFileSync(GOLDEN_PATH, "utf-8"));
   const caseIds: string[] = golden.cases.map((c: { id: string }) => c.id);
@@ -594,6 +647,7 @@ async function main() {
     "follow-up-references-onscreen-frame": runFollowUpReferencesOnScreen,
     "follow-up-gives-real-opinion": runFollowUpGivesOpinion,
     "follow-up-safety-interrupt-still-fires": runFollowUpSafetyInterrupt,
+    "off-topic-smalltalk-acknowledged-and-redirected": runOffTopicSmalltalk,
   };
 
   let totalPass = 0;

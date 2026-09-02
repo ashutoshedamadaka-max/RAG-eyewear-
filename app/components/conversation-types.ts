@@ -63,6 +63,7 @@ export interface TurnMachinery {
   usedAlternateQuestion?: boolean;
   askingFaceShape?: boolean;
   isFollowUp?: boolean;
+  isSmalltalk?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;
@@ -124,6 +125,35 @@ export interface TurnResult {
   assistantMessage: string;
   recommendation?: Recommendation;
 }
+
+// Live machinery panel (decisions.md, 2026-09-02): mirrors the "stage" SSE event's payload
+// shapes exactly -- runTurn's onStage callback (app/lib/conversation/converse.ts) emits these
+// at the real moment each computation finishes, in the order they actually happen. A
+// discriminated union on `stage` so a switch over it is exhaustively checked.
+export interface LiveSlotsStage {
+  stage: "slots";
+  data: { extractedPartial: Slots; cumulativeSlots: Slots };
+}
+export interface LiveRulesStage {
+  stage: "rules";
+  data: { derivedFacts: DerivedFactRecord[]; assumptions: DerivedFactRecord[]; fittingRulesTotalCount: number };
+}
+export interface LiveSqlStage {
+  stage: "sql";
+  data: {
+    sql: string;
+    sqlMatchCount: number;
+    catalogTotalCount: number;
+    relaxed: boolean;
+    relaxedDetails?: { droppedClause: string; frame_id: string }[];
+    neverRelaxBlocked?: { key: string; describe: string }[];
+  };
+}
+export interface LiveRetrievalStage {
+  stage: "retrieval";
+  data: { adviceHits: AdviceHitRecord[]; adviceNearMisses: AdviceHitRecord[] };
+}
+export type LiveStageEvent = LiveSlotsStage | LiveRulesStage | LiveSqlStage | LiveRetrievalStage;
 
 /** Parses a catalog blurb (app/lib/retrieval.ts's flattened prose format) back into structured fields -- the API returns frames as pre-flattened text for the LLM prompt, not as structured JSON, so the card UI has to read the same fields back out. Regex-based, not a second source of truth: every field it extracts is literally printed in the blurb by build-blurbs.ts's fixed template. */
 export interface ParsedFrame {

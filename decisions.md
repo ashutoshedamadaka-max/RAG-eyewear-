@@ -3721,4 +3721,318 @@ baseline and the prior spread logged earlier today, nothing new or
 attributable to this round's changes.
 
 ---
-<!-- next entry here -->
+
+## 2026-09-02 · Real streaming, not a client-side typewriter animation
+
+Asked what "letter by letter" text is called, then which of two ways to
+build it: a fake client-side reveal of an already-complete response, or
+real token streaming. Chose real streaming, correctly the harder one --
+a fake reveal is cosmetic pacing on top of the same wait Phase 8 already
+measured; real streaming is the actual fix Phase 8e's own write-up named
+for perceived latency, now with real infrastructure behind it instead of
+just the observation.
+
+**What changed, mechanically.** `/api/conversation` now returns a
+Server-Sent Events stream instead of one JSON blob -- `delta` events
+carry real text chunks as `runTurn`'s new optional `onDelta` callback
+fires, one final `done` event carries the complete, unchanged-in-shape
+`TurnResult`. Every plain-text generation call in the system streams
+through it: the face-shape ask, every ASK_ORDER question, a follow-up
+answer. Opt-in by construction (`onDelta` defaults to `undefined`) --
+every non-HTTP caller (the eval scripts, the golden-set runner) keeps
+the exact non-streamed code path this file has always had, verified by
+re-running the full suite after the change, not assumed from the diff.
+
+**The recommendation turn needed a real design decision, not just
+plumbing.** Its generation is structured output (`tool_choice`, forced
+function call) -- a tool call can't stream readable partial text, only
+JSON argument fragments, which aren't a "typewriter effect" in any
+useful sense. Rather than revert to freeform parsing to make it
+streamable (reintroducing the exact prose/card-duplication problem this
+same session already fixed by moving TO structured output), split the
+call in two: `generateFraming` (a new, small, genuinely streamed plain-
+text call -- 1-2 sentences, same "no frame names/prices/measurements"
+rule) and `generateGlossesAndClosing` (the existing structured call,
+unchanged in shape, minus the `framing` field it no longer produces).
+Run in PARALLEL, not sequentially, specifically so splitting one call
+into two doesn't stack additional latency on top of the turn Phase 8
+already measured as ~87% of total time. Framing is also the right and
+only piece of this turn worth streaming at all: glosses live inside
+cards, which appear as blocks, not something meant to type out letter by
+letter, and closing arrives after the cards regardless of how it's
+generated.
+
+**A real accuracy bug caught while wiring the two parallel calls'
+timing, not shipped.** The first version recorded BOTH `modelCalls`
+entries with the same `ms` value -- the outer parallel block's total
+wall-clock -- which would have made the machinery panel's bar-chart
+timing visualization double-count: two bars each claiming the full
+parallel-block duration, summing to roughly double what actually
+elapsed. Fixed by timing each of the two calls independently inside the
+`Promise.all`, confirmed with real numbers on a live run: "Writing the
+opening line" 4106ms, "Picking frames and writing the wrap-up" 5157ms --
+genuinely different durations, not the same number twice.
+
+**Verified against raw protocol bytes, not just "it compiles."** Curled
+the dev server directly and inspected the actual SSE stream: the
+opening greeting correctly sends zero `delta` events (it's static text,
+no model call); a real ask-turn streams dozens of `delta` chunks
+ending in a `done` event; the recommend turn's streamed delta text is
+BYTE-IDENTICAL to the final `recommendation.framing` field, and the
+closing paragraph never appears in the delta stream at all, confirming
+the framing/glosses-closing split behaves exactly as designed; a
+follow-up turn streams too, with the streamed text exactly matching the
+final `assistantMessage`; the missing-API-key fallback path was
+re-checked to confirm it still speaks the same `fallback` SSE event the
+client's parser expects, now that every response on this route is a
+stream rather than a plain JSON body.
+
+**Client side:** a hand-rolled SSE parser (no library needed for a
+protocol this small) buffers across `reader.read()` calls and splits on
+literal blank lines to find complete events -- safe because
+`JSON.stringify` on the server escapes any real newlines inside the
+payload itself, so a blank line always marks a genuine event boundary,
+never a line break inside streamed text. `TextDecoder`'s `{ stream:
+true }` option handles multi-byte UTF-8 characters (₹, em dashes --
+both appear constantly in this app's actual text) split across chunk
+boundaries correctly. A temporary bubble with a blinking cursor renders
+the accumulating `streamingText` at the end of the transcript while a
+turn is in flight, and disappears the instant the authoritative `done`
+event lands and the real transcript entry takes over -- not a separate
+rendering path to keep in sync, the same components render either way.
+
+**Not done this round, noted rather than silently skipped:** Phase 8's
+`measureTTFT` benchmark flag remains inert (unrelated mechanism to
+`onDelta`) -- real time-to-first-token measurement is possible again via
+`onDelta` if a future round wants to re-run that benchmark, but wiring
+it up wasn't part of what was asked here.
+
+---
+
+## 2026-09-02 · Live machinery panel, a fourth conversation path, and a persona that reacts instead of restating
+
+A six-item round, done in the order the streaming infrastructure above
+made natural: the SSE `stage` event (new) both feeds the live panel below
+and was the missing piece for filling the pre-first-token wait the same
+message flagged as "over 60% of the wait."
+
+### 1. Two-column layout, live machinery panel
+
+The machinery panel moved out of the message thread entirely -- no more
+per-message "Show how this was built" toggle (`MachineryToggle` deleted).
+`/` is now a two-column layout: chat on the left (`3fr`), a persistent
+panel on the right (`2fr`), `lg:sticky` so it stays alongside the chat as
+it scrolls. Below the `lg` breakpoint it collapses behind a toggle
+("Show ▸" / "Hide ▾") rather than disappearing -- reachable on a phone,
+not amputated.
+
+**The live half is the actual point, not the layout.** `runTurn` gained a
+`StageCallback` (`onStage`), wired at five real computation milestones it
+already passes through -- slots merged, rules derived (three call sites:
+face-shape ask, ASK_ORDER ask, recommend), SQL executed, advice
+retrieved -- forwarded as a new `stage` SSE event
+(`app/api/conversation/route.ts`). The client accumulates these into
+`liveStages` and a new `LiveMachineryPanel` renders them progressively:
+each stage row appears the moment its real event arrives, not simulated
+or paced client-side. Verified directly against the running dev server
+(not assumed from the diff): an ask-turn emits stage events in order
+`[slots, rules]`; the recommend turn emits `[slots, rules, sql,
+retrieval]`, with payload shapes matching the client's discriminated
+`LiveStageEvent` union exactly. A trailing "Writing the reply" row (a
+dashed, pulsing ring via `StageWrap`'s new `pending` prop, distinct from
+the solid ring on completed stages) covers the gap between the last known
+stage and the `done` event -- exactly the pre-first-token window, filled
+with the retrieval/rules data already on screen instead of a blank wait.
+Once `done` lands, the view seamlessly switches to rendering the same
+`MachineryPanel` component historical turns already used -- one render
+path, not two to keep in sync.
+
+**Turn stepper.** Defaults to following the current turn automatically
+(`pinnedTurnIndex = null`); `‹`/`›` step through `state.history` and pin
+to a specific index; stepping forward past the second-to-last real entry
+returns to auto-follow rather than landing on a stale pin that happens to
+equal latest. A new message (`post()`) always resets the pin back to
+live -- the point of a *live* panel is watching the turn actually being
+processed, so a new turn pulls the reader back to it rather than leaving
+them stranded on an old one mid-browse.
+
+### 2. Persona: reacting instead of restating
+
+Three concrete problems, fixed with the same lesson this project already
+learned once this session (equal specificity beats bare instructions --
+models imitate register from examples far more reliably than from being
+told what a register is called):
+
+- **Echo, not reply.** Added an explicit rule plus a paired example using
+  the exact phrasing flagged: bad = "For a professional look under
+  ₹2,000, I'd keep it clean and structured," good = "Professional it is.
+  Safe bet, but there's a range inside that." A second pair (desk
+  reading) demonstrates fragments and a sentence starting with "And" in
+  context, not just permitted by a rule nobody was following.
+- **Every recommendation ending on a caveat.** Constraint 5 (state the
+  assumption) now explicitly says *where*: in the opening line, before
+  the cards, never saved for last. Mechanically, this meant moving the
+  assumption text out of `generateGlossesAndClosing`'s `closing` field
+  and into `generateFraming`'s prompt -- `closing`'s schema description
+  now ends on a question instead. **First attempt still duplicated it**:
+  both calls share `derivedContext` (built by `recommendationUserContent`),
+  so `generateGlossesAndClosing` saw the same "Assumptions made" block
+  framing did and restated it anyway, regardless of what its own field
+  description asked for -- confirmed live, not assumed (`closing` echoed
+  the -4.00D assumption right after `framing` already had). Fixed
+  structurally, not with a stronger prompt: built a second
+  `derivedContextForClosing` with an empty assumptions array, so the
+  closing call has nothing left to repeat. Re-verified live: framing now
+  carries the assumption once, closing ends on a real question ("Want to
+  narrow these by colour, fit, or how much personality you want them to
+  show?").
+- **Sentences too well-formed.** Explicit permission with inline
+  examples for fragments, "And"/"But" openers, and one-thought-per-
+  sentence, folded into the same example pairs above rather than added
+  as a separate abstract rule.
+
+### 3. Fourth path: smalltalk / off-topic
+
+Previously everything routed through extraction, so a joke or an
+off-topic question just vanished -- extraction returned an empty partial
+and the conversation moved on as if nothing had been said. Added an
+`off_topic` boolean to `extract-turn.ts`'s schema (with explicit
+SYSTEM_PROMPT guidance distinguishing genuine off-topic content from a
+legitimate non-answer like "not sure," which stays on-topic) and a new
+`generateSmalltalk` call plus a branch in `runTurn`, checked right after
+the safety-interrupt check (same "independent of whatever's pending"
+priority, lower than an actual safety concern) and before the
+face-shape/ASK_ORDER/recommend branching.
+
+**Must-not-corrupt-slot-state is a structural guarantee, not a prompt
+one:** `extractedPartial` is forced to `{}` whenever `offTopic` is true,
+even if the model attached something to it anyway, so merging it is
+always a no-op regardless of what the extraction call returns.
+`askedTopics`/`faceShapeAsked` are never advanced on a smalltalk turn.
+The reply is generated with a hint pointing back at whatever's actually
+still pending (the next unanswered ASK_ORDER topic, the face-shape ask,
+or "getting their recommendation" if slots are already sufficient) so the
+deflection redirects toward something real, not a generic "anyway...".
+Also wired into the `state.status === "done"` follow-up path (redirects
+toward the recommendation already on screen) for the same reason follow-
+ups exist at all -- a "done" conversation still gets real messages.
+
+Verified live: "Random question -- are you an actual person, or a bot?
+What's your favorite movie?" mid-conversation (right after a face-shape
+skip, with `fit_issues` pending) got: *"I'm a bot, so The Matrix feels
+like the legally required answer -- slightly on the nose. Back to your
+glasses: tell me if your current pair slides down, feels tight, or
+leaves marks."* -- acknowledges, one joke, redirects to the actual
+pending question, and the next real answer (`rx_power=-1.75`) landed
+normally right after. New golden case,
+`off-topic-smalltalk-acknowledged-and-redirected`, checks both the
+mid-conversation and post-recommendation paths structurally: status
+unchanged, `isSmalltalk` flagged, slots and `askedTopics` byte-identical
+to before the off-topic turn, non-empty reply.
+
+### 4. Two machinery panel bugs
+
+- **Stage 2 duplication.** `rankCandidates` pushes one fact per matching
+  *frame*, not once per rule -- `style_prefs_overlap` firing on 3
+  candidates printed the same "matches 1 of your stated style preference"
+  row three times. Fixed with `groupFactsForDisplay`, which collapses
+  rows sharing the same `(ruleId, explanation)` pair into one row plus a
+  count ("— 3 candidates boosted"). Grouped by explanation text too, not
+  `ruleId` alone, because one rule (`lens_index_annotation`) genuinely
+  produces different text per frame (it cites that frame's own lens width
+  and suggested index) -- those rows must NOT collapse, since each one
+  carries different, frame-specific information. The "N of M fired"
+  headline count was already correct (`distinctRules`, ruleId-only); only
+  the row list under it needed collapsing.
+- **Stage 5 stale copy.** "Two calls to the language model this turn" was
+  hand-written before the framing/glosses split added a third chat call;
+  now derived from real `modelCalls` data, filtered by `kind` so a chat
+  call and an embedding call are never conflated ("3 calls to the
+  language model this turn, plus 1 embedding call to turn the question
+  into a vector"). Same class of bug as the earlier "2 used · 2
+  discarded" mismatch -- these strings have to be computed from the data
+  that's actually there, never written by hand.
+
+### 5. Cost label
+
+Replaced the inline caveat ("estimated — no public rate published for
+this model") with just "estimated" beside the figure. The fuller
+explanation stays where it already lived, in the paragraph below the
+token table -- this was about the badge specifically reading as noise
+next to the number, not about removing the caveat from the page.
+
+### 6. Streaming
+
+Already implemented earlier the same session (previous entry above);
+this round confirmed it via the full `eval-conversation` suite (67/67,
+zero regressions to the default non-streaming path every eval script
+uses) and then built on it directly -- the `stage` SSE event added for
+item 1 is the same infrastructure, and the live panel's progressive
+reveal is what now fills the pre-first-token window this message called
+out as "where over 60% of the wait sits."
+
+### Corpus thinness, observed in production
+
+Sampled transcript, stage 4 (advice retrieval): **1 chunk retrieved
+above the 0.25 floor, 7 below it, top score 0.273** -- barely over the
+floor, not a confident match. The advice/RAG half contributed almost
+nothing to that particular answer; the recommendation leaned on the
+catalog half and the fitting-rules derivations instead. This is the
+thin-corpus limitation named early in this project (`PROJECT_CONTEXT.md`
+§5's seven deferred advice sources) actually showing up in a live
+retrieval, not just a theoretical gap -- it strengthens, with a real
+number attached, the case for sourcing those seven sources rather than
+treating the four already in `data/advice/` as sufficient.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` clean after every change in this
+round, checked incrementally. Live-verified against the real dev server
+before trusting any of it: the raw SSE stage-event ordering (`curl`/node,
+confirmed `[slots, rules]` for an ask-turn and `[slots, rules, sql,
+retrieval]` for the recommend turn, payload shapes matching the client's
+`LiveStageEvent` union exactly), the persona's react-first + assumption-
+placement + fragment permissions on a live recommendation, and the
+smalltalk deflection both mid-conversation and post-recommendation.
+
+New golden case (`off-topic-smalltalk-acknowledged-and-redirected`)
+brings the suite to 18 cases. `npm run eval-conversation`, full suite:
+
+- First run surfaced one failure, correctly diagnosed as a false
+  positive in the eval itself, not a regression: `fit-issues-alternate-
+  for-non-wearer`'s `/current glasses/i` check flagged the new react-
+  first acknowledgment ("No current glasses to work from -- that's
+  useful to know") because it bare-matched the phrase anywhere in the
+  turn, when the actual invariant it was meant to protect is narrower --
+  the QUESTION must not presuppose a current pair's fit. Tightened to
+  require a fit-related word in the same clause as "current glasses/
+  pair" (the real bug shape: "how do your current glasses fit"), not
+  mere co-occurrence. The two checks this overlapped with
+  (`usedAlternateQuestion===true`, and the positive "asks about past
+  experience instead" check) already covered the real structural
+  guarantee -- this one was a redundant prose heuristic that needed
+  tightening, not removing.
+- Re-run after the fix: **77/77 checks passed**, zero remaining
+  failures.
+
+`npm run validate-judges` run three times, since the persona rewrite
+(item 2) directly affects the register the hedging judge grades:
+
+| run | groundedness | citation_accuracy | hedging_match |
+|---|---|---|---|
+| 1 | 18/18 (100%) | 14/16 (88%) | 6/6 (100%) |
+| 2 | 16/18 (89%) | 14/16 (88%) | 6/6 (100%) |
+| 3 | 17/18 (94%) | 12/16 (75%) | 6/6 (100%) |
+
+`hedging_match`: 100% (6/6) on all three runs again -- the metric this
+persona round most directly touches was unaffected by it, same as every
+prior spread this session. `groundedness` (89-100%) and
+`citation_accuracy` (75-88%) show the judge's already-documented run-to-
+run spread (temperature=1, can't be pinned to 0) -- citation_accuracy's
+75% low end (run 3) is below the previously observed 88-94% band, worth
+noting rather than smoothing over, but every individual disagreement in
+that run's log is the SAME judge (not the underlying system) missing a
+citation-to-passage match on a case the hand label calls correct --
+`groundedness` in the same run still agreed 17/18, so this reads as
+judge noise on one axis, not a system regression this round's changes
+caused.

@@ -4,23 +4,23 @@ import Link from "next/link";
 
 // Real numbers, not placeholders:
 // - groundedness/citation_accuracy ranges: three real runs of `npm run validate-judges`
-//   against the 18-case hand-labelled set (decisions.md 2026-08-31, "item 2" spread).
-// - conversation eval 36/36: `npm run eval-conversation` against the 7-case
-//   evals/golden/conversation.json (decisions.md 2026-09-01).
+//   against the 18-case hand-labelled set (decisions.md 2026-09-02, the persona-round spread).
+// - conversation eval 77/77: `npm run eval-conversation` against the 18-case
+//   evals/golden/conversation.json (decisions.md 2026-09-02).
 // - gap handling 3/3: `npm run eval-gap-handling` against PROJECT_CONTEXT.md §4's
 //   three intentional catalog gaps (added this session, decisions.md 2026-09-01).
 // If any of these numbers change, this component must be updated from a fresh
 // run, not edited to keep the page looking finished -- these were true as of
-// 2026-09-01 and are labelled that way in the write-up, not asserted as timeless.
+// 2026-09-02 and are labelled that way in the write-up, not asserted as timeless.
 
 const LLM_JUDGED = [
   {
-    value: "82–88%",
+    value: "89–100%",
     label: "Every claim traceable to a source",
     detail: "No invented facts. The range is three runs of the same test — the judge is itself a language model, so it isn't perfectly repeatable run to run.",
   },
   {
-    value: "80–93%",
+    value: "75–88%",
     label: "Citations point at the right passage",
     detail: "A claim can be well-supported but attached to the wrong reference. Measured as a separate dimension from groundedness.",
   },
@@ -28,9 +28,9 @@ const LLM_JUDGED = [
 
 const DETERMINISTIC = [
   {
-    value: "36/36",
+    value: "77/77",
     label: "Conversation handled correctly",
-    detail: "Budget phrasing (a range vs. an exact floor vs. a bare ceiling), mid-conversation changes of mind, the safety interrupt firing on any turn — checked against known-correct outcomes, not graded.",
+    detail: "Budget phrasing (a range vs. an exact floor vs. a bare ceiling), mid-conversation changes of mind, the safety interrupt firing on any turn, off-topic input getting acknowledged and redirected rather than dropped — checked against known-correct outcomes, not graded.",
   },
   {
     value: "3/3",

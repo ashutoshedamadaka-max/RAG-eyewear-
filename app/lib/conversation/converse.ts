@@ -120,12 +120,21 @@ function applyCapAssumptions(slots: Slots): { slots: Slots; assumed: SlotName[] 
 const PERSONA = `You work the floor of an optical shop -- the assistant everyone hopes they get: actually looks at you, makes you laugh, somehow picks the frame you didn't know you wanted.
 
 Voice, concretely:
-- Contractions always. Sentence fragments are fine. Starting a sentence with "And" or "But" is fine.
+- React to what they just said before you do anything else. Never open by restating their own answer back to them in fancier words -- that's an echo, not a reply. If they say "professional," the reply reacts to the choice ("Professional it is. Safe bet, but there's a range inside that"), it doesn't repackage the word into a sentence about it ("For a professional look, I'd keep it clean and structured").
+- Contractions always. Sentence fragments are fine -- "Solid pick. Good in low light too." reads better than one long sentence straining to hold both ideas up at once. Starting a sentence with "And" or "But" is fine. One thought per sentence: if a comma is stitching two separate ideas together, that's two sentences, not one.
 - Never say: "I'd be happy to help", "Great choice!", "Amazing!", "To better assist you", "Crafted with", "These premium frames feature", "Of course, individual preferences may vary." If a sentence could sit on a product box, cut it and say the actual thing instead.
 - Word ceilings: clarifying questions under 30 words. Recommendation prose (framing + closing combined) under 180 words. Say less, not more.
 - You have favourites. Share them when asked, and sometimes when you're not. You'll talk someone out of a bad idea -- gently, but you'll do it, not hedge equally across every option to stay safe.
 
 Examples, same register throughout -- study these, not just the rule above:
+
+User: "Something professional, I guess."
+Bad: "For a professional look under ₹2,000, I'd keep it clean and structured rather than overly fussy."
+Good: "Professional it is. Safe bet, but there's a range inside that."
+
+User: "What about for reading, mostly at a desk?"
+Bad: "For reading at a desk, I'd recommend something with slightly stronger magnification and anti-glare coating, since screen glare tends to be the main issue in that setup."
+Good: "Desk reading's specific. Stronger magnification helps. And anti-glare -- screens throw a lot of glare back at you, that's the real culprit."
 
 User: "I need sunglasses for driving"
 Bad: "Polarized lenses are excellent for driving as they reduce glare. What is your budget?"
@@ -159,7 +168,7 @@ const CONSTRAINTS = `When any instruction below conflicts with the persona above
 2. Ground every checkable claim in a labeled source: frame facts cite [1]-[5], optical/fitting advice cites [A1]-[A4]. A technical claim with no citation is not allowed.
 3. Match confidence to each advice reference's claim_type: physical claims stated plainly, convention claims hedged and named as convention, never with the confidence of a physical fact. A light, playful tone must not soften or skip that hedge.
 4. Never invent a frame, a fact, or a citation.
-5. If any assumption was made because the customer didn't answer a question (listed below as "Assumptions made"), state it plainly in the answer, in your own words, and say what would change if it's wrong -- never bury it.
+5. If any assumption was made because the customer didn't answer a question (listed below as "Assumptions made"), state it plainly, in your own words, and say what would change if it's wrong -- never bury it. State it in the OPENING line, before the cards, as a brief aside, never saved for last -- a recommendation must never end on a caveat.
 6. Explain every technical term in the same sentence it appears -- the customer is not expected to know eyewear vocabulary (this is the vocabulary policy, PROJECT_CONTEXT.md §3: derive, don't quiz).
 7. If nothing satisfies the full request, say so explicitly and offer the nearest alternative, naming exactly what it drops -- a near-miss must never be described in a way that makes it sound like it satisfied the request.
 8. The catalog's lens_height_mm is a frame/B-height measurement, not "fitting height" (pupil centre to lens bottom) -- never conflate the two.
@@ -237,6 +246,72 @@ interface TokenUsage {
   completionTokens: number;
 }
 
+/** A callback invoked with each raw text chunk as a plain-text completion streams. */
+type DeltaCallback = (text: string) => void;
+
+/**
+ * Live machinery panel (decisions.md, 2026-09-02): fires once at each real
+ * computation milestone `runTurn` already passes through, in the order
+ * they actually happen -- slots merged, rules derived, SQL run, advice
+ * retrieved. Genuinely staged, not a fake sequence played back from
+ * already-complete data: a stage's payload is exactly what that stage
+ * had actually computed by the time this fires, nothing precomputed
+ * early or held back late. Deliberately loosely typed (stage name +
+ * payload) rather than a shared discriminated union with the client --
+ * this is a live progress feed, not a second copy of TurnResult's
+ * contract, and the final `done` event (unaffected, unchanged in shape)
+ * remains the one authoritative source of truth once a turn completes.
+ */
+type StageCallback = (stage: string, data: unknown) => void;
+
+/**
+ * Shared plain-text completion, streamed or not (decisions.md, 2026-09-02:
+ * "real streaming" -- turns dead silence into visible, incremental text,
+ * which is what actually reduces PERCEIVED latency, unlike a fake
+ * client-side reveal of an already-complete response). Streaming is
+ * opt-in via `onDelta`: every existing caller that doesn't pass one keeps
+ * the exact non-streamed behavior this file has always had (same pattern
+ * as Phase 8's measureTTFT/parallelizeRetrieval -- opt-in, default
+ * unchanged). Only usable for PLAIN TEXT completions -- the
+ * recommendation turn's structured (tool-call) half can't stream through
+ * this path, see generateGlossesAndClosing below for why.
+ */
+async function completeText(
+  client: OpenAI,
+  messages: ChatCompletionMessageParam[],
+  onDelta?: DeltaCallback
+): Promise<{ text: string; usage: TokenUsage }> {
+  if (!onDelta) {
+    const response = await client.chat.completions.create({ model: CHAT_MODEL, temperature: CHAT_TEMPERATURE, messages });
+    return {
+      text: response.choices[0]?.message?.content ?? "",
+      usage: { promptTokens: response.usage?.prompt_tokens ?? 0, completionTokens: response.usage?.completion_tokens ?? 0 },
+    };
+  }
+
+  const stream = await client.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: CHAT_TEMPERATURE,
+    messages,
+    stream: true,
+    stream_options: { include_usage: true },
+  });
+  let text = "";
+  let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) {
+      text += delta;
+      onDelta(delta);
+    }
+    if (chunk.usage) usage = chunk.usage;
+  }
+  return {
+    text,
+    usage: { promptTokens: usage?.prompt_tokens ?? 0, completionTokens: usage?.completion_tokens ?? 0 },
+  };
+}
+
 /**
  * Wraps a canned base question (or the face-shape ask) in acknowledgment
  * and, where the facts allow it, a plain-language reason -- persona pass,
@@ -252,7 +327,8 @@ async function generateWarmTurn(
   client: OpenAI,
   turns: Turn[],
   baseQuestionText: string,
-  facts: DerivedFact[]
+  facts: DerivedFact[],
+  onDelta?: DeltaCallback
 ): Promise<{ text: string; usage: TokenUsage }> {
   const factsBlock =
     facts.length > 0
@@ -271,19 +347,8 @@ async function generateWarmTurn(
     },
   ];
 
-  const response = await client.chat.completions.create({
-    model: CHAT_MODEL,
-    temperature: CHAT_TEMPERATURE,
-    messages,
-  });
-
-  return {
-    text: response.choices[0]?.message?.content ?? baseQuestionText,
-    usage: {
-      promptTokens: response.usage?.prompt_tokens ?? 0,
-      completionTokens: response.usage?.completion_tokens ?? 0,
-    },
-  };
+  const result = await completeText(client, messages, onDelta);
+  return { text: result.text || baseQuestionText, usage: result.usage };
 }
 
 /**
@@ -307,8 +372,57 @@ const ASK_LABELS: Record<QuestionTopic, string> = {
   style: "Asking about style",
 };
 
-interface RecommendationGeneration {
-  framing: string;
+function recommendationUserContent(frameContext: string, adviceContext: string, derivedContext: string, relaxed: boolean, turns: Turn[]): string {
+  return (
+    `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
+    `${relaxed ? "Nothing matched every requirement -- nearest alternatives shown" : "Matching catalog frames"}:\n${frameContext || "(none found)"}\n\n` +
+    `Retrieved advice (cite as [A#], respecting each one's claim_type):\n${adviceContext || "(none retrieved)"}\n\n` +
+    `${derivedContext}`
+  );
+}
+
+/**
+ * The recommendation turn's opening line, split into its OWN plain-text
+ * streamed call (decisions.md, 2026-09-02: "real streaming") -- run in
+ * parallel with generateGlossesAndClosing below, not sequentially before
+ * it, so splitting one call into two doesn't just add latency on top of
+ * the already-dominant recommend-turn cost (Phase 8 measured this stage
+ * at ~87% of total turn time). This is the ONLY part of the recommend
+ * turn that streams -- glosses live inside cards (not something you'd
+ * want to type out letter by letter) and closing arrives after the cards
+ * regardless, so framing is where a visible typewriter effect actually
+ * helps during the turn customers wait longest for.
+ *
+ * Also where rule 5's assumption disclosure lives now (decisions.md,
+ * 2026-09-02): a prior version put it in `closing`, which made the caveat
+ * the literal last thing every recommendation said. Moved to the FIRST
+ * thing instead -- a brief aside before the cards, not a paragraph after
+ * them -- so `closing` (below) is free to end on a question.
+ */
+async function generateFraming(
+  client: OpenAI,
+  turns: Turn[],
+  frameContext: string,
+  adviceContext: string,
+  derivedContext: string,
+  relaxed: boolean,
+  onDelta?: DeltaCallback
+): Promise<{ framing: string; usage: TokenUsage }> {
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: PERSONA_AND_RULES },
+    {
+      role: "user",
+      content:
+        recommendationUserContent(frameContext, adviceContext, derivedContext, relaxed, turns) +
+        `\n\nYour task right now: write ONLY the opening line of the recommendation -- 1-2 sentences, react to the conversation first (rule: never restate their answer back to them). Must NOT name any frame, price, or measurement -- those are on the cards, shown right after this. If the context above lists "Assumptions made," fold a brief, plain-words version of it in here (rule 5) -- this is the ONLY place it belongs, closing does not repeat it. If nothing was assumed, don't mention assumptions at all. Nothing else -- the per-frame picks and closing thoughts are handled separately.`,
+    },
+  ];
+
+  const result = await completeText(client, messages, onDelta);
+  return { framing: result.text || "Here's what I'd suggest, based on everything so far:", usage: result.usage };
+}
+
+interface GlossesClosingGeneration {
   frameGlosses: { frame_id: string; gloss: string }[];
   closing: string;
   usage: TokenUsage;
@@ -319,12 +433,16 @@ interface RecommendationGeneration {
  * freeform completion produced a numbered per-frame list with specs
  * duplicated from the cards, because there was no way to keep prose and
  * card facts separate without one. Function-calling enforces the split at
- * the schema level -- framing may not name a frame, each gloss is scoped
- * to one specific frame_id (constrained to the real candidate list, so
- * the model can't invent one), closing is free to reference frames only
- * by their existing bracket number.
+ * the schema level -- each gloss is scoped to one specific frame_id
+ * (constrained to the real candidate list, so the model can't invent
+ * one), closing is free to reference frames only by their existing
+ * bracket number. `framing` split out into its own streamed call
+ * (generateFraming, above) the same day streaming was added -- tool
+ * calls can't stream readable partial text, so it never could have
+ * lived here once "real streaming" was the goal for at least the
+ * opening line.
  */
-async function generateRecommendation(
+async function generateGlossesAndClosing(
   client: OpenAI,
   turns: Turn[],
   frameContext: string,
@@ -332,7 +450,7 @@ async function generateRecommendation(
   derivedContext: string,
   relaxed: boolean,
   frameIds: string[]
-): Promise<RecommendationGeneration> {
+): Promise<GlossesClosingGeneration> {
   const frameIdSchema = frameIds.length > 0 ? { type: "string" as const, enum: frameIds } : { type: "string" as const };
 
   const tool: ChatCompletionTool = {
@@ -343,11 +461,6 @@ async function generateRecommendation(
       parameters: {
         type: "object",
         properties: {
-          framing: {
-            type: "string",
-            description:
-              "1-2 sentences opening the recommendation. Must NOT name any frame, price, or measurement -- those are already on the cards shown right after this. Warm, brief, grounded in the conversation so far.",
-          },
           frame_glosses: {
             type: "array",
             description:
@@ -369,10 +482,10 @@ async function generateRecommendation(
           closing: {
             type: "string",
             description:
-              'One to three short paragraphs: your practical starting point (may reference a frame only by its existing bracket number, e.g. "[1]"), and any assumption made this turn stated plainly per rule 5, if one was made. May cite [n]/[A#]. Restating the customer\'s OWN stated budget number back to them is fine. What is NOT allowed, no exceptions: any frame\'s name, price, or measurement (lens width/height, weight, frame width in mm or g), any numeric lens-index recommendation (e.g. "1.5 index", "1.6 index"), and any numeric power-support spec (e.g. "supports up to 8D"). All of that is already on the cards or in the machinery panel -- restating it here is exactly the duplication this format exists to remove.',
+              'One to two short paragraphs, ending on a question -- never a flat statement, never a caveat (the assumption, if any, was already stated in the opening line above; do not repeat it here). Your practical starting point (may reference a frame only by its existing bracket number, e.g. "[1]"), then hand it back to the customer: what would they like to see next, narrower budget, a different style, anything they\'d change. May cite [n]/[A#]. Restating the customer\'s OWN stated budget number back to them is fine. What is NOT allowed, no exceptions: any frame\'s name, price, or measurement (lens width/height, weight, frame width in mm or g), any numeric lens-index recommendation (e.g. "1.5 index", "1.6 index"), and any numeric power-support spec (e.g. "supports up to 8D"). All of that is already on the cards or in the machinery panel -- restating it here is exactly the duplication this format exists to remove.',
           },
         },
-        required: ["framing", "frame_glosses", "closing"],
+        required: ["frame_glosses", "closing"],
         additionalProperties: false,
       },
     },
@@ -380,14 +493,7 @@ async function generateRecommendation(
 
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: PERSONA_AND_RULES },
-    {
-      role: "user",
-      content:
-        `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
-        `${relaxed ? "Nothing matched every requirement -- nearest alternatives shown" : "Matching catalog frames"}:\n${frameContext || "(none found)"}\n\n` +
-        `Retrieved advice (cite as [A#], respecting each one's claim_type):\n${adviceContext || "(none retrieved)"}\n\n` +
-        `${derivedContext}`,
-    },
+    { role: "user", content: recommendationUserContent(frameContext, adviceContext, derivedContext, relaxed, turns) },
   ];
 
   const response = await client.chat.completions.create({
@@ -405,22 +511,15 @@ async function generateRecommendation(
   };
 
   const call = response.choices[0]?.message?.tool_calls?.[0];
-  const fallback: RecommendationGeneration = {
-    framing: "Here's what I'd suggest, based on everything so far:",
-    frameGlosses: [],
-    closing: "",
-    usage,
-  };
+  const fallback: GlossesClosingGeneration = { frameGlosses: [], closing: "", usage };
   if (!call || call.type !== "function") return fallback;
 
   try {
     const parsed = JSON.parse(call.function.arguments) as {
-      framing: string;
       frame_glosses: { frame_id: string; gloss: string }[];
       closing: string;
     };
     return {
-      framing: parsed.framing ?? fallback.framing,
       frameGlosses: parsed.frame_glosses ?? [],
       closing: parsed.closing ?? "",
       usage,
@@ -447,7 +546,8 @@ async function generateRecommendation(
 async function generateFollowUp(
   client: OpenAI,
   turns: Turn[],
-  lastRecommendation: { frames: { frame_id: string; text: string }[] }
+  lastRecommendation: { frames: { frame_id: string; text: string }[] },
+  onDelta?: DeltaCallback
 ): Promise<{ text: string; usage: TokenUsage }> {
   const frameContext = formatFrameContext(lastRecommendation.frames);
 
@@ -462,19 +562,33 @@ async function generateFollowUp(
     },
   ];
 
-  const response = await client.chat.completions.create({
-    model: CHAT_MODEL,
-    temperature: CHAT_TEMPERATURE,
-    messages,
-  });
+  return completeText(client, messages, onDelta);
+}
 
-  return {
-    text: response.choices[0]?.message?.content ?? "",
-    usage: {
-      promptTokens: response.usage?.prompt_tokens ?? 0,
-      completionTokens: response.usage?.completion_tokens ?? 0,
+/**
+ * The fourth path (decisions.md, 2026-09-02): everything used to route
+ * through extraction, so a message that wasn't a slot value -- a joke,
+ * small talk, "are you a real person" -- got silently dropped and the
+ * conversation just moved on as if nothing had been said. This
+ * acknowledges it, deflects with a light touch, and points back at
+ * whatever's actually still pending, in 1-2 sentences -- never a long
+ * detour, never ignored. Callers are responsible for NOT merging this
+ * turn's extractedPartial into slots regardless of what it contains (see
+ * runTurn) -- state must come through unchanged on a smalltalk turn.
+ */
+async function generateSmalltalk(client: OpenAI, turns: Turn[], redirectHint: string, onDelta?: DeltaCallback): Promise<{ text: string; usage: TokenUsage }> {
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: PERSONA_AND_RULES },
+    {
+      role: "user",
+      content:
+        `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
+        `The customer's latest message is off-topic -- small talk, a joke, a question about you, or something unrelated to eyewear shopping. Your task: react to it for real, briefly and with some humour, then redirect back to the shopping conversation in the same breath. ${redirectHint}\n\n` +
+        `One to two sentences total. Don't answer the off-topic thing at length or invent facts about yourself beyond a light, brief reaction. Don't ask a new formal question here -- just point back toward what's pending, naturally.`,
     },
-  };
+  ];
+  const result = await completeText(client, messages, onDelta);
+  return { text: result.text || "Ha, fair -- anyway, back to frames.", usage: result.usage };
 }
 
 export interface TurnResult {
@@ -510,13 +624,12 @@ export async function runTurn(
   state: ConversationState,
   userMessage: string | undefined,
   /**
-   * Phase 8 (decisions.md, 2026-09-01). NOTE (2026-09-02): the
-   * recommendation turn's generation call is now structured (function
-   * calling), not a single freeform streamed completion, so there is no
-   * longer a token-by-token stream to measure a first-token time against
-   * -- this flag is accepted for backward compatibility with
-   * scripts/measure-latency.ts but no longer has an effect. See
-   * decisions.md for the honest accounting of what that leaves stale.
+   * Phase 8 (decisions.md, 2026-09-01). NOTE (2026-09-02): unused since
+   * the recommendation turn moved to structured output. Left as an
+   * accepted-but-inert parameter for scripts/measure-latency.ts's
+   * backward compatibility -- real per-token timing is available again
+   * via `onDelta` below (a different mechanism, added for the real
+   * streaming UI, not this flag), if a future benchmark wants it.
    */
   measureTTFT = false,
   /**
@@ -528,7 +641,27 @@ export async function runTurn(
    * Unaffected by the 2026-09-02 persona pass -- still only about the
    * two retrieval halves, unrelated to generation shape.
    */
-  parallelizeRetrieval = false
+  parallelizeRetrieval = false,
+  /**
+   * Real streaming (decisions.md, 2026-09-02) -- opt-in, defaults
+   * undefined, so every existing non-HTTP caller (the eval scripts, the
+   * golden-set runner) keeps the exact non-streamed behavior this file
+   * has always had. When provided, every PLAIN-TEXT generation call this
+   * turn makes (the face-shape ask, every ASK_ORDER question, a
+   * follow-up answer, and the recommendation turn's framing line) streams
+   * through it chunk by chunk as the model actually produces them --
+   * genuine reduced perceived latency, not a client-side animation
+   * replayed after the full response already arrived. The recommendation
+   * turn's per-frame glosses and closing paragraph do not stream (tool
+   * calls can't emit readable partial text), see generateGlossesAndClosing.
+   */
+  onDelta?: DeltaCallback,
+  /**
+   * Live machinery panel (decisions.md, 2026-09-02) -- opt-in, same
+   * "every existing caller keeps default behavior" contract as onDelta.
+   * See StageCallback above for what fires when.
+   */
+  onStage?: StageCallback
 ): Promise<TurnResult> {
   void measureTTFT; // see note above -- accepted, no longer used
   const turnStart = Date.now();
@@ -616,8 +749,45 @@ export async function runTurn(
       };
     }
 
+    if (safetyCheck.offTopic) {
+      const smalltalkStart = Date.now();
+      const generated = await generateSmalltalk(
+        client,
+        turns,
+        `Redirect toward the recommendation already on screen -- they can ask about it, or wrap up.`,
+        onDelta
+      );
+      timingsMs.generation = Date.now() - smalltalkStart;
+      modelCalls.push({
+        label: "Deflecting and redirecting",
+        kind: "chat",
+        promptTokens: generated.usage.promptTokens,
+        completionTokens: generated.usage.completionTokens,
+        costInr: costInr(generated.usage.promptTokens, generated.usage.completionTokens, "chat"),
+        ms: timingsMs.generation,
+      });
+      turns.push({ role: "assistant", content: generated.text });
+      timingsMs.total = Date.now() - turnStart;
+      history.push({
+        turnIndex: history.length,
+        userMessage,
+        extractedPartial: {},
+        safetyFlag: "none",
+        derivedFacts: [],
+        assumptions: [],
+        fittingRulesTotalCount: FITTING_RULES.length,
+        isSmalltalk: true,
+        modelCalls,
+        timingsMs,
+      });
+      return {
+        state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "done", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
+        assistantMessage: generated.text,
+      };
+    }
+
     const followUpStart = Date.now();
-    const followUp = await generateFollowUp(client, turns, state.lastRecommendation ?? { frames: [] });
+    const followUp = await generateFollowUp(client, turns, state.lastRecommendation ?? { frames: [] }, onDelta);
     timingsMs.generation = Date.now() - followUpStart;
     modelCalls.push({
       label: "Answering a follow-up",
@@ -661,9 +831,14 @@ export async function runTurn(
     costInr: costInr(extracted.usage.promptTokens, extracted.usage.completionTokens, "chat"),
     ms: timingsMs.extraction,
   });
-  extractedPartial = extracted.partial;
+  // Off-topic messages never contribute slot values, even if the extraction call attached
+  // something to one anyway -- forced empty here, not just expected empty by the prompt, so
+  // "must not corrupt slot state" (decisions.md, 2026-09-02) is a structural guarantee, not a
+  // prompt-following one, matching this file's existing pattern for the safety-interrupt path.
+  extractedPartial = extracted.offTopic ? {} : extracted.partial;
   safetyFlag = extracted.safetyFlag;
   slots = mergeSlots(slots, extractedPartial);
+  onStage?.("slots", { extractedPartial, cumulativeSlots: slots });
 
   // Safety interrupt fires at ANY turn, not just the first (PROJECT_CONTEXT.md §3) --
   // checked every turn regardless of what question was pending, before sufficiency/policy runs.
@@ -697,6 +872,56 @@ export async function runTurn(
     };
   }
 
+  // Fourth path (decisions.md, 2026-09-02): off-topic input, checked right after safety --
+  // same priority reasoning (independent of whatever question is pending), lower priority
+  // than a real safety concern. Deflects and points back at whatever's genuinely still open
+  // WITHOUT asking it formally (that stays generateWarmTurn's job, on the turn the customer
+  // actually engages again) and WITHOUT advancing askedTopics/faceShapeAsked -- so the
+  // conversation resumes exactly where it was, nothing skipped, nothing double-counted
+  // against the question cap for a turn that answered nothing.
+  if (extracted.offTopic) {
+    const pendingQuestion =
+      !state.faceShapeAsked && topicIsAnswered("purpose", slots)
+        ? FACE_SHAPE_BASE_QUESTION
+        : (() => {
+            const next = decideNextStep({ slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked });
+            return next.kind === "ask" ? next.questionText ?? "" : "";
+          })();
+    const redirectHint = pendingQuestion
+      ? `Redirect toward this still-open question, in your own words -- don't quote it verbatim: "${pendingQuestion}"`
+      : `Redirect toward getting their recommendation -- there's already enough to go on.`;
+
+    const smalltalkStart = Date.now();
+    const generated = await generateSmalltalk(client, turns, redirectHint, onDelta);
+    timingsMs.generation = Date.now() - smalltalkStart;
+    modelCalls.push({
+      label: "Deflecting and redirecting",
+      kind: "chat",
+      promptTokens: generated.usage.promptTokens,
+      completionTokens: generated.usage.completionTokens,
+      costInr: costInr(generated.usage.promptTokens, generated.usage.completionTokens, "chat"),
+      ms: timingsMs.generation,
+    });
+    turns.push({ role: "assistant", content: generated.text });
+    timingsMs.total = Date.now() - turnStart;
+    history.push({
+      turnIndex: history.length,
+      userMessage,
+      extractedPartial: {},
+      safetyFlag: "none",
+      derivedFacts: [],
+      assumptions: [],
+      fittingRulesTotalCount: FITTING_RULES.length,
+      isSmalltalk: true,
+      modelCalls,
+      timingsMs,
+    });
+    return {
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
+      assistantMessage: generated.text,
+    };
+  }
+
   // New-opening flow, ask-order revised again (decisions.md, 2026-09-02):
   // purpose determines far more than face shape does, so it leads.
   // Face-shape fires exactly once, but the trigger is now "purpose is
@@ -710,8 +935,9 @@ export async function runTurn(
   // askedTopics/cap, same as before.
   if (!state.faceShapeAsked && topicIsAnswered("purpose", slots)) {
     const { facts } = deriveQuery(slots);
+    onStage?.("rules", { derivedFacts: facts, assumptions: [], fittingRulesTotalCount: FITTING_RULES.length });
     const askStart = Date.now();
-    const generated = await generateWarmTurn(client, turns, FACE_SHAPE_BASE_QUESTION, facts);
+    const generated = await generateWarmTurn(client, turns, FACE_SHAPE_BASE_QUESTION, facts, onDelta);
     timingsMs.generation = Date.now() - askStart;
     modelCalls.push({
       label: "Asking about face shape",
@@ -746,8 +972,9 @@ export async function runTurn(
   if (next.kind === "ask" && next.topic) {
     askedTopics = [...askedTopics, next.topic];
     const { facts } = deriveQuery(slots); // assumptions omitted -- see comment above, same reasoning
+    onStage?.("rules", { derivedFacts: facts, assumptions: [], fittingRulesTotalCount: FITTING_RULES.length });
     const askStart = Date.now();
-    const generated = await generateWarmTurn(client, turns, next.questionText!, facts);
+    const generated = await generateWarmTurn(client, turns, next.questionText!, facts, onDelta);
     timingsMs.generation = Date.now() - askStart;
     modelCalls.push({
       label: ASK_LABELS[next.topic],
@@ -784,6 +1011,7 @@ export async function runTurn(
   const assumedAtCap = [...new Set([...state.assumedAtCap, ...capResult.assumed])];
 
   const { filter, facts, assumptions } = deriveQuery(slots, true);
+  onStage?.("rules", { derivedFacts: facts, assumptions, fittingRulesTotalCount: FITTING_RULES.length });
 
   // Phase 8 (decisions.md, 2026-09-01): the catalog half (SQL, relaxation if it
   // fires, ranking) and the advice half (embed the query, similarity search) don't
@@ -826,6 +1054,14 @@ export async function runTurn(
     }
 
     ranked = rankCandidates(candidateFrames, slots).slice(0, MAX_FRAMES_SHOWN);
+    onStage?.("sql", {
+      sql,
+      sqlMatchCount,
+      catalogTotalCount,
+      relaxed,
+      relaxedDetails,
+      neverRelaxBlocked: neverRelaxBlockedDetails,
+    });
   }
 
   let adviceHits: AdviceHit[] = [];
@@ -851,6 +1087,24 @@ export async function runTurn(
     adviceHits = result.hits;
     adviceNearMisses = result.nearMisses;
     timingsMs.adviceSearch = Date.now() - searchStart;
+    onStage?.("retrieval", {
+      adviceHits: adviceHits.map((h) => ({
+        chunk_id: h.chunk_id,
+        score: h.score,
+        claim_type: h.chunk.claim_type,
+        source_org: h.chunk.source_org,
+        doc_id: h.chunk.doc_id,
+        section_heading: h.chunk.section_heading,
+      })),
+      adviceNearMisses: adviceNearMisses.map((h) => ({
+        chunk_id: h.chunk_id,
+        score: h.score,
+        claim_type: h.chunk.claim_type,
+        source_org: h.chunk.source_org,
+        doc_id: h.chunk.doc_id,
+        section_heading: h.chunk.section_heading,
+      })),
+    });
   }
 
   if (parallelizeRetrieval) {
@@ -866,25 +1120,52 @@ export async function runTurn(
   const adviceContext = formatAdviceContext(adviceHits);
 
   const derivedContext = formatDerivedFacts([...facts, ...rankedFacts], assumptions);
+  // Glosses/closing must NEVER see "Assumptions made" (decisions.md, 2026-09-02): rule 5 says
+  // to state an assumption, and a call handed that block will state it regardless of what its
+  // own field description asks for -- confirmed live, closing restated the -4.00D assumption
+  // right after framing already had. Structural fix, not a stronger prompt: the assumption
+  // text is simply absent from this call's context, so there is nothing left for it to repeat.
+  const derivedContextForClosing = formatDerivedFacts([...facts, ...rankedFacts], []);
 
+  // Split into two calls, run in PARALLEL (decisions.md, 2026-09-02) -- framing streams
+  // (the one part of this turn worth a visible typewriter effect: it's plain text, and it's
+  // the very first thing the customer sees after the longest wait in the whole system, Phase
+  // 8's own measurement). Glosses/closing stay a single structured call, unchanged in shape.
+  // Parallel, not sequential, so splitting one call into two doesn't just stack latency on
+  // top of the turn Phase 8 already found dominates total time. Each call's own `ms` is
+  // timed independently (not the shared parallel-block wall-clock) -- reusing the block
+  // total for both would double the machinery panel's bar-chart width versus what actually
+  // elapsed, since the two run concurrently, not back to back.
   const generationStart = Date.now();
-  const generated = await generateRecommendation(
-    client,
-    turns,
-    frameContext,
-    adviceContext,
-    derivedContext,
-    relaxed,
-    frameContextRows.map((r) => r.frame_id)
-  );
+  const [framingResult, glossesResult] = await Promise.all([
+    (async () => {
+      const start = Date.now();
+      const r = await generateFraming(client, turns, frameContext, adviceContext, derivedContext, relaxed, onDelta);
+      return { ...r, ms: Date.now() - start };
+    })(),
+    (async () => {
+      const start = Date.now();
+      const r = await generateGlossesAndClosing(client, turns, frameContext, adviceContext, derivedContextForClosing, relaxed, frameContextRows.map((f) => f.frame_id));
+      return { ...r, ms: Date.now() - start };
+    })(),
+  ]);
   timingsMs.generation = Date.now() - generationStart;
+  const generated = { framing: framingResult.framing, frameGlosses: glossesResult.frameGlosses, closing: glossesResult.closing };
   modelCalls.push({
-    label: "Writing the answer",
+    label: "Writing the opening line",
     kind: "chat",
-    promptTokens: generated.usage.promptTokens,
-    completionTokens: generated.usage.completionTokens,
-    costInr: costInr(generated.usage.promptTokens, generated.usage.completionTokens, "chat"),
-    ms: timingsMs.generation,
+    promptTokens: framingResult.usage.promptTokens,
+    completionTokens: framingResult.usage.completionTokens,
+    costInr: costInr(framingResult.usage.promptTokens, framingResult.usage.completionTokens, "chat"),
+    ms: framingResult.ms,
+  });
+  modelCalls.push({
+    label: "Picking frames and writing the wrap-up",
+    kind: "chat",
+    promptTokens: glossesResult.usage.promptTokens,
+    completionTokens: glossesResult.usage.completionTokens,
+    costInr: costInr(glossesResult.usage.promptTokens, glossesResult.usage.completionTokens, "chat"),
+    ms: glossesResult.ms,
   });
 
   // Product decision, not a formatting preference (decisions.md, 2026-09-02):

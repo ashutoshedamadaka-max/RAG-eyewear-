@@ -19,7 +19,9 @@ The customer is never expected to know eyewear vocabulary. They describe their s
 - face_shape: this is asked as tappable options at the very start of the conversation, with a "skip / not sure" choice always available. If they name a shape (oval, round, square, heart, rectangle), set it. If they skip, say they don't know, or say anything equivalent to "not sure" in reply to that opener, set face_shape to "unsure" explicitly -- do not leave it unset, since "unset" and "asked and declined" need to look different to the rest of the system.
 - budget: approximate language ("around", "about", "roughly", "somewhere near", "-ish") means the number is not a hard boundary -- set BOTH budget_min and budget_max as a range roughly 15-20% below and above the stated figure (e.g. "around ₹3000" -> budget_min≈2500-2600, budget_max≈3400-3500), not budget_min=budget_max=3000. A bare ceiling ("under ₹3000", "up to ₹3000", "keep it under ₹3000", or just a plain number with no qualifier, e.g. "₹3000") means only a maximum was stated -- set budget_max only, leave budget_min unset entirely. Only set an exact budget_min when the customer states a genuine floor ("between ₹2000 and ₹3000", "at least ₹2000", "₹2000 to ₹3000") -- in that case use their exact stated numbers, not a computed range.
 
-safety_flag is independent of everything else and must be checked on every turn regardless of what question is pending: set "vision_symptom" for anything describing a physical eye/vision symptom (pain, floaters, sudden vision change, flashes of light, double vision), "medical_question" for asking whether glasses/a product will treat or fix a medical condition (astigmatism, an eye disease, "will these fix X"). Otherwise "none". Do not skip this check just because the conversation was about frame shopping.`;
+safety_flag is independent of everything else and must be checked on every turn regardless of what question is pending: set "vision_symptom" for anything describing a physical eye/vision symptom (pain, floaters, sudden vision change, flashes of light, double vision), "medical_question" for asking whether glasses/a product will treat or fix a medical condition (astigmatism, an eye disease, "will these fix X"). Otherwise "none". Do not skip this check just because the conversation was about frame shopping.
+
+off_topic is also independent and also checked every turn: set it true when the message doesn't engage with the shopping conversation at all -- a joke, small talk ("how's your day"), a question about the assistant itself ("are you an AI", "who made you"), testing/poking at the bot, a fully unrelated tangent. Do NOT set it true for a real (even unhelpful) attempt to answer whatever's pending -- "not sure", "I don't know", "skip that", "none of those" are on-topic non-answers, not off_topic. A message can be off_topic AND still contain no other fields -- that's the expected shape for it.`;
 
 const EXTRACTION_TOOL: ChatCompletionTool = {
   type: "function",
@@ -51,6 +53,11 @@ const EXTRACTION_TOOL: ChatCompletionTool = {
         eye_spacing: { type: "string", enum: ["close_set", "wide_set"] },
         face_length_ratio: { type: "string", enum: ["long", "typical"] },
         safety_flag: { type: "string", enum: ["vision_symptom", "medical_question", "none"] },
+        off_topic: {
+          type: "boolean",
+          description:
+            "True ONLY when the message doesn't engage with the shopping conversation at all -- a joke, small talk, a question about the assistant itself, testing the bot, a completely unrelated tangent. FALSE for a genuine (even unhelpful) attempt to engage: \"not sure\", \"I don't know\", \"skip that\", a vague or incomplete answer to what was just asked are all on-topic, not off_topic -- they're real answers, just not informative ones. When in doubt, false.",
+        },
       },
       required: ["safety_flag"],
       additionalProperties: false,
@@ -73,6 +80,7 @@ export interface TokenUsage {
 interface ExtractedTurn {
   partial: PartialSlots;
   safetyFlag: SafetyFlag;
+  offTopic: boolean;
   usage: TokenUsage;
 }
 
@@ -115,21 +123,21 @@ export async function extractTurn(
   };
 
   const call = response.choices[0]?.message?.tool_calls?.[0];
-  if (!call || call.type !== "function") return { partial: {}, safetyFlag: "none", usage };
+  if (!call || call.type !== "function") return { partial: {}, safetyFlag: "none", offTopic: false, usage };
 
   let raw: Record<string, unknown>;
   try {
     raw = JSON.parse(call.function.arguments);
   } catch {
-    return { partial: {}, safetyFlag: "none", usage };
+    return { partial: {}, safetyFlag: "none", offTopic: false, usage };
   }
 
-  const { safety_flag, ...rest } = raw;
+  const { safety_flag, off_topic, ...rest } = raw;
   const partial: PartialSlots = {};
   for (const [key, value] of Object.entries(rest)) {
     if (value === undefined || value === null) continue;
     (partial as Record<string, unknown>)[key] = { value, source: "stated", confidence: 1.0 };
   }
 
-  return { partial, safetyFlag: (safety_flag as SafetyFlag) ?? "none", usage };
+  return { partial, safetyFlag: (safety_flag as SafetyFlag) ?? "none", offTopic: off_topic === true, usage };
 }

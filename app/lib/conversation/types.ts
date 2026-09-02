@@ -133,6 +133,8 @@ export interface TurnMachinery {
   askingFaceShape?: boolean;
   /** True only on a follow-up turn (state.status was already "done" when this turn started) -- decisions.md 2026-09-02's restored third path. No extraction/retrieval reruns on this turn; `recommendation` below stays unset since no new query was compiled. */
   isFollowUp?: boolean;
+  /** True only on the fourth path (decisions.md, 2026-09-02): the customer's message was off-topic (a joke, small talk, a question about the assistant) rather than a real answer or a follow-up about what's on screen. extractedPartial is forced empty on this turn -- nothing an off-topic message "extracted" is ever merged into slots. */
+  isSmalltalk?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;

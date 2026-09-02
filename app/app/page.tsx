@@ -29,10 +29,10 @@ import Link from "next/link";
 import { Newsreader, Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import FaceShapePicker from "@/components/FaceShapePicker";
 import RecommendationCard from "@/components/RecommendationCard";
-import { MachineryToggle } from "@/components/MachineryPanel";
+import MachineryPanel, { LiveMachineryPanel } from "@/components/MachineryPanel";
 import EvalSection from "@/components/EvalSection";
 import { parseFrameBlurb } from "@/components/conversation-types";
-import type { ConversationState, TurnResult, Slots, RecommendedFrame } from "@/components/conversation-types";
+import type { ConversationState, TurnResult, Slots, RecommendedFrame, LiveStageEvent } from "@/components/conversation-types";
 
 import straightforwardFixture from "@/lib/conversation/fixtures/straightforward.json";
 import intentionalGapFixture from "@/lib/conversation/fixtures/intentional-gap.json";
@@ -89,6 +89,28 @@ export default function ConversationPage() {
   const [replayScenario, setReplayScenario] = useState<ReplayFixture | null>(null);
   const [replayStep, setReplayStep] = useState(0);
 
+  // Real streaming (decisions.md, 2026-09-02): accumulates as `delta` SSE events arrive from
+  // the server -- genuine token-by-token text, not a client-side animation replayed after the
+  // full response already showed up. Rendered as a temporary bubble at the end of the
+  // transcript while a turn is in flight; cleared the moment the authoritative `done` event
+  // lands and the real state takes over.
+  const [streamingText, setStreamingText] = useState("");
+
+  // Live machinery panel (decisions.md, 2026-09-02): accumulates as `stage` SSE events arrive
+  // for the turn currently in flight -- one entry per real computation milestone runTurn passes
+  // through (slots merged, rules derived, SQL run, advice retrieved), in the order they actually
+  // happen. Reset at the start of every post() and cleared once `done`/`fallback` lands, since
+  // the finalized data lives in state.history from that point on.
+  const [liveStages, setLiveStages] = useState<LiveStageEvent[]>([]);
+  // Turn stepper: null = follow the current/live turn automatically (the default, and the
+  // point of a LIVE panel). A number pins the panel to that history index instead, so a
+  // reader can step back through previous turns without the panel yanking them back on every
+  // re-render -- only a genuinely NEW message (post()) resets this back to null.
+  const [pinnedTurnIndex, setPinnedTurnIndex] = useState<number | null>(null);
+  // Narrow viewports (decisions.md, 2026-09-02): the panel collapses behind a toggle rather
+  // than disappearing -- reachable, not amputated. Irrelevant at lg+ (always shown there).
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+
   function applyTurnResult(result: TurnResult) {
     setState(result.state);
     if (result.recommendation) setRecommendation(result.recommendation);
@@ -97,27 +119,66 @@ export default function ConversationPage() {
   async function post(message?: string) {
     setLoading(true);
     setError(null);
+    setStreamingText("");
+    setLiveStages([]);
+    setPinnedTurnIndex(null);
     try {
       const res = await fetch("/api/conversation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state, message }),
       });
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `Request failed (${res.status})`);
       }
-      const body = await res.json();
-      if (body && body.fallback) {
-        setFallbackReason(body.reason ?? "upstream_error");
-        setStarted(true);
-        return;
+
+      // Server-Sent Events, hand-parsed -- no library needed for a protocol this small.
+      // `delta` events carry real text chunks; one final `done` (or `fallback`) event carries
+      // the complete, authoritative payload, identical in shape to what a plain JSON response
+      // always carried. JSON.stringify on the server escapes any real newlines inside the data
+      // itself, so splitting on a literal blank line ("\n\n") to find event boundaries is safe.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let sepIndex: number;
+        while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, sepIndex);
+          buffer = buffer.slice(sepIndex + 2);
+
+          const eventMatch = rawEvent.match(/^event: (.+)$/m);
+          const dataMatch = rawEvent.match(/^data: (.+)$/m);
+          if (!eventMatch || !dataMatch) continue;
+          const eventType = eventMatch[1];
+          const data = JSON.parse(dataMatch[1]);
+
+          if (eventType === "delta") {
+            setStreamingText((t) => t + data.text);
+          } else if (eventType === "stage") {
+            setLiveStages((prev) => [...prev, { stage: data.stage, data: data.data } as LiveStageEvent]);
+          } else if (eventType === "fallback") {
+            setFallbackReason(data.reason ?? "upstream_error");
+            setStarted(true);
+            setStreamingText("");
+            setLiveStages([]);
+          } else if (eventType === "done") {
+            applyTurnResult(data as TurnResult);
+            setStreamingText("");
+            setLiveStages([]);
+          }
+        }
       }
-      applyTurnResult(body as TurnResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setStreamingText("");
     }
   }
 
@@ -178,6 +239,30 @@ export default function ConversationPage() {
       : undefined;
   const replayExhausted = Boolean(replayScenario) && replayStep >= (replayScenario?.turns.length ?? 0);
 
+  // Turn stepper (decisions.md, 2026-09-02): the panel shows the CURRENT turn by default --
+  // "live" while one is actually in flight (real streaming, not replay), otherwise the latest
+  // completed entry -- with a way to step back through history. Replay never has a live phase
+  // (fixtures apply a complete TurnResult synchronously on each "Continue" click), so it always
+  // falls through to the historical per-index view, same rendering path a live turn uses once done.
+  const isLiveView = pinnedTurnIndex === null && loading && !inReplay;
+  const viewIndex = pinnedTurnIndex ?? (state ? state.history.length - 1 : -1);
+  const totalKnownTurns = state ? state.history.length + (isLiveView ? 1 : 0) : 0;
+  const displayTurnNumber = isLiveView ? totalKnownTurns : viewIndex + 1;
+  const stepperPrevDisabled = displayTurnNumber <= 1;
+  const stepperNextDisabled = pinnedTurnIndex === null;
+
+  function stepTurn(delta: number) {
+    if (!state) return;
+    const base = pinnedTurnIndex ?? state.history.length - 1;
+    const target = base + delta;
+    if (target < 0) return;
+    // Stepping forward past the second-to-last real entry returns to "follow the live/current
+    // turn" (null) rather than pinning to the last index explicitly -- so a reader who steps
+    // forward lands back in auto-follow mode, not in a stale pin that happens to equal latest.
+    if (delta > 0 && target >= state.history.length - 1) setPinnedTurnIndex(null);
+    else setPinnedTurnIndex(target);
+  }
+
   return (
     <div
       className={`${serif.variable} ${sans.variable} ${mono.variable} min-h-screen bg-[#F6F8F7] pb-16`}
@@ -198,9 +283,9 @@ export default function ConversationPage() {
         </div>
       </header>
 
-      <main className="max-w-[800px] mx-auto px-6 pt-6">
+      <main className="max-w-[1160px] mx-auto px-6 pt-6">
         {inReplay && (
-          <div className="mb-5 rounded-md border border-[#E3C989] bg-[#FBF3DF] px-3.5 py-2.5 text-[12.8px] text-[#6B4E14]">
+          <div className="mb-5 max-w-[800px] rounded-md border border-[#E3C989] bg-[#FBF3DF] px-3.5 py-2.5 text-[12.8px] text-[#6B4E14]">
             <strong>Replaying a recorded conversation.</strong> The live model isn&apos;t
             available right now ({FALLBACK_REASON_LABELS[fallbackReason ?? ""] ?? "the live call failed"}).
             Everything below — including the machinery panel — is real data from an actual run of
@@ -218,7 +303,7 @@ export default function ConversationPage() {
         )}
 
         {inReplay && !replayScenario && (
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-[800px]">
             <p className="text-[13px] text-[#5F6F68] mb-2">Pick a recorded conversation to replay:</p>
             {REPLAY_SCENARIOS.map((fixture) => (
               <button
@@ -234,12 +319,12 @@ export default function ConversationPage() {
         )}
 
         {started && state && (
-          <div>
+          <div className="lg:grid lg:grid-cols-[3fr_2fr] lg:gap-8 lg:items-start">
+          <div className="min-w-0">
             {state.history.map((entry, i) => {
               const isOpening = i === 0;
               const userContent = isOpening ? undefined : turns[2 * i - 1]?.content;
               const assistantContent = isOpening ? turns[0]?.content : turns[2 * i]?.content;
-              const cumulative = cumulativeSlotsAt(state.history, i, state.slots);
               // Follow-up path (decisions.md, 2026-09-02): dropped the "last entry" requirement --
               // once a follow-up turn can be appended after the recommendation, the recommend
               // entry is no longer necessarily last, but it's still the ONLY entry that will ever
@@ -247,15 +332,6 @@ export default function ConversationPage() {
               // regardless of how many follow-ups come after.
               const isRecommendTurn = Boolean(entry.recommendation);
               const isLastEntry = i === state.history.length - 1;
-              // "Show how this was built" only where there's something to see (decisions.md,
-              // 2026-09-02, revised same day): originally gated on a recommendation/fired
-              // rule/assumption, written before every ask-turn made a real generation call of
-              // its own. Now that it does (acknowledgment + question, persona pass), there's
-              // real timing/cost data on nearly every turn -- so "something to see" widens to
-              // any real model call too. This still excludes exactly one turn, correctly: the
-              // static greeting, which makes no model call and has nothing behind it at all.
-              const hasMachineryToShow =
-                Boolean(entry.recommendation) || entry.derivedFacts.length > 0 || entry.assumptions.length > 0 || entry.modelCalls.length > 0;
 
               return (
                 <div key={entry.turnIndex} className="mb-5">
@@ -326,10 +402,26 @@ export default function ConversationPage() {
                     </div>
                   )}
 
-                  {hasMachineryToShow && <MachineryToggle entry={entry} cumulativeSlots={cumulative} />}
                 </div>
               );
             })}
+
+            {/* Real streaming (decisions.md, 2026-09-02): a temporary bubble showing the
+                turn actually being written, chunk by chunk, as the server produces it -- not
+                a placeholder, not a client-side animation of an already-complete response.
+                Vanishes the instant the authoritative `done` event lands and the real
+                transcript entry (state.history) takes over rendering in its place. */}
+            {loading && streamingText && !inReplay && (
+              <div className="mb-5">
+                <p
+                  className="text-[#14201C] m-0 max-w-[62ch] whitespace-pre-wrap"
+                  style={{ fontFamily: "var(--font-serif)", fontSize: 16, lineHeight: 1.65 }}
+                >
+                  {streamingText}
+                  <span className="inline-block w-[2px] h-[17px] bg-[#14201C] ml-0.5 align-text-bottom animate-pulse" />
+                </p>
+              </div>
+            )}
 
             {state.status === "safety_interrupt" && (
               <p className="text-[12.5px] text-[#8A5A0B] mb-4">
@@ -404,6 +496,69 @@ export default function ConversationPage() {
                 <EvalSection />
               </div>
             )}
+          </div>
+
+          {/* Two-column layout, live machinery panel (decisions.md, 2026-09-02): moved out of
+              the message thread entirely -- no more per-message "Show how this was built"
+              toggle. Sticky alongside the chat on wide viewports; a collapsed toggle on narrow
+              ones (mobilePanelOpen), never gone entirely. Shows the CURRENT turn by default
+              (live, while one is in flight; otherwise the latest completed entry) with a
+              stepper to walk back through history. */}
+          <aside className="mt-8 lg:mt-0 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <h2 className="text-[13.5px] font-semibold text-[#14201C] m-0">How this is built</h2>
+              <button
+                onClick={() => setMobilePanelOpen((v) => !v)}
+                aria-expanded={mobilePanelOpen}
+                className="lg:hidden text-[12px] font-medium text-[#14493E] border border-[#C9DDD4] rounded px-2.5 py-1 whitespace-nowrap"
+              >
+                {mobilePanelOpen ? "Hide ▾" : "Show ▸"}
+              </button>
+            </div>
+            <div className={mobilePanelOpen ? "block" : "hidden lg:block"}>
+              {state.history.length > 0 && (
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => stepTurn(-1)}
+                      disabled={stepperPrevDisabled}
+                      className="w-6 h-6 rounded border border-[#DFE6E2] text-[#14201C] text-[12px] leading-none disabled:opacity-30"
+                      aria-label="Previous turn"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-[12px] font-mono text-[#5F6F68] tabular-nums">
+                      Turn {displayTurnNumber} of {totalKnownTurns}
+                      {isLiveView && <span className="text-[#4E7F6B]"> · live</span>}
+                    </span>
+                    <button
+                      onClick={() => stepTurn(1)}
+                      disabled={stepperNextDisabled}
+                      className="w-6 h-6 rounded border border-[#DFE6E2] text-[#14201C] text-[12px] leading-none disabled:opacity-30"
+                      aria-label="Next turn"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  {pinnedTurnIndex !== null && (
+                    <button onClick={() => setPinnedTurnIndex(null)} className="text-[11.5px] underline text-[#14493E]">
+                      Jump to current
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {isLiveView ? (
+                <LiveMachineryPanel stages={liveStages} generating={loading} streamingText={streamingText} />
+              ) : viewIndex >= 0 ? (
+                <MachineryPanel entry={state.history[viewIndex]} cumulativeSlots={cumulativeSlotsAt(state.history, viewIndex, state.slots)} />
+              ) : (
+                <div className="bg-[#0E1614] rounded-md px-5 py-5 text-[12.5px] text-[#7B9089] font-mono">
+                  Nothing to show yet.
+                </div>
+              )}
+            </div>
+          </aside>
           </div>
         )}
 
