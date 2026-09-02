@@ -2921,4 +2921,85 @@ normal live-mode operation, the missing-key fallback response shape, and
 the rate limiter tripping on both routes at the configured threshold.
 
 ---
+
+## 2026-09-02 · The first real deploy 404'd everywhere -- root cause was my own tracing config, not the user's setup
+
+The deployment-readiness audit above was thorough about what I could
+verify locally (build output, trace file contents, a local production
+server). It could not verify the one thing that actually broke: how
+Vercel's own build pipeline assembles a deployment from that output. That
+gap is exactly where the real bug was hiding.
+
+**Symptom, diagnosed live rather than guessed at.** First deploy: `next
+build` succeeded, the trace files genuinely contained `catalog.db` and
+the advice JSON (I'd verified this last entry), Root Directory was
+correctly set to `app` (confirmed by screenshot after an initial miss),
+the deployment showed "Ready" and "Production," and the correct domain
+was confirmed via the Domains tab -- and every route still 404'd,
+including Vercel's own auto-captured screenshot of the deployment. Ruled
+out, in order, with real evidence at each step rather than assumption:
+wrong URL, wrong deployment, stale cache, wrong domain. That elimination
+process is what made the next hypothesis worth checking instead of
+guessing further.
+
+**Root cause, confirmed against a known upstream issue, not
+reverse-engineered from symptoms alone:** `next.config.ts`'s
+`outputFileTracingRoot` was set to the monorepo root -- one level
+*outside* Vercel's configured Root Directory (`app`) -- specifically so
+tracing could reach the sibling `../data`. That exact combination
+(`outputFileTracingRoot` pointing outside Root Directory, Turbopack,
+Vercel, a monorepo) corrupts the production routing manifest even though
+`next build` itself exits 0 -- a currently open, unresolved Next.js issue
+(github.com/vercel/next.js#88579, "no currently working configuration
+for Turbopack production builds in monorepos with shared packages").
+Nothing about this project's setup was wrong; it walked directly into a
+real, still-unfixed bug in the framework/platform interaction, and the
+build succeeding was never going to reveal that, because the bug lives in
+a step *after* `next build` finishes.
+
+**Fix: stop needing `outputFileTracingRoot` to point outside Root
+Directory at all, rather than work around the bug.** The three modules
+the live API routes actually read at runtime
+(`app/lib/retrieval.ts`/`advice-retrieval.ts`/`catalog-db.ts`) now read
+from `app/data/`, a build-time copy of the canonical `../data/`
+(`app/scripts/copy-runtime-data.ts`, run automatically via npm's
+`predev`/`prebuild` lifecycle hooks -- no manual step to remember, and no
+change to how `npm run dev`/`npm run build` are invoked). `../data/`
+(repo root) stays the single source of truth for every generation/build
+script (`generate_catalog.py`, `build-catalog-db.ts`, `embed-advice.ts`,
+`catalog:update`, etc. -- none of which are part of the deployed runtime,
+so none of them needed to change); `app/data/` is gitignored, purely a
+mirror, regenerated fresh before every dev start and every build.
+`next.config.ts` no longer sets `outputFileTracingRoot` at all --
+`outputFileTracingIncludes` alone is sufficient once the included files
+live inside Root Directory, which is the well-supported, heavily-used
+case, not the one the open issue is about.
+
+**Verified beyond "the build succeeded" this time, having learned that
+lesson from this exact failure:** ran a full local production cycle --
+`npm run build` (prebuild hook copies the data, build succeeds, trace
+files re-inspected and still correctly reference the files, now at
+`app/data/...` instead of `../data/...`), then `next start` against the
+real built output, then actual HTTP requests: `GET /` -> 200, `GET
+/conversation` -> 200, `POST /api/conversation` -> a real conversation
+turn. `npm run eval-conversation` re-run afterward, still 36/36. Stated
+plainly: this rules out the app itself being broken by the restructuring,
+but it does **not** by itself prove the original Vercel-specific bug is
+gone, because `next start` never goes through Vercel's build-output
+assembly step -- that step is exactly where the bug lived, and exactly
+what local tooling cannot reproduce. The only real confirmation is a
+fresh Vercel deploy actually serving a page, which is the next step, not
+yet done as of this entry.
+
+**The lesson worth keeping, stated generally:** "the build succeeded"
+and "the deployment works" are different claims, and the gap between
+them was invisible to every local verification step this project could
+run, by construction -- the failing step lives entirely inside a
+platform's private build pipeline, not in anything `next build` or `next
+start` touch. A clean build log is necessary evidence, not sufficient
+evidence, for "the deployment is correct" -- worth naming plainly rather
+than let the earlier entry's thorough-sounding verification section
+imply more certainty than it actually had.
+
+---
 <!-- next entry here -->

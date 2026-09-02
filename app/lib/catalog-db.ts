@@ -9,7 +9,11 @@ import { DatabaseSync } from "node:sqlite";
 import { getFrameById, type CatalogFrame } from "./retrieval";
 import { ORDERED_DOMAINS } from "./config/domains";
 
-const DB_PATH = path.resolve(process.cwd(), "..", "data", "catalog", "out", "catalog.db");
+// Deployment fix (decisions.md, 2026-09-02): see the matching comment in
+// app/lib/retrieval.ts -- reads app/data (a build-time copy), never the
+// repo-root data directly, to avoid the Turbopack/outputFileTracingRoot
+// monorepo bug (vercel/next.js#88579).
+const DB_PATH = path.resolve(process.cwd(), "data", "catalog", "out", "catalog.db");
 
 let db: DatabaseSync | undefined;
 function getDb(): DatabaseSync {

@@ -45,8 +45,11 @@ let cache:
 function loadStore() {
   if (cache) return cache;
 
-  const root = path.resolve(process.cwd(), "..");
-  const outDir = path.join(root, "data", "advice", "out");
+  // Deployment fix (decisions.md, 2026-09-02): see the matching comment in
+  // app/lib/retrieval.ts -- reads app/data (a build-time copy), never the
+  // repo-root data directly, to avoid the Turbopack/outputFileTracingRoot
+  // monorepo bug (vercel/next.js#88579).
+  const outDir = path.resolve(process.cwd(), "data", "advice", "out");
 
   const chunkRows: AdviceChunk[] = JSON.parse(
     fs.readFileSync(path.join(outDir, "chunks.json"), "utf-8")

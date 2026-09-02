@@ -32,8 +32,13 @@ let cache:
 function loadStore() {
   if (cache) return cache;
 
-  const root = path.resolve(process.cwd(), "..");
-  const outDir = path.join(root, "data", "catalog", "out");
+  // Deployment fix (decisions.md, 2026-09-02): reads app/data, a
+  // build-time copy of the canonical ../data (see
+  // scripts/copy-runtime-data.ts), not the repo-root data directly --
+  // outputFileTracingRoot pointing outside this project's Vercel Root
+  // Directory broke Turbopack's production routing manifest entirely
+  // (vercel/next.js#88579), even though `next build` itself succeeded.
+  const outDir = path.resolve(process.cwd(), "data", "catalog", "out");
 
   const catalogRows: CatalogFrame[] = JSON.parse(
     fs.readFileSync(path.join(outDir, "catalog.json"), "utf-8")

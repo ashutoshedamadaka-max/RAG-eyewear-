@@ -6,7 +6,9 @@
     "node": "24.x"
   },
   "scripts": {
+    "predev": "tsx scripts/copy-runtime-data.ts",
     "dev": "next dev",
+    "prebuild": "tsx scripts/copy-runtime-data.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

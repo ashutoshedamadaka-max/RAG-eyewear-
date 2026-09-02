@@ -5,3 +5,10 @@ node_modules/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Build-time mirror of the repo-root data/ directory, populated by
+# app/scripts/copy-runtime-data.ts (predev/prebuild). ../data (repo root)
+# stays the canonical, committed source of truth -- this copy exists only
+# so the deployed API routes never read outside their own project
+# directory (decisions.md, 2026-09-02).
+app/data/
