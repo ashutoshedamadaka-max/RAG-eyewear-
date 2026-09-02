@@ -4,6 +4,11 @@ Conversational eyewear recommender. Hybrid architecture: structured filters over
 the frame catalog, RAG with citations over optician advice, one agent
 orchestrating both.
 
+**Live demo:** [rag-eyewear.vercel.app](https://rag-eyewear.vercel.app/) —
+the conversational interface with the full machinery panel is at
+[`/conversation`](https://rag-eyewear.vercel.app/conversation); the root
+page is the deliberately-naive Phase 1 baseline it's measured against.
+
 Start with `PROJECT_CONTEXT.md`. Append to `decisions.md` as you go.
 
 ## Reproduce the catalog

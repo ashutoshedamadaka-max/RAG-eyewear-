@@ -3002,4 +3002,81 @@ than let the earlier entry's thorough-sounding verification section
 imply more certainty than it actually had.
 
 ---
+
+## 2026-09-02 · Live at rag-eyewear.vercel.app -- the actual root cause, a CLI mistake made along the way, and what each prior fix was really worth
+
+**The real root cause: the Vercel project's Framework Preset was set to
+"Other," not "Next.js."** Not discovered by reasoning about the code --
+discovered by pulling the project's actual live settings with the Vercel
+CLI (`vercel pull`) and reading `"framework": null` directly out of the
+result. With the framework preset unset, Vercel ran the configured build
+command (which happened to be `next build` regardless, since that's
+`package.json`'s own `build` script) but never told its deployment/routing
+layer this was a Next.js app -- so it never translated the `.next` output
+into working routes and functions, and served a platform-level 404 for
+literally everything, on a deployment that reported "Ready" because
+`next build` itself really had succeeded. Confirmed directly: the live
+404 response was `Content-Type: text/plain` with Vercel's generic
+"NOT_FOUND" body, not Next's own compiled `_not-found` HTML page proven
+present in every build log -- meaning the request never reached the
+Next.js app at all, consistent with routing never having been wired up
+in the first place. Fixed by switching the Framework Preset to Next.js in
+Settings -> General and triggering a fresh deployment. Verified
+independently after the user reported success, not taken on their word
+alone: `curl` against the live domain for `/`, `/conversation`, and a
+real `POST /api/conversation` turn, all correct.
+
+**What the two earlier fixes were actually worth, now that the real cause
+is known.** Neither was wasted, but neither was *the* answer either:
+
+- The `outputFileTracingRoot`-outside-Root-Directory / Turbopack monorepo
+  bug (github.com/vercel/next.js#88579, prior entry) is real and the fix
+  for it (`app/data/` as a build-time-copied local mirror, no more
+  cross-boundary tracing root) is worth keeping regardless -- it's a
+  genuine, currently-unresolved upstream issue this project's original
+  layout walked directly into, and removing the dependency on it is
+  strictly safer going forward, framework preset aside.
+- The Root-Directory-was-empty fix (an earlier entry, before this one)
+  was also real and also necessary -- without it, nothing would have
+  built at all, regardless of framework preset.
+- Neither one was sufficient by itself, and no amount of re-verifying
+  `next build`'s own output was ever going to surface a problem that
+  lived entirely in a Vercel project setting outside any file in this
+  repo. The build log looked perfect through this whole investigation,
+  every single time -- because it was. The fix was never in the code.
+
+**A mistake made mid-investigation, disclosed at the time and repeated
+here for the record.** Attempting to reproduce Vercel's build-assembly
+step locally (`vercel pull --yes` with no existing project link), a
+non-interactive flag with no explicit `--project`/`--team` target let the
+CLI auto-create a brand-new, unwanted Vercel project named `app` under
+the user's account, connected to the same GitHub repo, instead of linking
+to the existing `rag-eyewear` project. Caught immediately by inspecting
+the resulting `.vercel/project.json` rather than assuming success,
+disclosed to the user in the same turn, and corrected: the accidentally-
+downloaded credentials were deleted locally, the user removed the stray
+project from their dashboard, and the CLI was re-linked properly with
+`vercel link --project rag-eyewear --team <slug> --yes` -- explicit
+targeting, no ambiguity for the CLI to resolve on its own. **The lesson:
+an authenticated CLI command that can create cloud resources needs the
+same "confirm before acting" discipline as a destructive git command,
+even when the intent is read-only diagnosis** -- `--yes` was read as "skip
+confirmation prompts," not "and also skip telling me what you're about to
+create," and those turned out not to be the same thing.
+
+**What actually broke this particular investigation, stated plainly:**
+every verification this project could run locally -- `tsc --noEmit`,
+`next build`, `next start`, real HTTP requests against a local production
+server, inspecting `.next`'s own trace files -- was 100% consistent and
+100% correct, on every single attempt. None of it could have caught this,
+because the actual defect was a dashboard checkbox this repository has no
+way to see or assert against. Worth keeping as the honest lesson from
+this whole thread, not smoothed over by the fact that it's fixed now: for
+a deployed system, "everything I can test locally passes" and "the
+deployment is configured correctly" are genuinely different claims, and
+closing that gap sometimes requires looking at the platform's own state
+directly (as `vercel pull` finally did here), not just at the code and
+its build output.
+
+---
 <!-- next entry here -->
