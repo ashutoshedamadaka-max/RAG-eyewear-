@@ -60,6 +60,7 @@ export interface TurnMachinery {
   assumptions: DerivedFactRecord[];
   fittingRulesTotalCount: number;
   askedTopic?: string;
+  askingFaceShape?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;
@@ -90,6 +91,7 @@ export interface ConversationState {
   assumedAtCap: string[];
   status: "in_progress" | "safety_interrupt" | "recommending" | "done";
   history: TurnMachinery[];
+  faceShapeAsked: boolean;
 }
 
 export interface RecommendedFrame {
@@ -98,12 +100,18 @@ export interface RecommendedFrame {
   boost: number;
   reasons: DerivedFactRecord[];
   droppedClause?: string;
+  /** One sentence of judgement/reasoning, always present -- prose carries judgement, the card's own fields carry specs (decisions.md, 2026-09-02). */
+  gloss: string;
 }
 
 export interface Recommendation {
   frames: RecommendedFrame[];
   sql: string;
   relaxed: boolean;
+  /** Opens the recommendation turn, before the cards -- names no frame, price, or measurement. */
+  framing: string;
+  /** After the cards -- the practical starting point and any assumption made this turn. May cite [n]/[A#]. */
+  closing: string;
 }
 
 export interface TurnResult {

@@ -11,20 +11,31 @@ export const ASK_ORDER: QuestionTopic[] = ["purpose", "prescription", "fit_issue
 export const QUESTION_CAP = 5;
 
 /**
- * The face-shape opener (PROJECT_CONTEXT.md §3, §7: tappable illustrations,
- * "skip / not sure" always available). Moved to turn 0 -- 2026-09-01, see
- * decisions.md -- ahead of `purpose`, because it used to live inside the
- * `style` topic at the END of ASK_ORDER, where it was structurally
- * unreachable: `purpose` is always answered first, so by the time `budget`
- * (the only other sufficiency-gating slot) was answered, the conversation
- * was already sufficient and never reached `style` at all. Asked
- * unconditionally, exactly once, at the very start of every conversation --
- * NOT tracked in `askedTopics` and does not count against `QUESTION_CAP`,
- * since it's a single tap costing nothing in constraint terms (a soft
- * ranking nudge, never a filter) and the user can always skip it.
+ * New-opening flow (decisions.md, 2026-09-02): the very first thing said,
+ * before anything is asked. A warm, static greeting -- static because
+ * there's nothing to react to yet, so an LLM call here would only add
+ * latency for zero benefit. Introduces the assistant by name and opens
+ * with a genuinely open question, so the customer states their situation
+ * in their own words before being asked to tap anything.
  */
-export const FACE_SHAPE_OPENER_TEXT =
-  "Before anything else — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement.";
+export const GREETING_TEXT =
+  "Hi, I'm Specs — I help people find frames that actually work for them, not just look nice on a shelf. What's going on: shopping for something specific, or not sure where to start?";
+
+/**
+ * The face-shape ask (PROJECT_CONTEXT.md §3, §7: tappable illustrations,
+ * "skip / not sure" always available). Originally turn 0 verbatim
+ * (2026-09-01); moved again (2026-09-02) to right after the customer's
+ * first open reply to GREETING_TEXT, so the assistant acknowledges what
+ * they actually said before asking anything -- this text is now an INPUT
+ * to a warm generation pass (converse.ts), not shown verbatim, but its
+ * content (optional, styling nudge, never a requirement) is still exactly
+ * what must be preserved. Still asked unconditionally, exactly once,
+ * still NOT tracked in `askedTopics` and still doesn't count against
+ * `QUESTION_CAP` -- see ConversationState.faceShapeAsked (types.ts) for
+ * how "asked yet" is now tracked instead of turn position.
+ */
+export const FACE_SHAPE_BASE_QUESTION =
+  "Before we go further — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement.";
 
 const QUESTION_TEXT: Record<QuestionTopic, string> = {
   purpose: "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?",

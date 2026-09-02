@@ -127,6 +127,8 @@ export interface TurnMachinery {
   /** FITTING_RULES.length -- the total number of distinct rule categories that COULD have fired, so the panel can show "N of M" honestly. Same value every turn (it's a property of the code, not the conversation), included per-turn so the UI never has to import derive.ts's registry directly. */
   fittingRulesTotalCount: number;
   askedTopic?: QuestionTopic;
+  /** New-opening flow (decisions.md, 2026-09-02): true only on the one turn that acknowledges the customer's first open reply and asks for face shape -- the client uses this, not turn position, to know when to show the face-shape chips. */
+  askingFaceShape?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;
@@ -169,8 +171,10 @@ export interface ConversationState {
   status: "in_progress" | "safety_interrupt" | "recommending" | "done";
   /** Phase 6: one entry per processed turn (including the opening turn), for the machinery toggle. */
   history: TurnMachinery[];
+  /** New-opening flow (decisions.md, 2026-09-02): the face-shape ask has moved off turn 0 -- it's now asked (with acknowledgment) right after the customer's first open reply to the greeting, exactly once. This tracks whether that's happened yet, independent of askedTopics (face_shape stays outside ASK_ORDER and the question cap, same as before). */
+  faceShapeAsked: boolean;
 }
 
 export function emptyState(): ConversationState {
-  return { slots: {}, turns: [], askedTopics: [], assumedAtCap: [], status: "in_progress", history: [] };
+  return { slots: {}, turns: [], askedTopics: [], assumedAtCap: [], status: "in_progress", history: [], faceShapeAsked: false };
 }

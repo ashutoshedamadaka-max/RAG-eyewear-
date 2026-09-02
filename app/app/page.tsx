@@ -161,7 +161,13 @@ export default function ConversationPage() {
   }
 
   const turns = state?.turns ?? [];
-  const waitingForFaceShapeReply = !fallbackReason && state?.status === "in_progress" && turns.length === 1;
+  // New-opening flow (decisions.md, 2026-09-02): the face-shape ask is no
+  // longer positional (turn 0) -- it's whichever turn the server flagged
+  // askingFaceShape, and only the LAST turn can still be "awaiting a
+  // reply" (every earlier one already has one, or the conversation
+  // wouldn't have continued).
+  const lastEntry = state?.history[state.history.length - 1];
+  const waitingForFaceShapeReply = !fallbackReason && state?.status === "in_progress" && Boolean(lastEntry?.askingFaceShape);
   const recommendedFrames: (RecommendedFrame & { parsed: ReturnType<typeof parseFrameBlurb> })[] =
     (recommendation?.frames ?? []).map((f) => ({ ...f, parsed: parseFrameBlurb(f.frame_id, f.text) }));
 
@@ -235,6 +241,11 @@ export default function ConversationPage() {
               const assistantContent = isOpening ? turns[0]?.content : turns[2 * i]?.content;
               const cumulative = cumulativeSlotsAt(state.history, i, state.slots);
               const isFinalRecommendTurn = Boolean(entry.recommendation) && i === state.history.length - 1 && state.status === "done";
+              const isLastEntry = i === state.history.length - 1;
+              // "Show how this was built" only where there's something to see: the
+              // recommendation turn, or any turn where a rule fired or an assumption
+              // was made (decisions.md, 2026-09-02) -- not every plain question turn.
+              const hasMachineryToShow = Boolean(entry.recommendation) || entry.derivedFacts.length > 0 || entry.assumptions.length > 0;
 
               return (
                 <div key={entry.turnIndex} className="mb-5">
@@ -258,36 +269,47 @@ export default function ConversationPage() {
                     </p>
                   )}
 
-                  {isOpening && waitingForFaceShapeReply && (
+                  {!inReplay && isLastEntry && entry.askingFaceShape && waitingForFaceShapeReply && (
                     <FaceShapePicker selected={selectedFaceShape} onSelect={selectFaceShape} disabled={loading} />
                   )}
 
-                  {isFinalRecommendTurn && (
+                  {isFinalRecommendTurn && recommendation && (
                     <div>
+                      {/* Product decision, not a formatting preference (decisions.md, 2026-09-02):
+                          cards carry facts, prose carries judgement. framing opens (no frame
+                          names/prices), cards follow, closing (practical starting point, any
+                          assumption) comes after -- never a numbered list duplicating card specs. */}
                       <p
                         className="text-[#14201C] m-0 mb-4 max-w-[62ch] whitespace-pre-wrap"
                         style={{ fontFamily: "var(--font-serif)", fontSize: 16, lineHeight: 1.65 }}
                       >
-                        {assistantContent}
+                        {recommendation.framing}
                       </p>
                       {recommendedFrames.map((f) => {
                         if (!f.parsed) return null;
-                        const primaryReason = f.reasons[0];
                         const isConvention = f.reasons.some((r) => r.ruleId === "face_shape_boost" || r.ruleId === "style_prefs_overlap");
                         return (
                           <RecommendationCard
                             key={f.frame_id}
                             frame={f.parsed}
-                            gloss={primaryReason?.explanation}
+                            gloss={f.gloss}
                             claimType={isConvention ? "convention" : undefined}
                             droppedClause={f.droppedClause}
                           />
                         );
                       })}
+                      {recommendation.closing && (
+                        <p
+                          className="text-[#14201C] m-0 mt-4 max-w-[62ch] whitespace-pre-wrap"
+                          style={{ fontFamily: "var(--font-serif)", fontSize: 16, lineHeight: 1.65 }}
+                        >
+                          {recommendation.closing}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  <MachineryToggle entry={entry} cumulativeSlots={cumulative} />
+                  {hasMachineryToShow && <MachineryToggle entry={entry} cumulativeSlots={cumulative} />}
                 </div>
               );
             })}
@@ -341,7 +363,7 @@ export default function ConversationPage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Type your reply..."
-                    className="flex-1 rounded-md border border-[#DFE6E2] bg-[#FDFEFD] px-3 py-2 text-[14px]"
+                    className="flex-1 rounded-md border border-[#DFE6E2] bg-[#FDFEFD] text-[#14201C] placeholder:text-[#8A9992] px-3 py-2 text-[14px]"
                     style={{ fontFamily: "var(--font-serif)" }}
                     disabled={loading}
                   />

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 // Real numbers, not placeholders:
 // - groundedness/citation_accuracy ranges: three real runs of `npm run validate-judges`
 //   against the 18-case hand-labelled set (decisions.md 2026-08-31, "item 2" spread).
@@ -74,6 +76,13 @@ export default function EvalSection() {
         All four run against a <b className="font-medium text-[#14201C]">golden set</b> — a
         fixed list of test conversations with the correct answer written down in advance, so a
         change that breaks something shows up as a number, not a surprise.
+      </p>
+      <p className="text-[12.8px] leading-relaxed text-[#5F6F68] mt-2">
+        For a sense of what these numbers are actually measured against, see{" "}
+        <Link href="/baseline" className="underline hover:text-[#14201C]">
+          the deliberately-naive Phase 1 baseline
+        </Link>{" "}
+        this system is evaluated relative to — not the product, the comparison point.
       </p>
     </div>
   );
