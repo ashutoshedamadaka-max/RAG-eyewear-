@@ -3388,4 +3388,69 @@ worth checking against the repo's actual remote state before re-diagnosing
 the code.
 
 ---
+
+## 2026-09-02 · Two real bugs found live, both fixed at the policy source
+
+**Fit-issues asked of a customer who just said they don't wear
+glasses.** Found live, not by re-reading code: a customer answered "I
+don't wear glasses, and I don't know my power," the assistant correctly
+acknowledged exactly that, then in the same breath asked "have your
+current glasses been sliding down, feeling tight, or leaving marks?" --
+a direct contradiction, one sentence apart. Root cause was already
+visible in `policy.ts` by comparison: `topicIsAnswered("prescription", ...)`
+already special-cases `rx_status="none"` (skips `lens_type`, since a
+non-wearer has no lens type to report) but the exact same reasoning was
+never applied to `fit_issues` two cases below it. Same bug class the
+2026-08-28 splaying/pressing correction addressed (a diagnostic question
+asked of someone it structurally can't apply to), just never noticed
+before now -- the OLD static canned phrasing never had to reconcile this
+out loud, so the contradiction stayed invisible until the persona pass
+made the assistant say "you don't currently wear glasses" and then ask
+about "your current glasses" in the same turn. Fixed by mirroring the
+existing prescription/lens_type pattern exactly: `rx_status="none"` skips
+`fit_issues` too. Verified live against the exact reported scenario
+before and after -- the fix produces "What's this pair mainly for" next,
+not the contradictory question.
+
+**A related, not-yet-fixed observation, flagged rather than silently
+patched:** the SAME live trace showed the face-shape ack+ask responding
+to a customer who had ALREADY stated their face shape in their open
+reply ("My face shape is oval") by asking them to tap it again anyway --
+`generateWarmTurn`'s face-shape branch doesn't check whether face_shape
+was already stated. Not fixed this pass (not what was reported), noted
+here so it isn't lost.
+
+**Machinery panel: the condition from earlier today was already too
+narrow by the time it shipped.** Written assuming ask-turns had nothing
+interesting behind them (true when it was written, that same day, before
+the persona pass existed) -- but the persona pass (same day, later
+commit) gave every ask-turn a real second model call. By the time both
+landed, "recommendation, fired rule, or assumption" was excluding turns
+that now genuinely have real timing/cost data worth showing. Widened to
+also show whenever `modelCalls.length > 0`, which now excludes exactly
+one turn correctly: the static greeting, which makes no model call and
+has nothing behind it.
+
+**A real cascading test failure from the fit_issues fix, not a new bug.**
+`mind-change-partial-update`'s own script sets `rx_status="none"` mid-way
+through (an intentional part of its mind-change content), which now
+correctly skips `fit_issues` -- shifting exactly which topic comes next
+and breaking the same kind of fixed-turn-count assumption the
+`never-gives-prescription`/`fishing-for-enthusiasm` cases already hit
+earlier today. Fixed the same way: the tail now drives dynamically
+(answers whatever topic is actually asked) instead of assuming a fixed
+order, and the case's description/expected_behavior text in the golden
+file updated to explain why, rather than leaving a stale claim standing.
+
+**Verification:** live-traced the exact reported scenario against the
+dev server before writing the fix, and again after, comparing real
+responses rather than trusting the diff. `npx tsc --noEmit` and
+`npm run build` clean. `npm run eval-conversation` run three times after
+both fixes: 50/51, 50/51 (the single failure both times was the
+already-documented assumption-phrasing flakiness from earlier today, not
+a new one -- confirmed by reading the actual failing case's output both
+times, not assumed from the count alone). `mind-change-partial-update`
+itself passed clean (8/8) on every run.
+
+---
 <!-- next entry here -->

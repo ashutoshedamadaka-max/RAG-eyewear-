@@ -3,7 +3,7 @@
   "cases": [
     {
       "id": "mind-change-partial-update",
-      "description": "Mid-conversation mind-change: customer states a purpose, answers a question, then explicitly changes an earlier answer (computer glasses -> reading glasses instead) while also answering the currently-pending question in the same message. Tests that a partial update overwrites only the field it addresses -- the corrected purpose/product_type must replace the stale one, while fit_issues (answered in the same turn) and every other previously-known slot must survive untouched. Also exercises the post-fix flow: sufficiency is met at the budget turn but the conversation continues to the now-reachable `style` topic before recommending.",
+      "description": "Mid-conversation mind-change: customer states a purpose, answers a question, then explicitly changes an earlier answer (computer glasses -> reading glasses instead) while also volunteering fit_issues in the same message. Tests that a partial update overwrites only the field it addresses -- the corrected purpose/product_type must replace the stale one, while fit_issues (volunteered in the same turn) and every other previously-known slot must survive untouched. Also exercises the post-fix flow: style must remain reachable, not skipped by the sufficiency short-circuit. The runner drives the tail dynamically (answers whatever topic is actually asked) rather than assuming a fixed order (decisions.md, 2026-09-02): this script's own 'don't wear glasses currently' turn sets rx_status='none', which correctly SKIPS fit_issues entirely (a real bug fixed the same day -- asking a customer who just said they don't wear glasses about how their current glasses fit) and shifts the exact remaining order, without changing what the case actually verifies.",
       "turns": [
         "I'm just starting to look, not sure exactly what I need yet.",
         "Not sure about my face shape, let's skip that.",
@@ -13,7 +13,7 @@
         "My budget is up to ₹1200.",
         "I like a more minimal look, nothing flashy."
       ],
-      "expected_behavior": "After the computer-glasses turn: purpose includes 'computer', product_type='computer'. After the change-of-plans turn: purpose no longer includes 'computer' and instead reflects reading; product_type='reading'; fit_issues includes 'slipping' (new information from the same turn, must not be lost alongside the correction). After the budget turn: budget_max=1200, sufficiency is met, but because 2+ topics have already been asked the conversation does NOT stop here -- it asks `style` next rather than recommending immediately. Only after the style turn does status become 'done', with the compiled QUERY filter reflecting product_type='reading', not the earlier 'computer'."
+      "expected_behavior": "After the computer-glasses turn: purpose includes 'computer', product_type='computer'. After the change-of-plans turn: purpose no longer includes 'computer' and instead reflects reading; product_type='reading'; fit_issues includes 'slipping' (new information from the same turn, must not be lost alongside the correction) even though fit_issues was never separately asked (rx_status='none', set two turns earlier, correctly skips it). `style` is reached and answered before status becomes 'done' -- not skipped by the sufficiency short-circuit just because sufficiency happens to be met partway through. The compiled QUERY filter reflects product_type='reading', not the earlier 'computer'."
     },
     {
       "id": "volunteers-everything-upfront",

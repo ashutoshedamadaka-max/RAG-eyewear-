@@ -119,14 +119,26 @@ async function runMindChange(): Promise<Check[]> {
   checks.push(check("product_type=reading", state.slots.product_type?.value === "reading", JSON.stringify(state.slots.product_type)));
   checks.push(check("fit_issues includes slipping", (state.slots.fit_issues?.value ?? []).includes("slipping"), JSON.stringify(state.slots.fit_issues)));
 
-  r = await runTurn(state, "My budget is up to ₹1200.");
-  state = r.state;
-  checks.push(check("budget_max=1200", state.slots.budget_max?.value === 1200, JSON.stringify(state.slots.budget_max)));
-  checks.push(check("does NOT recommend yet -- style still unasked (post-fix sufficiency gate)", state.status === "in_progress", state.status));
+  // From here, answer whatever's actually asked rather than assume a fixed order
+  // (decisions.md, 2026-09-02): fit_issues is now correctly SKIPPED once
+  // rx_status="none" is known (the "don't wear glasses" turn above set it, and a
+  // real fit_issues bug this same round exposed the missing case) -- which shifts
+  // exactly which topic comes next relative to the original fixed script,
+  // regardless of the mind-change content. A dynamic driver is robust to that.
+  const tailAnswers: Record<string, string> = {
+    budget: "My budget is up to ₹1200.",
+    style: "I like a more minimal look, nothing flashy.",
+  };
+  for (let i = 0; i < 5 && state.status === "in_progress"; i++) {
+    const entry = state.history[state.history.length - 1];
+    const topic = entry.askedTopic;
+    if (!topic || !tailAnswers[topic]) break;
+    r = await runTurn(state, tailAnswers[topic]);
+    state = r.state;
+  }
 
-  r = await runTurn(state, "I like a more minimal look, nothing flashy.");
-  state = r.state;
-  checks.push(check("status=done after style turn", state.status === "done", state.status));
+  checks.push(check("status=done (reached recommend)", state.status === "done", state.status));
+  checks.push(check("style topic was actually reached, not skipped by the sufficiency short-circuit", state.askedTopics.includes("style"), JSON.stringify(state.askedTopics)));
   checks.push(check("recommendation SQL does not filter product_type=computer", !(r.recommendation?.sql ?? "").includes("'computer'"), r.recommendation?.sql ?? "(none)"));
 
   return checks;

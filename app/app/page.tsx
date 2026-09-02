@@ -242,10 +242,15 @@ export default function ConversationPage() {
               const cumulative = cumulativeSlotsAt(state.history, i, state.slots);
               const isFinalRecommendTurn = Boolean(entry.recommendation) && i === state.history.length - 1 && state.status === "done";
               const isLastEntry = i === state.history.length - 1;
-              // "Show how this was built" only where there's something to see: the
-              // recommendation turn, or any turn where a rule fired or an assumption
-              // was made (decisions.md, 2026-09-02) -- not every plain question turn.
-              const hasMachineryToShow = Boolean(entry.recommendation) || entry.derivedFacts.length > 0 || entry.assumptions.length > 0;
+              // "Show how this was built" only where there's something to see (decisions.md,
+              // 2026-09-02, revised same day): originally gated on a recommendation/fired
+              // rule/assumption, written before every ask-turn made a real generation call of
+              // its own. Now that it does (acknowledgment + question, persona pass), there's
+              // real timing/cost data on nearly every turn -- so "something to see" widens to
+              // any real model call too. This still excludes exactly one turn, correctly: the
+              // static greeting, which makes no model call and has nothing behind it at all.
+              const hasMachineryToShow =
+                Boolean(entry.recommendation) || entry.derivedFacts.length > 0 || entry.assumptions.length > 0 || entry.modelCalls.length > 0;
 
               return (
                 <div key={entry.turnIndex} className="mb-5">

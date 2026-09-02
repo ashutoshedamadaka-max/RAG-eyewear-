@@ -61,6 +61,13 @@ export function topicIsAnswered(topic: QuestionTopic, slots: Slots): boolean {
       if (slots.rx_status.value === "none") return true;
       return Boolean(slots.lens_type);
     case "fit_issues":
+      // Same reasoning as prescription/lens_type just above, and the same bug class the
+      // splaying/pressing correction fixed (decisions.md, 2026-08-28): rx_status="none" means
+      // there are no current glasses to report fit issues about. QUESTION_TEXT below literally
+      // asks "have YOUR CURRENT GLASSES been sliding..." -- asking it anyway isn't just
+      // pointless, it's a direct contradiction of what the customer just said, one turn after
+      // the assistant itself acknowledged they don't wear glasses (found live, 2026-09-02).
+      if (slots.rx_status?.value === "none") return true;
       return Boolean(slots.fit_issues);
     case "budget":
       return Boolean(slots.budget_min || slots.budget_max);
