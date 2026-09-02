@@ -24,7 +24,7 @@ export default function FaceShapePicker({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex gap-1.5 mt-3.5 flex-wrap">
+    <div className="flex gap-2.5 mt-4 flex-wrap">
       {SHAPES.map((s) => {
         const isSelected = selected === s.label;
         return (
@@ -33,20 +33,23 @@ export default function FaceShapePicker({
             onClick={() => onSelect(s.label)}
             disabled={disabled}
             aria-pressed={isSelected}
-            className="border rounded-md bg-[#FDFEFD] px-2.5 pt-2 pb-1.5 flex flex-col items-center gap-1 disabled:opacity-50"
-            style={{ borderColor: isSelected ? "#14493E" : "#DFE6E2" }}
+            className="rounded-lg bg-[#FDFEFD] px-3 pt-2.5 pb-2 flex flex-col items-center gap-1.5 disabled:opacity-50 transition-shadow hover:shadow-[0_2px_8px_rgba(20,32,28,0.1)]"
+            style={{
+              border: `1.5px solid ${isSelected ? "#14493E" : "#B9CAC1"}`,
+              boxShadow: isSelected ? "0 0 0 1px #14493E, 0 2px 8px rgba(20,73,62,0.15)" : "0 1px 3px rgba(20,32,28,0.07)",
+            }}
           >
-            <svg viewBox="0 0 70 86" width="36" height="44" aria-hidden="true">
+            <svg viewBox="0 0 70 86" width="40" height="48" aria-hidden="true">
               <path
                 d={s.d}
-                fill={isSelected ? "#E7F0EC" : "#EDF1EF"}
-                stroke={isSelected ? "#14493E" : "#DFE6E2"}
-                strokeWidth="1.8"
+                fill={isSelected ? "#E7F0EC" : "#E7EDEA"}
+                stroke={isSelected ? "#14493E" : "#7C9188"}
+                strokeWidth="2"
               />
-              <circle cx="26" cy="36" r="2" fill={isSelected ? "#14493E" : "#8A9992"} />
-              <circle cx="44" cy="36" r="2" fill={isSelected ? "#14493E" : "#8A9992"} />
+              <circle cx="26" cy="36" r="2.4" fill={isSelected ? "#14493E" : "#4A5B53"} />
+              <circle cx="44" cy="36" r="2.4" fill={isSelected ? "#14493E" : "#4A5B53"} />
             </svg>
-            <span className="text-[11px] font-medium" style={{ color: isSelected ? "#14493E" : "#5F6F68" }}>
+            <span className="text-[11.5px] font-medium" style={{ color: isSelected ? "#14493E" : "#14201C" }}>
               {s.label}
             </span>
           </button>
@@ -56,11 +59,15 @@ export default function FaceShapePicker({
         onClick={() => onSelect("Not sure")}
         disabled={disabled}
         aria-pressed={selected === "Not sure"}
-        className="border rounded-md bg-[#FDFEFD] px-3 flex flex-col items-center justify-center gap-1 disabled:opacity-50"
-        style={{ borderColor: selected === "Not sure" ? "#14493E" : "#DFE6E2", minWidth: 56 }}
+        className="rounded-lg bg-[#FDFEFD] px-3 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 transition-shadow hover:shadow-[0_2px_8px_rgba(20,32,28,0.1)]"
+        style={{
+          border: `1.5px solid ${selected === "Not sure" ? "#14493E" : "#B9CAC1"}`,
+          boxShadow: selected === "Not sure" ? "0 0 0 1px #14493E, 0 2px 8px rgba(20,73,62,0.15)" : "0 1px 3px rgba(20,32,28,0.07)",
+          minWidth: 58,
+        }}
       >
-        <span className="text-[15px]" style={{ color: selected === "Not sure" ? "#14493E" : "#8A9992" }}>?</span>
-        <span className="text-[11px] font-medium" style={{ color: selected === "Not sure" ? "#14493E" : "#5F6F68" }}>
+        <span className="text-[17px] font-medium" style={{ color: selected === "Not sure" ? "#14493E" : "#4A5B53" }}>?</span>
+        <span className="text-[11.5px] font-medium" style={{ color: selected === "Not sure" ? "#14493E" : "#14201C" }}>
           Not sure
         </span>
       </button>

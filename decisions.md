@@ -3354,4 +3354,38 @@ worth a manual look in an actual browser before treating this as fully
 closed.
 
 ---
+
+## 2026-09-02 · Face-shape picker was nearly invisible, and the deploy-drift bug that caused the last confusion
+
+**The visibility bug, confirmed by an actual screenshot** (the browser
+check the prior entry flagged as missing): the card background
+(`#FDFEFD`) sat on a page background (`#F6F8F7`) close enough in
+luminosity that the card barely separated from the page, and the face
+illustration inside each card compounded it -- a near-white fill
+(`#EDF1EF`) on a near-white stroke (`#DFE6E2`), on a near-white card, on
+a near-white page: four stacked layers of the same color. `FaceShapePicker.tsx`
+fixed with real separation at every layer: a visible border (`#B9CAC1`),
+a soft drop shadow to lift the card off the page (plus a stronger hover
+shadow), a genuinely-toned face fill/stroke, and darker eye dots. Selected
+state was already fine (`#14493E`/`#E7F0EC` had real contrast) and is
+unchanged.
+
+**Separately, the actual cause of "deployed but no changes visible" from
+the previous round: a missing `git push`, not a bad deploy.** The persona-pass
+commit was made locally and never pushed -- `origin/master` was one
+commit behind, so the live site was still serving the prior commit
+(the route swap) when screenshots were taken showing the old canned
+greeting, the old numbered per-frame list, and the old EvalSection copy,
+none of which had actually failed to deploy. Confirmed directly
+(`git log origin/master` vs. local) before assuming anything about the
+code, pushed, and the same screenshots would have shown the new behavior
+on a reload. Worth naming as its own lesson distinct from the earlier
+"the build succeeded / the deployment is correct" gap: this one wasn't
+even a deployment problem, it was this session forgetting the last step
+of its own git workflow -- a good reminder that "committed" and "pushed"
+are not the same claim, and a report of "no changes" is itself evidence
+worth checking against the repo's actual remote state before re-diagnosing
+the code.
+
+---
 <!-- next entry here -->
