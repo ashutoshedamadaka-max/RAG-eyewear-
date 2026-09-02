@@ -3453,4 +3453,272 @@ times, not assumed from the count alone). `mind-change-partial-update`
 itself passed clean (8/8) on every run.
 
 ---
+
+## 2026-09-02 · Six changes: why the constraints beat the persona, a real third path restored, and a real precondition audit
+
+### 1. Why the constraints were winning the voice, not just conflicts -- a transferable finding
+
+Diagnosis, stated as the finding it is, not just the fix applied: the
+persona was one paragraph of adjectives -- "warm, lightly playful,
+genuinely invested" -- sitting above nine constraints written with far
+more concrete precision (exact banned phrases would have helped here
+too, but even without them, "cite [1]-[5]", "hedge convention claims",
+"state the assumption plainly" are each an order of magnitude more
+specific than "warm"). Models weight specificity, not position in the
+prompt. The constraints were never "winning conflicts" against the
+persona in the sense of two instructions actively fighting over the same
+sentence -- they were simply the most detailed instructions in the
+prompt, so they shaped the actual OUTPUT far more than a paragraph of
+adjectives could, independent of whether a real conflict ever arose. The
+result read as careful, formal, question-and-answer -- not because the
+model was choosing precision over warmth, but because only one of the
+two was ever operationalized specifically enough to show up in the text.
+
+**The fix is not softer constraints -- it's a persona with equal
+specificity**, and the highest-leverage single piece of it is paired
+bad/good examples, not more adjectives or even more rules: a model
+imitates a demonstrated register far more reliably than it infers one
+from being told what the register is called. `PERSONA` (converse.ts) was
+rewritten with a job and a place instead of adjectives, explicit
+permissions (contractions, fragments, sentence-initial "And"/"But"), a
+literal banned-phrase list, word ceilings, and six paired bad/good
+examples covering the catalog's actual purpose/material/style space
+(driving glare, a price floor, a rimless-safety decline, a hedged
+face-shape convention, a direct opinion request, an honest "we don't
+have that" near-miss). All nine constraints are untouched, still after
+the persona, still winning stated-explicitly-first on conflict -- the
+fix targets the actual mechanism (specificity asymmetry), not the
+symptom (which paragraph is "on top").
+
+**Transferable, generalized:** a persona paragraph and a constraints list
+are not automatically in the tension their names imply -- they compete
+for how much the model actually has to go on when producing text, and
+whichever one gives the model more concrete surface to imitate will
+dominate the output's texture regardless of intent or document order.
+Write personas the way you'd write the constraints you actually trust:
+specific, example-driven, checkable -- "adjectives vs. rules" was never
+really the axis; "vague vs. specific" was, on both sides of that split.
+
+### 2. Preconditions -- one real gap, audited against all six topics
+
+Found live, reported by the user in the previous round and fixed then at
+the `topicIsAnswered` layer (silently skip fit_issues when
+rx_status="none"); revisited this round because skipping isn't what was
+asked for -- the customer should be asked something USEFUL instead, and
+skipping can't do that. Redesigned: `policy.ts#TOPIC_DEFINITIONS` gives
+every topic an explicit optional `precondition` and `alternateQuestionText`;
+`questionTextFor` is the single function both `decideNextStep` and the
+machinery panel's `usedAlternateQuestion` flag read from, so the two can
+never disagree about which text applies. `topicIsAnswered("fit_issues")`
+reverted to its pre-precondition form (`Boolean(slots.fit_issues)`) --
+the "once asked, never re-asked" rule (askedTopics tracking) already
+prevents a loop regardless of whether the alternate's free-text answer
+happens to fill the fit_issues slot, so skipping was never actually
+necessary once asking the RIGHT question became possible.
+
+**Audit result, all six checked (five ASK_ORDER topics + the separate
+face-shape ask), documented so the audit is verifiable, not just
+claimed:** purpose -- no precondition, nothing upstream of it. prescription
+-- no precondition, it's the question that establishes rx_status itself.
+fit_issues -- HAS one (rx_status !== "none"; alternate asks about past
+experience instead of current fit). budget -- no precondition, always
+applicable. style -- no precondition, already phrased optional. face-shape
+-- no precondition, already has a built-in skip path (tap "Not sure").
+Only fit_issues had a real gap.
+
+**Ask-order: purpose now leads.** Face-shape's trigger moved from "the
+customer's first reply" (positional) to "purpose is known" (whichever
+turn that happens to be) -- `topicIsAnswered("purpose", slots)` gates
+the same face-shape branch that used to fire unconditionally. If the
+open reply doesn't state a purpose, decideNextStep naturally asks
+purpose first (ASK_ORDER[0], nothing new needed); face-shape fires
+immediately after, whenever purpose becomes known, however it became
+known. Verified live: an open reply that didn't mention purpose got
+purpose asked BEFORE face-shape; a later message answering purpose
+triggered face-shape immediately after, before prescription. Still asked
+exactly once, still outside askedTopics/QUESTION_CAP, unchanged.
+
+New golden case: `fit-issues-alternate-for-non-wearer` -- asserts the
+topic is actually asked (not silently skipped), `usedAlternateQuestion`
+is structurally true, and the question text neither mentions "current
+glasses" nor omits asking about past experience. Drives dynamically
+(reads `askedTopic`/`askingFaceShape` off the live response) since the
+exact turn fit_issues lands on now depends on what the open reply
+happens to convey -- a fixed script would desync the same way two
+existing cases already did earlier today.
+
+### 3. Cards capped at 3; the near-miss treatment now actually fires for soft mismatches
+
+`MAX_FRAMES_SHOWN`: 5 -> 3. Separately, and more load-bearing: a real
+transcript showed frames 4-5 whose own model-generated glosses admitted
+they dropped a stated requirement ("drops the narrow-face fit shared by
+the first three", "drops your requested professional style") while
+rendering identical to the three real matches -- the amber near-miss
+treatment exists (`RecommendationCard`'s `droppedClause`-driven footer)
+but was wired ONLY to the relaxation ladder's HARD near-miss
+(`catalog-db.ts`, fires only when an actual WHERE clause had to be
+dropped). A frame that clears every hard constraint but shares NONE of a
+stated style preference is a different, softer kind of dropped
+requirement that the existing mechanism had no way to represent.
+
+Fixed structurally, not by adjusting the model's prose: `derive.ts#styleMismatchClause`
+computes, directly from a frame's real `style_tags` against the
+customer's real stated `style_prefs`, whether a shown frame shares none
+of it -- returns a real dropped-requirement string when so, `undefined`
+otherwise. `converse.ts` merges this into the SAME `droppedClauseByFrameId`
+map the relaxation ladder already populates (soft fills in only where a
+hard one isn't already set), so `RecommendationCard` needed zero changes
+-- the near-miss UI already existed, it just needed a second, correct
+source of truth feeding it.
+
+New golden case: `recommendation-capped-at-three-with-verified-near-miss`.
+The near-miss check is verified against an INDEPENDENTLY recomputed
+expectation (`styleMismatchClause` called directly against the real
+catalog frame and the real stated slots) -- never trusted from what the
+system itself returned, the same discipline the 2026-08-28 "golden set
+ground truth was circular" entry established, applied here to a new
+near-miss class instead of the original relaxation-ladder one.
+
+### 4. The third path, restored
+
+An earlier version of this project routed every turn to one of clarify /
+recommend / follow-up; this codebase had shrunk to two (clarify,
+recommend), so any conversation dead-ended at the recommendation with no
+way to ask "does it come in tortoise?" or "which would you pick?"
+without restarting. Restored as a genuine third branch in `runTurn`,
+gated on `state.status === "done"` -- **the three-way split IS the
+`ConversationState` itself** (in_progress + unanswered topics = clarify,
+in_progress -> sufficient = recommend, done = follow-up), not a separate
+intent-classification model call. Deliberate, and worth stating as a
+design position, not an oversight: `policy.ts`'s own header already
+argues this exact case for ask-order ("deterministic... not something
+that benefits from an LLM call... checkable without a judge") -- the
+same reasoning applies here. A classifier call would add latency, cost,
+and a new failure mode (misclassification) to answer a question the
+state machine already answers for free and with zero ambiguity.
+
+**What a follow-up turn actually does:** still runs extraction, but
+ONLY for the safety check -- any partial slots it would have produced
+are discarded, never merged, so a follow-up genuinely cannot restart or
+redirect the compiled query. If the safety check fires, the exact same
+hardcoded, never-generated interrupt message fires here too (verified
+with a golden case specifically for this -- safety must not get weaker
+just because a recommendation already happened). Otherwise,
+`generateFollowUp` answers using `ConversationState.lastRecommendation`
+-- a new field, persisted because the server is stateless per call and
+has no other way to know what's still on screen without it. Scoped
+tightly: may reference only already-shown frames by their existing
+bracket number, explicitly told to give a real opinion when asked for
+one ("which would you pick" gets a named answer, not "all three are
+excellent choices") rather than hedge equally to stay safe, and every
+grounding rule (citations, hedging, no invented facts) still applies --
+persona and constraints are the SAME `PERSONA_AND_RULES` system prompt,
+not a separate, less-guarded voice for this path.
+
+**Client-side consequence, necessary for cards to keep rendering
+correctly:** the recommend turn's special rendering (framing, then
+cards, then closing) was gated on `i === history.length - 1` -- true
+only while the recommendation was the LAST turn. The moment a follow-up
+gets appended after it, that condition goes false and the cards would
+have silently vanished from view, replaced by the recommend turn's flat
+joined text. Fixed by dropping the position requirement entirely
+(`Boolean(entry.recommendation)` alone is sufficient and correct, since
+exactly one history entry will ever have it set) -- caught by reasoning
+through the render path before shipping, not discovered live, but
+exactly the kind of thing that would only have shown up as "the cards
+disappeared after I asked a follow-up," a confusing symptom once removed
+from its cause.
+
+Three new golden cases: `follow-up-references-onscreen-frame` (slots
+provably unchanged, byte-identical before/after; turn flagged
+`isFollowUp`; no new `recommendation`; answer cites an on-screen bracket
+number), `follow-up-gives-real-opinion` (does not match an
+equal-hedge pattern; does name a specific frame), `follow-up-safety-interrupt-still-fires`.
+
+### 5. Two smaller fixes
+
+**Convention badge**, scoped from `face_shape_boost || style_prefs_overlap`
+down to `face_shape_boost` alone. `style_prefs_overlap` fires on almost
+any shared tag (broad, common catalog tagging) and carries no `source`
+citation at all -- it's a metadata match, not a sourced convention
+claim, unlike `face_shape_boost` which only fires when a face shape was
+stated AND cites `optician-guide-style-and-complexion` directly. Checked
+against a real transcript before concluding this was the right scope,
+not a guess: 4 of 5 returned frames carried `style_prefs_overlap`, zero
+carried `face_shape_boost` (face shape had been skipped in that
+conversation) -- confirming the badge really was firing on "matches a
+common tag," not "a convention claim was actually made."
+
+**Varied gloss openings.** Five real glosses from one transcript all
+opened "This is the [X]..." -- added an explicit instruction to the
+`frame_glosses` array's own schema description (not a per-item one,
+since the requirement is about variation ACROSS the set) to vary
+sentence structure and opening words across the array. Verified live on
+a fresh run afterward: "Honestly, [1] is my first pick...", "[2] is the
+roomier, lighter-feeling alternative...", "The havana makes [3] the
+warmer..." -- three genuinely different sentence shapes, not a template
+filled in three ways.
+
+### 6. Machinery panel and pale frames
+
+**Root-caused against the deployed build, not the dev server, as asked.**
+Drove a real conversation directly against `https://rag-eyewear.vercel.app/api/conversation`
+(not localhost) and inspected the raw response: `modelCalls.length=3`,
+`recommendation` present and fully populated -- identical in shape to
+what dev already returned. The server-side data was never wrong in
+production. Stated plainly rather than papered over: this environment
+has no browser tool, so the CLIENT rendering itself (whether the toggle
+button actually appears in a real browser) could not be independently
+re-confirmed beyond what the code review already established after the
+prior round's widen-the-condition fix. If the panel is still missing
+after this round's deploy, the next useful evidence would be a browser
+console screenshot (a client-side JS error would explain a rendering gap
+that correct server data and correct-looking code can't) -- flagging
+this rather than guessing further without new evidence.
+
+**Pale frames were the SAME failure class as the face-shape picker
+(2026-09-02, earlier today):** the card's image backdrop (`#F1F4F3`) sat
+close enough to crystal's fill colors (`#DCE6E6` base, `#F2F8F8` light --
+`FrameIllustration.tsx#PALETTE`) that a crystal frame nearly disappeared
+against it -- near-white on near-white, the exact pattern already fixed
+once this session. Backdrop darkened to `#E4EAE7` and given a real
+border (`#C9D3CD`) so pale frames get a defined edge regardless of how
+close their fill lands to the backdrop color, not just a contrast hope.
+
+### Verification
+
+`npx tsc --noEmit` clean and `npm run build` clean after every change in
+this entry, checked incrementally, not just at the end. Live-traced every
+behavioral change against the real dev-server pipeline before trusting
+it -- purpose-leads ordering, the fit_issues alternate firing correctly,
+the cap-at-3 + varied-gloss output, a real follow-up exchange (including
+a second follow-up referencing the first), and the production API
+directly for item 6's root-cause -- all confirmed against actual
+responses, not assumed from reading the diff.
+
+`npm run eval-conversation`, full 17-case suite (12 existing + 5 new this
+round), one clean run: **67/67 checks passed.** Includes the two
+regression risks this round's changes created on paper -- the ask-order
+change and the fit_issues rewrite both touched code every existing case
+depends on -- and none of the 12 pre-existing cases needed further
+changes beyond what was already fixed earlier today.
+
+`npm run validate-judges` run three times, as requested, since the
+persona rewrite directly affects the register the hedging judge grades:
+
+| run | groundedness | citation_accuracy | hedging_match |
+|---|---|---|---|
+| 1 | 17/18 (94%) | 14/16 (88%) | 6/6 (100%) |
+| 2 | 15/18 (83%) | 15/16 (94%) | 6/6 (100%) |
+| 3 | 16/18 (89%) | 15/16 (94%) | 6/6 (100%) |
+
+**`hedging_match`: 100% (6/6) on all three runs, zero variance** -- the
+metric this persona change most directly touches was unaffected by it.
+`groundedness` (83-94%) and `citation_accuracy` (88-94%) show their
+already-documented run-to-run spread (temperature=1, this judge model
+can't be pinned to 0) -- both ranges consistent with the 2026-08-31
+baseline and the prior spread logged earlier today, nothing new or
+attributable to this round's changes.
+
+---
 <!-- next entry here -->

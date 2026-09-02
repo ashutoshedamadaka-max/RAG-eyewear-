@@ -60,7 +60,9 @@ export interface TurnMachinery {
   assumptions: DerivedFactRecord[];
   fittingRulesTotalCount: number;
   askedTopic?: string;
+  usedAlternateQuestion?: boolean;
   askingFaceShape?: boolean;
+  isFollowUp?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;
@@ -92,6 +94,9 @@ export interface ConversationState {
   status: "in_progress" | "safety_interrupt" | "recommending" | "done";
   history: TurnMachinery[];
   faceShapeAsked: boolean;
+  lastRecommendation?: {
+    frames: { frame_id: string; text: string }[];
+  };
 }
 
 export interface RecommendedFrame {

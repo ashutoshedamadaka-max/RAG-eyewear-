@@ -240,7 +240,12 @@ export default function ConversationPage() {
               const userContent = isOpening ? undefined : turns[2 * i - 1]?.content;
               const assistantContent = isOpening ? turns[0]?.content : turns[2 * i]?.content;
               const cumulative = cumulativeSlotsAt(state.history, i, state.slots);
-              const isFinalRecommendTurn = Boolean(entry.recommendation) && i === state.history.length - 1 && state.status === "done";
+              // Follow-up path (decisions.md, 2026-09-02): dropped the "last entry" requirement --
+              // once a follow-up turn can be appended after the recommendation, the recommend
+              // entry is no longer necessarily last, but it's still the ONLY entry that will ever
+              // have `recommendation` set, so checking that alone still identifies it correctly
+              // regardless of how many follow-ups come after.
+              const isRecommendTurn = Boolean(entry.recommendation);
               const isLastEntry = i === state.history.length - 1;
               // "Show how this was built" only where there's something to see (decisions.md,
               // 2026-09-02, revised same day): originally gated on a recommendation/fired
@@ -265,7 +270,7 @@ export default function ConversationPage() {
                     </div>
                   )}
 
-                  {assistantContent && !isFinalRecommendTurn && (
+                  {assistantContent && !isRecommendTurn && (
                     <p
                       className="text-[#14201C] m-0 max-w-[62ch]"
                       style={{ fontFamily: "var(--font-serif)", fontSize: 16, lineHeight: 1.65 }}
@@ -278,7 +283,7 @@ export default function ConversationPage() {
                     <FaceShapePicker selected={selectedFaceShape} onSelect={selectFaceShape} disabled={loading} />
                   )}
 
-                  {isFinalRecommendTurn && recommendation && (
+                  {isRecommendTurn && recommendation && (
                     <div>
                       {/* Product decision, not a formatting preference (decisions.md, 2026-09-02):
                           cards carry facts, prose carries judgement. framing opens (no frame
@@ -292,7 +297,14 @@ export default function ConversationPage() {
                       </p>
                       {recommendedFrames.map((f) => {
                         if (!f.parsed) return null;
-                        const isConvention = f.reasons.some((r) => r.ruleId === "face_shape_boost" || r.ruleId === "style_prefs_overlap");
+                        // Convention badge scoped to face_shape_boost only (decisions.md, 2026-09-02) --
+                        // style_prefs_overlap fires on almost any shared tag (common catalog tagging),
+                        // so including it made the badge show on nearly every card, carrying no
+                        // information. face_shape_boost is genuinely rare (only fires when a face
+                        // shape was stated AND this frame is conventionally suited to it) and is the
+                        // one that actually cites a convention-tagged source (optician-guide-style-
+                        // and-complexion), unlike style_prefs_overlap which cites none.
+                        const isConvention = f.reasons.some((r) => r.ruleId === "face_shape_boost");
                         return (
                           <RecommendationCard
                             key={f.frame_id}
@@ -326,15 +338,6 @@ export default function ConversationPage() {
               </p>
             )}
 
-            {state.status === "done" && !inReplay && (
-              <div className="mt-8">
-                <div className="text-[13.5px] font-semibold text-[#14201C] mb-2.5">
-                  How this is evaluated
-                </div>
-                <EvalSection />
-              </div>
-            )}
-
             {inReplay && replayScenario && !replayExhausted && (
               <button
                 onClick={advanceReplay}
@@ -353,9 +356,13 @@ export default function ConversationPage() {
               </button>
             )}
 
+            {/* Follow-up path (decisions.md, 2026-09-02): the input used to disappear once
+                status="done", ending the conversation at the recommendation. Now it stays --
+                a "done" conversation still accepts follow-ups ("does it come in tortoise?",
+                "which would you pick?"), it just stops being a clarify/recommend cycle. Only
+                a genuine hard stop (safety_interrupt) or the face-shape chip wait hides it. */}
             {!inReplay &&
-              state.status !== "done" &&
-              state.status !== "safety_interrupt" &&
+              (state.status === "in_progress" || state.status === "done") &&
               !(waitingForFaceShapeReply) && (
                 <form
                   onSubmit={(e) => {
@@ -367,7 +374,7 @@ export default function ConversationPage() {
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your reply..."
+                    placeholder={state.status === "done" ? "Ask about these frames..." : "Type your reply..."}
                     className="flex-1 rounded-md border border-[#DFE6E2] bg-[#FDFEFD] text-[#14201C] placeholder:text-[#8A9992] px-3 py-2 text-[14px]"
                     style={{ fontFamily: "var(--font-serif)" }}
                     disabled={loading}
@@ -383,6 +390,20 @@ export default function ConversationPage() {
               )}
 
             {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
+
+            {/* Moved below the follow-up input (decisions.md, 2026-09-02) -- it used to sit
+                between the recommendation and where the conversation would have continued,
+                which now visibly interrupts an active follow-up chat. Evaluation info reads
+                better as a closing "about this system" section than a wall in the middle of
+                a conversation. */}
+            {state.status === "done" && !inReplay && (
+              <div className="mt-8">
+                <div className="text-[13.5px] font-semibold text-[#14201C] mb-2.5">
+                  How this is evaluated
+                </div>
+                <EvalSection />
+              </div>
+            )}
           </div>
         )}
 

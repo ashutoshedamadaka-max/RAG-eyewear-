@@ -218,6 +218,31 @@ export interface RankedFrame {
 }
 
 /**
+ * A SOFT near-miss, distinct from the relaxation ladder's HARD one
+ * (catalog-db.ts's `droppedClause`, produced only when a real WHERE
+ * clause had to be dropped). This one fires when a frame clears every
+ * hard constraint but shares NONE of the customer's stated style
+ * preference -- a real gap, not a hard-constraint violation, but still a
+ * dropped requirement in the customer's own words ("something classic"),
+ * and it deserves the same near-miss treatment on the card, not silent
+ * inclusion among frames that actually match (decisions.md, 2026-09-02:
+ * "any frame that drops a stated requirement must render as a
+ * near-miss"). Computed structurally from the same style_tags/style_prefs
+ * overlap check rankCandidates already does for the boost, not parsed out
+ * of generated prose -- returns undefined (no near-miss) whenever the
+ * customer never stated a style preference at all, or this frame does
+ * share one.
+ */
+export function styleMismatchClause(frame: CatalogFrame, slots: Slots): string | undefined {
+  const stylePrefs = slots.style_prefs?.value ?? [];
+  if (stylePrefs.length === 0) return undefined;
+  const frameStyles = (frame.style_tags as string[] | undefined) ?? [];
+  const overlap = stylePrefs.some((s) => frameStyles.includes(s));
+  if (overlap) return undefined;
+  return `your stated style preference (${stylePrefs.join(", ")})`;
+}
+
+/**
  * The soft-ORDER-BY half of the compile step. Runs after the hard SQL
  * filter narrows candidates (catalog-db.ts, unchanged) -- this project
  * deliberately keeps ranking in JS rather than folding it into the SQL

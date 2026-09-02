@@ -37,17 +37,70 @@ export const GREETING_TEXT =
 export const FACE_SHAPE_BASE_QUESTION =
   "Before we go further — tap whichever face shape looks closest to yours, or skip if you're not sure. It's just a styling nudge, never a requirement.";
 
-const QUESTION_TEXT: Record<QuestionTopic, string> = {
-  purpose: "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?",
-  prescription:
-    "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?",
-  fit_issues: "Have your current glasses been sliding down, feeling tight, or leaving marks?",
-  budget: "What's your budget for the frame?",
-  // face_shape moved out to FACE_SHAPE_OPENER_TEXT (turn 0) -- style now covers style_prefs only.
-  style: "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional.",
+/**
+ * Every topic's question, and -- audited across all five ASK_ORDER topics
+ * plus the separate face-shape ask (decisions.md, 2026-09-02) -- an
+ * explicit `precondition` wherever the default question can stop applying
+ * given what's already known, with an `alternateQuestionText` that asks
+ * something genuinely useful instead of either a contradiction or a
+ * silent skip. Audit result: only `fit_issues` has a real one.
+ *
+ * - purpose: no precondition -- always applicable, nothing upstream of it.
+ * - prescription: no precondition -- this is the question that ESTABLISHES
+ *   rx_status; nothing can precede it.
+ * - fit_issues: HAS one. Its default phrasing ("have your current glasses
+ *   been sliding...") presupposes the customer currently owns eyewear.
+ *   Found live (2026-09-02): a customer who'd just said "I don't wear
+ *   glasses" was asked this anyway, one turn after the assistant itself
+ *   acknowledged they don't wear glasses. Precondition: `rx_status !==
+ *   "none"`. Alternate: ask about past experience instead of current fit,
+ *   which is both askable and actually useful for a first-time or
+ *   between-pairs customer.
+ * - budget: no precondition -- always applicable regardless of anything
+ *   else known.
+ * - style: no precondition -- already phrased as optional ("Totally
+ *   optional"), and asking it is harmless regardless of what else is known.
+ */
+interface TopicDefinition {
+  questionText: string;
+  /** Returns false when the default questionText doesn't apply given current slots. */
+  precondition?: (slots: Slots) => boolean;
+  /** Used instead of questionText when precondition() returns false. */
+  alternateQuestionText?: string;
+}
+
+const TOPIC_DEFINITIONS: Record<QuestionTopic, TopicDefinition> = {
+  purpose: {
+    questionText: "What's this pair mainly for — everyday wear, sunglasses, computer or reading, or sports?",
+  },
+  prescription: {
+    questionText:
+      "Do you wear glasses now, and if so, do you know roughly how strong your prescription is? And do you need help seeing both far away and up close, or just one of those?",
+  },
+  fit_issues: {
+    questionText: "Have your current glasses been sliding down, feeling tight, or leaving marks?",
+    precondition: (slots) => slots.rx_status?.value !== "none",
+    alternateQuestionText: "Have you worn glasses before, and if so, was there anything about the fit you didn't like?",
+  },
+  budget: {
+    questionText: "What's your budget for the frame?",
+  },
+  style: {
+    // face_shape moved out to FACE_SHAPE_BASE_QUESTION -- this covers style_prefs only.
+    questionText: "Any particular style you lean toward — minimal, bold, retro, professional, sporty, playful? Totally optional.",
+  },
 };
 
-/** Whether a topic's question is already answered by what's STATED/DERIVED so far -- independent of whether it was ever literally asked, so a volunteered answer skips the question (PROJECT_CONTEXT.md §3: "skip anything already inferable"). */
+/** The question text to actually ask for a topic right now -- the default, or the precondition-driven alternate. Single source of truth `decideNextStep` and `converse.ts` both read from, so the two can never disagree about which text applies. */
+export function questionTextFor(topic: QuestionTopic, slots: Slots): { text: string; usedAlternate: boolean } {
+  const def = TOPIC_DEFINITIONS[topic];
+  if (def.precondition && !def.precondition(slots) && def.alternateQuestionText) {
+    return { text: def.alternateQuestionText, usedAlternate: true };
+  }
+  return { text: def.questionText, usedAlternate: false };
+}
+
+/** Whether a topic's question is already answered by what's STATED/DERIVED so far -- independent of whether it was ever literally asked, so a volunteered answer skips the question (PROJECT_CONTEXT.md §3: "skip anything already inferable"). Deliberately does NOT special-case fit_issues on rx_status="none" -- that precondition is handled by asking a DIFFERENT, applicable question (above), not by skipping the topic outright; skipping was tried and reverted the same day once the "replace with something useful" requirement made skipping the wrong fix. */
 export function topicIsAnswered(topic: QuestionTopic, slots: Slots): boolean {
   switch (topic) {
     case "purpose":
@@ -61,18 +114,11 @@ export function topicIsAnswered(topic: QuestionTopic, slots: Slots): boolean {
       if (slots.rx_status.value === "none") return true;
       return Boolean(slots.lens_type);
     case "fit_issues":
-      // Same reasoning as prescription/lens_type just above, and the same bug class the
-      // splaying/pressing correction fixed (decisions.md, 2026-08-28): rx_status="none" means
-      // there are no current glasses to report fit issues about. QUESTION_TEXT below literally
-      // asks "have YOUR CURRENT GLASSES been sliding..." -- asking it anyway isn't just
-      // pointless, it's a direct contradiction of what the customer just said, one turn after
-      // the assistant itself acknowledged they don't wear glasses (found live, 2026-09-02).
-      if (slots.rx_status?.value === "none") return true;
       return Boolean(slots.fit_issues);
     case "budget":
       return Boolean(slots.budget_min || slots.budget_max);
     case "style":
-      // face_shape no longer counts here -- it's asked separately at turn 0, outside ASK_ORDER.
+      // face_shape no longer counts here -- it's asked separately, outside ASK_ORDER.
       return Boolean((slots.style_prefs?.value.length ?? 0) > 0);
   }
 }
@@ -89,6 +135,8 @@ export interface NextStep {
   kind: "ask" | "recommend";
   topic?: QuestionTopic;
   questionText?: string;
+  /** True when the topic's precondition failed and the ALTERNATE question text was used instead of the default -- exposed so the machinery panel and golden-set checks can assert on it structurally, not by parsing prose. */
+  usedAlternateQuestion?: boolean;
 }
 
 /**
@@ -127,5 +175,6 @@ export function decideNextStep(state: ConversationState): NextStep {
   }
 
   const topic = unasked[0];
-  return { kind: "ask", topic, questionText: QUESTION_TEXT[topic] };
+  const { text, usedAlternate } = questionTextFor(topic, state.slots);
+  return { kind: "ask", topic, questionText: text, usedAlternateQuestion: usedAlternate };
 }

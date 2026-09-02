@@ -36,7 +36,7 @@ import { queryFrames, countMatches, findNearestAlternatives } from "../catalog-d
 import { getBlurb } from "../retrieval";
 import { getAdviceEmbeddingModel, retrieveAdviceTopKWithNearMisses, type AdviceHit } from "../advice-retrieval";
 import { extractTurn } from "./extract-turn";
-import { deriveQuery, rankCandidates, filterUnsafeRimless, FITTING_RULES, type DerivedFact } from "./derive";
+import { deriveQuery, rankCandidates, filterUnsafeRimless, styleMismatchClause, FITTING_RULES, type DerivedFact } from "./derive";
 import { decideNextStep, ASK_ORDER, QUESTION_CAP, topicIsAnswered, GREETING_TEXT, FACE_SHAPE_BASE_QUESTION } from "./policy";
 import type {
   ConversationState,
@@ -50,7 +50,14 @@ import type {
   ModelCallUsage,
 } from "./types";
 
-const MAX_FRAMES_SHOWN = 5;
+// 5 -> 3 (decisions.md, 2026-09-02): five cards read as a search-results
+// page, not a recommendation. A real transcript returned five, two of
+// which the model's OWN glosses admitted dropped a stated requirement
+// ("drops the narrow-face fit shared by the first three", "drops your
+// requested professional style") while rendering identical to the three
+// real matches -- see styleMismatchClause below for the structural fix
+// to that specific failure, independent of this cap.
+const MAX_FRAMES_SHOWN = 3;
 const MAX_ADVICE_SHOWN = 4;
 
 // Defaults applied only when the 5-question cap is hit (or no topic is left
@@ -97,7 +104,54 @@ function applyCapAssumptions(slots: Slots): { slots: Slots; assumed: SlotName[] 
 // Persona first, constraints after, explicitly ordered so a conflict has
 // only one correct resolution (decisions.md, 2026-09-02: "when they
 // conflict, constraints win" -- stated, not implied).
-const PERSONA = `You are Specs, the in-store assistant at an optical shop, continuing a multi-turn conversation with a customer. Warm, lightly playful, genuinely invested in getting them the right fit -- not a form to fill out. Acknowledge what they just said, specifically, before moving on to anything else; a generic "got it" is not acknowledgment. When a question is about to matter for a real, already-established reason, say why in one short plain-language clause. A light touch describing options is welcome. Think of the optician who is funny and warm and still says "I don't know, get that checked" when that is the honest answer -- manner is warm, claims are precise, and the two never trade against each other.`;
+//
+// Rewritten the same day, same-day diagnosis (decisions.md): the first
+// version of this persona was one paragraph of adjectives -- warm,
+// lightly playful, genuinely invested -- sitting above nine numbered
+// constraints written with far more precision. Models weight
+// specificity, not position: the constraints were winning the VOICE, not
+// just conflicts they were meant to win, because they were simply the
+// more detailed instructions in the prompt. The fix is not softer
+// constraints -- it's a persona with equal specificity: a job and a
+// place instead of adjectives, explicit permissions, a banned-phrase
+// list, word ceilings, and paired bad/good examples (the highest-leverage
+// piece -- models imitate register far more reliably from examples than
+// from being told what a register is called).
+const PERSONA = `You work the floor of an optical shop -- the assistant everyone hopes they get: actually looks at you, makes you laugh, somehow picks the frame you didn't know you wanted.
+
+Voice, concretely:
+- Contractions always. Sentence fragments are fine. Starting a sentence with "And" or "But" is fine.
+- Never say: "I'd be happy to help", "Great choice!", "Amazing!", "To better assist you", "Crafted with", "These premium frames feature", "Of course, individual preferences may vary." If a sentence could sit on a product box, cut it and say the actual thing instead.
+- Word ceilings: clarifying questions under 30 words. Recommendation prose (framing + closing combined) under 180 words. Say less, not more.
+- You have favourites. Share them when asked, and sometimes when you're not. You'll talk someone out of a bad idea -- gently, but you'll do it, not hedge equally across every option to stay safe.
+
+Examples, same register throughout -- study these, not just the rule above:
+
+User: "I need sunglasses for driving"
+Bad: "Polarized lenses are excellent for driving as they reduce glare. What is your budget?"
+Good: "Polarized's what you want -- kills the glare bouncing off other cars' windshields and wet roads. Budget?"
+
+User: "What's your cheapest titanium frame?"
+Bad: "Our most affordable titanium option is priced at ₹4,800, offering excellent value."
+Good: "₹4,800 gets you in the door for titanium -- nothing cheaper in that material here. Below that you're into metal or acetate instead."
+
+User: "I really want rimless, they look so light"
+Bad: "Rimless frames can be a wonderful choice, though for stronger prescriptions there are some considerations regarding lens compatibility."
+Good: "I get it -- rimless barely registers on your face. But at -6.00D the lens edge gets thick enough that drilling straight into it isn't safe on most of what's here. Semi-rim gets you close to that lightness without the risk."
+
+User: "I have a round face, what shape works?"
+Bad: "For round faces, we typically recommend angular frames as they provide excellent facial balance and are universally flattering."
+Good: "Convention says angular over round -- more contrast, less roundness echoing roundness. That's a styling rule of thumb, not a law, so don't let it talk you out of something you actually like."
+
+User: "Which of these would you actually pick?"
+Bad: "All three are excellent choices that would suit your needs well. It really comes down to personal preference."
+Good: "Honestly? [2]. The tortoise hides scratches better than the crystal, and semi-rim splits the difference between 'barely there' and 'actually stays on.'"
+
+User: "Do you have anything under ₹1,500 in titanium?"
+Bad: "While we don't have an exact match, we have several premium options that may exceed your budget slightly but offer superior quality."
+Good: "Nothing that cheap in titanium -- the floor here is ₹4,800. If ₹1,500's a hard ceiling, metal or acetate gets you there instead."
+
+That's the manner. The constraints below govern what you're allowed to claim -- just as much a part of who you are, not a leash on it.`;
 
 const CONSTRAINTS = `When any instruction below conflicts with the persona above, these win. Every time -- warmth is a manner of delivery, never a license to claim more than the evidence supports.
 
@@ -296,7 +350,8 @@ async function generateRecommendation(
           },
           frame_glosses: {
             type: "array",
-            description: "Exactly one entry per frame shown, same frames as the candidate list below, in the same order.",
+            description:
+              "Exactly one entry per frame shown, same frames as the candidate list below, in the same order. Vary sentence structure and opening words ACROSS this array -- do not start every gloss the same way (e.g. every one beginning \"This is the...\"). Each frame gets a genuinely different sentence shape, not a template filled in five ways.",
             items: {
               type: "object",
               properties: {
@@ -373,6 +428,53 @@ async function generateRecommendation(
   } catch {
     return fallback;
   }
+}
+
+/**
+ * The restored third path (decisions.md, 2026-09-02): an earlier version
+ * of this project routed every turn to one of clarify / recommend /
+ * follow-up; this codebase had shrunk to two, so any conversation ended
+ * at the recommendation with no way to ask about what's on screen.
+ * Deliberately freeform text, not structured output -- unlike the
+ * recommendation turn, a follow-up isn't producing a new set of cards to
+ * keep separate from prose, it's answering a question about cards that
+ * already exist. Scoped tightly: may reference only the frames already
+ * shown (by their existing bracket number), may not introduce a new one,
+ * and is explicitly told it may hold and state an opinion rather than
+ * hedge equally across every option -- "which would you pick" deserves a
+ * real answer, not "all three are excellent choices."
+ */
+async function generateFollowUp(
+  client: OpenAI,
+  turns: Turn[],
+  lastRecommendation: { frames: { frame_id: string; text: string }[] }
+): Promise<{ text: string; usage: TokenUsage }> {
+  const frameContext = formatFrameContext(lastRecommendation.frames);
+
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: PERSONA_AND_RULES },
+    {
+      role: "user",
+      content:
+        `Conversation so far:\n${turns.map((t) => `${t.role}: ${t.content}`).join("\n")}\n\n` +
+        `The frames already on screen -- reference these by their existing bracket number, never introduce one not listed here:\n${frameContext}\n\n` +
+        `Your task: answer the customer's latest message as a follow-up about what's already shown. If they ask for an opinion or a pick, give a real one -- name a frame directly rather than hedging equally across all of them. Don't restate specs already on the cards (size, price, material -- the customer can already see those). Don't run a new search or introduce a frame not in the list above; if the answer genuinely isn't in what's shown (e.g. a color variant that doesn't exist in the catalog), say that plainly rather than inventing one. Every grounding rule still applies: no invented facts, hedge convention claims, never assert how something will look on them.`,
+    },
+  ];
+
+  const response = await client.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: CHAT_TEMPERATURE,
+    messages,
+  });
+
+  return {
+    text: response.choices[0]?.message?.content ?? "",
+    usage: {
+      promptTokens: response.usage?.prompt_tokens ?? 0,
+      completionTokens: response.usage?.completion_tokens ?? 0,
+    },
+  };
 }
 
 export interface TurnResult {
@@ -461,8 +563,87 @@ export async function runTurn(
       timingsMs,
     });
     return {
-      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked },
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
       assistantMessage: GREETING_TEXT,
+    };
+  }
+
+  // Restored third path (decisions.md, 2026-09-02): an earlier version of this project
+  // routed every turn to one of clarify / recommend / follow-up; this codebase had shrunk
+  // to two, so a conversation could never continue past its recommendation. Once
+  // state.status is already "done", any further message is a follow-up about what's on
+  // screen, not a new clarify/recommend cycle -- deliberately no extraction-driven slot
+  // updates and no new SQL/retrieval (generateFollowUp is scoped to state.lastRecommendation's
+  // already-shown frames). Still runs extraction for the SAFETY CHECK only, discarding
+  // any partial slots it finds -- safety must never be weaker just because a recommendation
+  // already happened. The three-way split is the ConversationState itself (in_progress +
+  // unanswered topics = clarify, in_progress -> sufficient = recommend, done = follow-up),
+  // not a separate intent-classification model call -- deterministic and testable, the same
+  // reasoning policy.ts's own header gives for keeping ask-order a rule, not a judgment call.
+  if (state.status === "done") {
+    turns.push({ role: "user", content: userMessage });
+
+    const safetyCheckStart = Date.now();
+    const safetyCheck = await extractTurn(client, state.turns, userMessage, slots);
+    timingsMs.extraction = Date.now() - safetyCheckStart;
+    modelCalls.push({
+      label: "Checking for anything urgent",
+      kind: "chat",
+      promptTokens: safetyCheck.usage.promptTokens,
+      completionTokens: safetyCheck.usage.completionTokens,
+      costInr: costInr(safetyCheck.usage.promptTokens, safetyCheck.usage.completionTokens, "chat"),
+      ms: timingsMs.extraction,
+    });
+
+    if (safetyCheck.safetyFlag !== "none") {
+      const message = SAFETY_INTERRUPT_MESSAGES[safetyCheck.safetyFlag === "vision_symptom" ? "vision_symptom" : "medical_question"];
+      turns.push({ role: "assistant", content: message });
+      timingsMs.total = Date.now() - turnStart;
+      history.push({
+        turnIndex: history.length,
+        userMessage,
+        extractedPartial: {},
+        safetyFlag: safetyCheck.safetyFlag,
+        derivedFacts: [],
+        assumptions: [],
+        fittingRulesTotalCount: FITTING_RULES.length,
+        modelCalls,
+        timingsMs,
+      });
+      return {
+        state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "safety_interrupt", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
+        assistantMessage: message,
+      };
+    }
+
+    const followUpStart = Date.now();
+    const followUp = await generateFollowUp(client, turns, state.lastRecommendation ?? { frames: [] });
+    timingsMs.generation = Date.now() - followUpStart;
+    modelCalls.push({
+      label: "Answering a follow-up",
+      kind: "chat",
+      promptTokens: followUp.usage.promptTokens,
+      completionTokens: followUp.usage.completionTokens,
+      costInr: costInr(followUp.usage.promptTokens, followUp.usage.completionTokens, "chat"),
+      ms: timingsMs.generation,
+    });
+    turns.push({ role: "assistant", content: followUp.text });
+    timingsMs.total = Date.now() - turnStart;
+    history.push({
+      turnIndex: history.length,
+      userMessage,
+      extractedPartial: {},
+      safetyFlag: "none",
+      derivedFacts: [],
+      assumptions: [],
+      fittingRulesTotalCount: FITTING_RULES.length,
+      isFollowUp: true,
+      modelCalls,
+      timingsMs,
+    });
+    return {
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "done", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
+      assistantMessage: followUp.text,
     };
   }
 
@@ -511,18 +692,23 @@ export async function runTurn(
       timingsMs,
     });
     return {
-      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "safety_interrupt", history, faceShapeAsked: state.faceShapeAsked },
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "safety_interrupt", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
       assistantMessage: message,
     };
   }
 
-  // New-opening flow (decisions.md, 2026-09-02): the face-shape ask happens
-  // exactly once, right after the customer's FIRST reply (to the
-  // greeting) -- acknowledging what they said, then asking. Takes
-  // priority over decideNextStep entirely, same as the old turn-0 special
-  // case did, just moved one exchange later. Outside askedTopics/cap, same
-  // as before.
-  if (!state.faceShapeAsked) {
+  // New-opening flow, ask-order revised again (decisions.md, 2026-09-02):
+  // purpose determines far more than face shape does, so it leads.
+  // Face-shape fires exactly once, but the trigger is now "purpose is
+  // known" (however it became known -- volunteered in the open reply, or
+  // just asked+answered), not "this is literally the first reply." If the
+  // open reply doesn't state purpose, this condition is false here and
+  // falls through to decideNextStep below, which asks purpose first
+  // (ASK_ORDER[0]) same as any other unanswered topic; once purpose is
+  // known, THIS branch fires on the very next turn. Still takes priority
+  // over decideNextStep once its condition is met, still outside
+  // askedTopics/cap, same as before.
+  if (!state.faceShapeAsked && topicIsAnswered("purpose", slots)) {
     const { facts } = deriveQuery(slots);
     const askStart = Date.now();
     const generated = await generateWarmTurn(client, turns, FACE_SHAPE_BASE_QUESTION, facts);
@@ -550,7 +736,7 @@ export async function runTurn(
       timingsMs,
     });
     return {
-      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: true },
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: true, lastRecommendation: state.lastRecommendation },
       assistantMessage: generated.text,
     };
   }
@@ -582,11 +768,12 @@ export async function runTurn(
       assumptions: [],
       fittingRulesTotalCount: FITTING_RULES.length,
       askedTopic: next.topic,
+      usedAlternateQuestion: next.usedAlternateQuestion,
       modelCalls,
       timingsMs,
     });
     return {
-      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked },
+      state: { slots, turns, askedTopics, assumedAtCap: state.assumedAtCap, status: "in_progress", history, faceShapeAsked: state.faceShapeAsked, lastRecommendation: state.lastRecommendation },
       assistantMessage: generated.text,
     };
   }
@@ -754,19 +941,45 @@ export async function runTurn(
   });
 
   const droppedClauseByFrameId = new Map((relaxedDetails ?? []).map((d) => [d.frame_id, d.droppedClause]));
+  // Soft near-miss, merged in only where the relaxation ladder didn't already set a HARD
+  // one (decisions.md, 2026-09-02): a frame that clears every hard constraint but shares
+  // none of a stated style preference is still a dropped requirement in the customer's own
+  // words, and must render with the same amber near-miss treatment, not sit undifferentiated
+  // among real matches -- computed structurally (styleMismatchClause), not left to whether
+  // the model's own prose happens to mention it.
+  for (const r of ranked) {
+    if (!droppedClauseByFrameId.has(r.frame.frame_id)) {
+      const soft = styleMismatchClause(r.frame, slots);
+      if (soft) droppedClauseByFrameId.set(r.frame.frame_id, soft);
+    }
+  }
+
+  const recommendedFrames = ranked.map((r) => ({
+    frame_id: r.frame.frame_id,
+    text: getBlurb(r.frame.frame_id),
+    boost: r.boost,
+    reasons: r.reasons,
+    droppedClause: droppedClauseByFrameId.get(r.frame.frame_id),
+    gloss: glossByFrameId.get(r.frame.frame_id) ?? "",
+  }));
 
   return {
-    state: { slots, turns, askedTopics, assumedAtCap, status: "done", history, faceShapeAsked: state.faceShapeAsked },
+    state: {
+      slots,
+      turns,
+      askedTopics,
+      assumedAtCap,
+      status: "done",
+      history,
+      faceShapeAsked: state.faceShapeAsked,
+      // Restored third path (decisions.md, 2026-09-02): persisted so a follow-up turn
+      // ("does it come in tortoise?", "which would you pick?") can answer about what's
+      // actually on screen without re-running extraction/SQL/retrieval to rediscover it.
+      lastRecommendation: { frames: recommendedFrames.map((f) => ({ frame_id: f.frame_id, text: f.text })) },
+    },
     assistantMessage: answer,
     recommendation: {
-      frames: ranked.map((r) => ({
-        frame_id: r.frame.frame_id,
-        text: getBlurb(r.frame.frame_id),
-        boost: r.boost,
-        reasons: r.reasons,
-        droppedClause: droppedClauseByFrameId.get(r.frame.frame_id),
-        gloss: glossByFrameId.get(r.frame.frame_id) ?? "",
-      })),
+      frames: recommendedFrames,
       sql,
       relaxed,
       framing: generated.framing,

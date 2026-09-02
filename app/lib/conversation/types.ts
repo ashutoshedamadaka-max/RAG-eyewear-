@@ -127,8 +127,12 @@ export interface TurnMachinery {
   /** FITTING_RULES.length -- the total number of distinct rule categories that COULD have fired, so the panel can show "N of M" honestly. Same value every turn (it's a property of the code, not the conversation), included per-turn so the UI never has to import derive.ts's registry directly. */
   fittingRulesTotalCount: number;
   askedTopic?: QuestionTopic;
+  /** True only when askedTopic's precondition failed and the ALTERNATE question text was used (policy.ts#questionTextFor) -- e.g. fit_issues asking about past eyewear experience instead of current fit, because rx_status="none". Exposed so golden-set checks can assert on which path fired structurally, not by parsing the generated prose (decisions.md, 2026-09-02). */
+  usedAlternateQuestion?: boolean;
   /** New-opening flow (decisions.md, 2026-09-02): true only on the one turn that acknowledges the customer's first open reply and asks for face shape -- the client uses this, not turn position, to know when to show the face-shape chips. */
   askingFaceShape?: boolean;
+  /** True only on a follow-up turn (state.status was already "done" when this turn started) -- decisions.md 2026-09-02's restored third path. No extraction/retrieval reruns on this turn; `recommendation` below stays unset since no new query was compiled. */
+  isFollowUp?: boolean;
   recommendation?: {
     sql: string;
     sqlMatchCount: number;
@@ -173,6 +177,19 @@ export interface ConversationState {
   history: TurnMachinery[];
   /** New-opening flow (decisions.md, 2026-09-02): the face-shape ask has moved off turn 0 -- it's now asked (with acknowledgment) right after the customer's first open reply to the greeting, exactly once. This tracks whether that's happened yet, independent of askedTopics (face_shape stays outside ASK_ORDER and the question cap, same as before). */
   faceShapeAsked: boolean;
+  /**
+   * The restored third path (decisions.md, 2026-09-02): persisted here,
+   * not just held client-side, because the server is stateless per call
+   * (client round-trips the whole state) -- a follow-up turn ("does it
+   * come in tortoise?", "which would you pick?") needs to know what's
+   * actually on screen without re-running extraction/SQL/retrieval to
+   * rediscover it. Set once, on the turn that produces a recommendation;
+   * carried through unchanged by every turn after, including follow-ups
+   * (they don't produce a new one).
+   */
+  lastRecommendation?: {
+    frames: { frame_id: string; text: string }[];
+  };
 }
 
 export function emptyState(): ConversationState {

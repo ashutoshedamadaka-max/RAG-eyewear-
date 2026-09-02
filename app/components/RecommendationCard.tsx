@@ -32,7 +32,12 @@ export default function RecommendationCard({ frame, gloss, citationMarker, claim
         </div>
       )}
       <div className="flex gap-4 p-4 items-start flex-wrap">
-        <div className="w-[150px] min-w-[130px] flex-none bg-[#F1F4F3] rounded p-1.5">
+        {/* Backdrop darkened + bordered (decisions.md, 2026-09-02): the old #F1F4F3 sat too
+            close to pale/crystal frame fill colors (#DCE6E6 base, #F2F8F8 light -- see
+            FrameIllustration's PALETTE) for the illustration to read against it, the same
+            near-white-on-near-white pattern the face-shape picker had. A border gives pale
+            frames a real edge regardless of how close their fill lands to the backdrop. */}
+        <div className="w-[150px] min-w-[130px] flex-none bg-[#E4EAE7] border border-[#C9D3CD] rounded p-1.5">
           <FrameIllustration
             frame={{
               frame_id: frame.frame_id,
