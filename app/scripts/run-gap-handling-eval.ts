@@ -13,7 +13,12 @@
 // Result 3 table already verified this behavior against (2026-08-28) --
 // re-run here to get a fresh, current number for the /conversation
 // interface's evaluation section, not to re-litigate that finding.
+import fs from "node:fs";
+import path from "node:path";
 import { queryFrames, findNearestAlternatives, type StructuredFilter } from "../lib/catalog-db";
+
+const ROOT = path.resolve(__dirname, "..", "..");
+const REPORTS_DIR = path.join(ROOT, "evals", "harness", "reports");
 
 interface GapCase {
   label: string;
@@ -28,6 +33,7 @@ const GAPS: GapCase[] = [
 
 function main() {
   let pass = 0;
+  const cases: Record<string, unknown>[] = [];
   for (const gap of GAPS) {
     const { frames: exact } = queryFrames(gap.filter, 1);
     const isRealGap = exact.length === 0;
@@ -45,9 +51,34 @@ function main() {
     } else {
       console.log(`    no alternative offered${neverRelaxBlocked.length ? ` (blocked by never-relax: ${neverRelaxBlocked.map((b) => b.describe).join(", ")})` : ""}`);
     }
+
+    cases.push({
+      label: gap.label,
+      ok,
+      exactMatchCount: exact.length,
+      isRealGap,
+      offersNamedAlternative,
+      nearestAlternative:
+        alternatives.length > 0
+          ? { frame: `${alternatives[0].frame.brand} ${alternatives[0].frame.model}`, droppedClause: alternatives[0].droppedClause }
+          : undefined,
+      neverRelaxBlocked: neverRelaxBlocked.length > 0 ? neverRelaxBlocked.map((b) => b.describe) : undefined,
+    });
   }
 
   console.log(`\n=== ${pass}/${GAPS.length} intentional gaps correctly declined with a named alternative ===`);
+
+  // Committed report JSON (decisions.md, 2026-09-03) -- same reasoning as
+  // run-conversation-eval.ts's report: the /evals page reads this directly.
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const reportPath = path.join(REPORTS_DIR, `gap-handling-${timestamp}.json`);
+  fs.writeFileSync(
+    reportPath,
+    JSON.stringify({ generatedAt: new Date().toISOString(), summary: { pass, total: GAPS.length }, cases }, null, 2)
+  );
+  console.log(`Full report written to ${reportPath}`);
+
   if (pass < GAPS.length) process.exitCode = 1;
 }
 

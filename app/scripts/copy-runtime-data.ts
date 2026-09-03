@@ -1,9 +1,11 @@
-// Deployment fix (decisions.md, 2026-09-02). Runs automatically before
-// `dev` and `build` (npm's predev/prebuild lifecycle hooks -- see
-// package.json). Copies exactly the files the live API routes read at
-// runtime (app/lib/retrieval.ts, advice-retrieval.ts, catalog-db.ts) from
-// the canonical ../data (repo root, still the source of truth for every
-// build/tooling script) into app/data (gitignored, a build-time mirror).
+// Deployment fix (decisions.md, 2026-09-02, extended 2026-09-03). Runs
+// automatically before `dev` and `build` (npm's predev/prebuild lifecycle
+// hooks -- see package.json). Copies exactly the files the live API
+// routes read at runtime (app/lib/retrieval.ts, advice-retrieval.ts,
+// catalog-db.ts), plus the committed eval report/golden-set JSON the
+// /evals page reads server-side, from the canonical ../data and ../evals
+// (repo root, still the source of truth for every build/tooling script)
+// into app/data (gitignored, a build-time mirror).
 //
 // Why this exists: a Next.js/Turbopack + Vercel monorepo bug means
 // `outputFileTracingRoot` pointing OUTSIDE the project's Root Directory
@@ -34,4 +36,24 @@ for (const [src, dest] of FILES) {
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   fs.copyFileSync(srcPath, destPath);
   console.log(`copied ${src} -> app/${dest}`);
+}
+
+// /evals page (decisions.md, 2026-09-03): reads committed report JSON and golden-set JSON
+// directly, so it stays current when evals are re-run instead of quoting a hand-typed number.
+// Whole directories, not a fixed file list -- report filenames are timestamped and grow over
+// time, unlike the fixed catalog/advice outputs above.
+const DIRS = [
+  ["evals/harness/reports", "eval-reports"],
+  ["evals/golden", "eval-golden"],
+] as const;
+
+for (const [src, dest] of DIRS) {
+  const srcDir = path.join(REPO_ROOT, src);
+  const destDir = path.join(APP_ROOT, "data", dest);
+  fs.mkdirSync(destDir, { recursive: true });
+  const files = fs.readdirSync(srcDir).filter((f) => f.endsWith(".json"));
+  for (const f of files) {
+    fs.copyFileSync(path.join(srcDir, f), path.join(destDir, f));
+  }
+  console.log(`copied ${files.length} file(s) from ${src} -> app/data/${dest}`);
 }

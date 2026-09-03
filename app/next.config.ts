@@ -39,6 +39,11 @@ const nextConfig: NextConfig = {
       "data/catalog/out/blurbs.json",
       "data/catalog/out/embeddings.json",
     ],
+    // /evals + /'s eval one-liner (decisions.md, 2026-09-03): both read
+    // app/lib/eval-reports.ts's dynamically-listed report/golden files server-side --
+    // same tracing gap as above, since the file list itself isn't known until runtime.
+    "/": ["data/eval-reports/*.json", "data/eval-golden/*.json"],
+    "/evals": ["data/eval-reports/*.json", "data/eval-golden/*.json"],
   },
 };
 

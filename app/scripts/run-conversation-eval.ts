@@ -20,6 +20,7 @@ import { styleMismatchClause } from "../lib/conversation/derive";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const GOLDEN_PATH = path.join(ROOT, "evals", "golden", "conversation.json");
+const REPORTS_DIR = path.join(ROOT, "evals", "harness", "reports");
 
 interface Check {
   label: string;
@@ -652,11 +653,13 @@ async function main() {
 
   let totalPass = 0;
   let totalChecks = 0;
+  const perCase: { id: string; checks: Check[]; skipped?: boolean }[] = [];
 
   for (const id of caseIds) {
     const runner = runners[id];
     if (!runner) {
       console.log(`\n[${id}] NO RUNNER REGISTERED -- skipped`);
+      perCase.push({ id, checks: [], skipped: true });
       continue;
     }
     console.log(`\n[${id}]`);
@@ -666,9 +669,23 @@ async function main() {
       if (c.pass) totalPass++;
       console.log(`  ${c.pass ? "✓" : "✗ FAIL"} ${c.label}${c.pass ? "" : `\n      got: ${c.detail}`}`);
     }
+    perCase.push({ id, checks });
   }
 
   console.log(`\n=== ${totalPass}/${totalChecks} checks passed ===`);
+
+  // Committed report JSON (decisions.md, 2026-09-03): the /evals page reads this directly
+  // rather than a hand-typed number in a component, so re-running this script is what keeps
+  // that page current -- same pattern validate-judges.ts already established.
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const reportPath = path.join(REPORTS_DIR, `conversation-eval-${timestamp}.json`);
+  fs.writeFileSync(
+    reportPath,
+    JSON.stringify({ generatedAt: new Date().toISOString(), summary: { totalPass, totalChecks }, cases: perCase }, null, 2)
+  );
+  console.log(`\nFull report written to ${reportPath}`);
+
   if (totalPass < totalChecks) process.exitCode = 1;
 }
 

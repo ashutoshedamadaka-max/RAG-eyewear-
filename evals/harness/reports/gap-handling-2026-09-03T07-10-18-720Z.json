@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-09-03T07:10:18.721Z",
+  "summary": {
+    "pass": 2,
+    "total": 3
+  },
+  "cases": [
+    {
+      "label": "polarized sports <= INR 2,500",
+      "ok": true,
+      "exactMatchCount": 0,
+      "isRealGap": true,
+      "offersNamedAlternative": true,
+      "nearestAlternative": {
+        "frame": "Terra Optics Line 509",
+        "droppedClause": "price <= 2500"
+      }
+    },
+    {
+      "label": "progressive-ready rimless",
+      "ok": true,
+      "exactMatchCount": 0,
+      "isRealGap": true,
+      "offersNamedAlternative": true,
+      "nearestAlternative": {
+        "frame": "Orbit&Co Line 482",
+        "droppedClause": "progressive_ready == true"
+      }
+    },
+    {
+      "label": "titanium <= INR 4,500",
+      "ok": false,
+      "exactMatchCount": 1,
+      "isRealGap": false,
+      "offersNamedAlternative": true,
+      "nearestAlternative": {
+        "frame": "Truss Series 377",
+        "droppedClause": "material == titanium"
+      }
+    }
+  ]
+}

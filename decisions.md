@@ -4036,3 +4036,183 @@ citation-to-passage match on a case the hand label calls correct --
 `groundedness` in the same run still agreed 17/18, so this reads as
 judge noise on one axis, not a system regression this round's changes
 caused.
+
+---
+
+## 2026-09-03 · Four pages, a full-page demo rebuild, and an evaluation report that reads from its own data
+
+A React prototype was supplied as a visual spec (colors, spacing, layout
+patterns), not code -- rebuilt against the live pipeline the same way
+every prior interface round has been, per the project's own standing
+rule.
+
+### 1. Four pages, one shared header
+
+`/` (the demo), `/how-it-works` (architecture), `/evals` (the full
+report), `/baseline` (the existing naive comparison, unchanged, now
+linked from both the header and `/evals`). `Header.tsx` renders exactly
+once, in the root layout -- a client component only because it needs
+`usePathname()` to highlight the active tab, everything else about it is
+static. The demo is linked from the portfolio as a full standalone page,
+not embedded, so every page carries its own nav rather than assuming the
+visitor arrived via `/`.
+
+### 2. The demo page: a true full-page, two-column app shell
+
+Previous round's version used `lg:sticky` -- the panel followed the page
+as it scrolled, which isn't the same thing as two INDEPENDENTLY
+scrolling regions ("the panel scrolls on its own so the chat doesn't
+drag it"). Rebuilt as a real fixed-viewport shell instead: the root
+layout gives `Header` a fixed height (`h-14`) and everything below it
+`h-[calc(100dvh-...)]`-equivalent via flex (`flex-1 min-h-0`), and the
+demo page's own root opts out of the layout's default page-scroll
+(`overflow-y-auto`) with `overflow-hidden`, so its own two children --
+chat (`basis-[58%]`) and the machinery panel (`basis-[42%]`) -- each
+scroll in their own `overflow-y-auto` region instead. Below 1080px
+(`min-[1080px]:` arbitrary-value variants, not Tailwind's 1024px `lg`,
+matching the number actually given) the columns stack and the scroll
+behavior flips: the outer region becomes the single scroll container,
+the two columns go back to natural height. Every other page
+(`/evals`, `/how-it-works`, `/baseline`) needs zero changes to keep
+scrolling normally -- the layout's default `overflow-y-auto` on the
+shared content wrapper handles them, and only the demo page opts out.
+
+**Eval cards replaced with one line**, sized like body text, real
+numbers from a server-computed prop (`app/lib/eval-reports.ts`'s
+`loadEvalSummary()`, called in a new thin server wrapper --
+`app/app/page.tsx` -- that passes the numbers down to the actual
+interactive component, `ConversationDemo.tsx`, now split out
+specifically because a client component can't do the filesystem read
+this needed). `EvalSection.tsx` (the old hardcoded-array version)
+deleted outright, not left dead in the tree.
+
+### 3. Machinery panel: stage 2's phrasing, matched to spec exactly
+
+Both machinery-panel bugs from the prior round's fix (the per-candidate
+`style_prefs_overlap` duplication, stage 5's hand-written call count)
+were re-verified against the current code and found already correct --
+`groupFactsForDisplay` was already collapsing duplicate rows,
+stage 5's copy was already deriving `chatCallCount`/`embeddingCallCount`
+from real `modelCalls` data. What changed is the exact wording of the
+collapsed row: reformatted to `"<rule> → soft ranking nudge, N
+candidates boosted"` (a `RULE_SHORT_LABELS` lookup by `ruleId`, same
+pattern as `ASK_LABELS` elsewhere in this app -- a stable name for a
+stable id, not a hand-written sentence that could drift from the count
+next to it) instead of the previous inline `"— N candidates boosted"`
+suffix on the full explanation sentence. Applied identically to both the
+historical `MachineryPanel` and the live `LiveMachineryPanel`, which
+share the same grouping helper.
+
+### 4. Report-generation infrastructure: two eval scripts now persist JSON
+
+`/evals` needed to read real numbers, not quote them -- `judge-
+validation` reports already got written to `evals/harness/reports/`
+(the pattern `validate-judges.ts` established in Phase 4); `run-
+conversation-eval.ts` and `run-gap-handling-eval.ts` didn't, they only
+ever printed to the console. Both now write a timestamped report JSON,
+same directory, same shape convention (`generatedAt`, `summary`,
+`cases`). `scripts/copy-runtime-data.ts` (the Vercel-tracing workaround
+from 2026-09-02) extended to mirror whole directories now, not just a
+fixed file list -- `evals/harness/reports/*.json` and
+`evals/golden/*.json` into `app/data/eval-reports/` and
+`app/data/eval-golden/`, since report filenames are timestamped and grow
+over time. `next.config.ts`'s `outputFileTracingIncludes` gained
+entries for `/` and `/evals` (glob patterns, same reasoning as the
+existing API-route entries: a dynamically-built path Next's tracing
+can't fully resolve alone).
+
+### 5. A real finding, caught while building this: the titanium gap no longer holds
+
+Running the (newly JSON-persisting) gap-handling eval fresh returned
+**2/3, not 3/3** -- the "titanium under ₹4,500" gap the user's own
+message quoted as passing no longer does. Traced, not assumed: this
+catalog was deliberately price-churned on 2026-09-01 (`simulate_churn.py`,
+logged the same day as "Catalog churn, simulated and reported honestly")
+specifically to test whether the gap survives ordinary catalog updates --
+it didn't, on purpose, and that was already reported honestly at the
+time. Re-running the harness today just re-confirmed the same real,
+intentional state of the catalog. The requested demo one-liner and
+`/evals` page both show the true current number (2/3) rather than the
+3/3 the request assumed, with the reason surfaced as its own finding in
+`/evals` section 4 rather than silently corrected without comment.
+
+### 6. `/how-it-works`: real content now, a placeholder diagram problem solved differently
+
+The user's diagram is still pending ("I'll supply the diagram
+separately"). Rather than ship an empty placeholder box, built a real
+six-stage flow diagram from actual boxes/arrows matching the machinery
+panel's own six stage names exactly (Read the conversation → Applied the
+fitting rules → Queried the catalogue → Retrieved optician guidance →
+Wrote the answer → What it cost) -- genuinely useful now, easy to
+replace or supplement once the supplied diagram arrives, not thrown-away
+scaffolding.
+
+### 7. `/evals`: the four sections
+
+**Methodology** explains the groundedness/citation-accuracy split (an
+early revision found them unintentionally overlapping on misattributed
+citations, refined to orthogonal questions -- "supported somewhere,
+regardless of citation" vs. "the citation that exists points at the
+right place") and why hedging is a third, separate dimension
+(claim_type-driven confidence register).
+
+**Judge validation** surfaces the negative case
+(`constructed-hedging-fail-convention-stated-as-requirement`, hand=fail,
+judge caught it) proving the hedging judge actually discriminates
+rather than defaulting to pass, the 2026-08-31 in-sample/held-out
+methodology finding (82-88%/80-93% in-sample vs. 83-100%/83-100%
+held-out, small-N caveat stated), and the two disagreements from that
+same exercise that were deliberately left unresolved rather than tuned
+away (a "nearest by size" ambiguity, a 1.67-index boundary case) --
+plus, separately and clearly dated, the CURRENT live disagreements from
+the latest committed report, since judge variance means the exact
+disagreement set shifts run to run and pretending only the historical
+two exist today would be its own small dishonesty.
+
+**The three golden sets** -- resolved which three, since the repo
+actually has four (`physical.json`, `refusal.json`, `judge_validation.json`,
+`conversation.json`) against an original plan of three
+(physical/style/refusal) where style was never built. The three that
+actually back the four summary cards are `judge_validation.json`
+(groundedness + citation_accuracy), `conversation.json` (conversation
+checks), and `refusal.json` (gap-handling, "why unanswerable questions
+are deliberately included" -- bare refusal isn't the target, §6's
+relaxation-ladder point stated directly). `physical.json` disclosed as
+existing but not part of the dashboard; `style.json` disclosed as never
+built, not implied by omission.
+
+**What the evals caught** pulls four dated findings from this file
+(ground truth copied from the system being graded, 2026-08-28; the same
+circularity one level up between the golden-set generator and the live
+pipeline, 2026-08-29; four "documented ≠ implemented" instances across
+three distinct mechanisms, 2026-08-31/2026-09-01; a model upgrade that
+improved prose and worsened constraint compliance, 2026-08-28) plus a
+fifth, freshly discovered while building this exact page: item 5 above,
+the closed titanium gap -- included because it's the same category of
+finding as the other four, not a special case.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` clean throughout, checked after
+every structural change (the layout split, the demo rebuild, each new
+page), not just at the end. `npm run eval-conversation` re-run fresh
+after a transient network timeout on the first attempt (a real
+`BodyTimeoutError` mid-run, not a code issue -- confirmed by re-running
+clean): **77/77**, unaffected by anything this round touched.
+`npm run eval-gap-handling` re-run fresh: **2/3** (see item 5). Both
+scripts now persist a report JSON for the first time, confirmed by
+reading them back through `loadEvalSummary()` directly before trusting
+the page to render them.
+
+Live-verified against the running dev server, not assumed from the
+diff: all four routes return 200; `/evals` server-renders the real
+numbers end to end (89-100% groundedness, 75-88% citation accuracy,
+77/77 conversation, 2/3 gap-handling, the full in-sample/held-out table,
+the negative case, the current live disagreement list, all five "what
+the evals caught" findings); `/how-it-works`'s six stage-box titles
+initially used present-tense phrasing ("Apply," "Query," "Retrieve,"
+"Write") that didn't literally match `MachineryPanel.tsx`'s past-tense
+stage names despite the page's own copy claiming they were "the same
+six" -- caught by grepping the rendered HTML for the exact panel
+strings, not by re-reading the source and assuming it matched. Fixed to
+match verbatim.

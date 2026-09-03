@@ -38,15 +38,32 @@ export function distinctRules(facts: { ruleId?: string }[]): Set<string> {
  * practice means one group per rule.
  */
 export function groupFactsForDisplay(facts: { explanation: string; source?: string; ruleId?: string }[]) {
-  const groups = new Map<string, { explanation: string; source?: string; count: number }>();
+  const groups = new Map<string, { explanation: string; source?: string; ruleId?: string; count: number }>();
   for (const f of facts) {
     const key = `${f.ruleId ?? ""}::${f.explanation}`;
     const existing = groups.get(key);
     if (existing) existing.count += 1;
-    else groups.set(key, { explanation: f.explanation, source: f.source, count: 1 });
+    else groups.set(key, { explanation: f.explanation, source: f.source, ruleId: f.ruleId, count: 1 });
   }
   return [...groups.values()];
 }
+
+/**
+ * Short, human names for the ranking-nudge rules specifically -- the only
+ * ones `rankCandidates` pushes once per matching FRAME (decisions.md,
+ * 2026-09-03), so the only ones that ever collapse into a >1 group below.
+ * Naming a stable `ruleId`, same pattern as `ASK_LABELS` elsewhere in this
+ * app -- not a hand-written summary sentence that could drift from the
+ * real count next to it.
+ */
+const RULE_SHORT_LABELS: Record<string, string> = {
+  style_prefs_overlap: "style preference",
+  face_shape_boost: "face shape",
+  eye_spacing_close_set: "eye spacing",
+  eye_spacing_wide_set: "eye spacing",
+  nose_profile_prominent: "nose profile",
+  long_face_lens_height: "face length",
+};
 
 /** `pending` (live panel only, decisions.md 2026-09-02): the stage that's actually in flight right now -- a dashed, pulsing ring instead of the solid completed-stage circle, so "still working on this" reads as visibly different from "done." */
 export function StageWrap({ n, name, headline, children, isLast, pending }: { n: number; total: number; name: string; headline: string; children: React.ReactNode; isLast: boolean; pending?: boolean }) {
@@ -127,8 +144,9 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
         {groupFactsForDisplay(entry.derivedFacts).map((g, i) => (
           <div key={i} className="py-1 border-t border-[#26332E] first:border-t-0">
             <div className="font-mono text-[12.5px] leading-relaxed text-[#C4D2CB]">
-              {g.explanation}
-              {g.count > 1 && <span className="text-[#7B9089]"> — {g.count} candidates boosted</span>}
+              {g.count > 1
+                ? `${RULE_SHORT_LABELS[g.ruleId ?? ""] ?? g.explanation} → soft ranking nudge, ${g.count} candidates boosted`
+                : g.explanation}
             </div>
             {g.source && <div className="font-mono text-[11px] text-[#7B9089] mt-0.5">{g.source}</div>}
           </div>
@@ -362,8 +380,9 @@ function renderLiveRules(data: LiveRulesStage["data"]) {
       {groupFactsForDisplay(data.derivedFacts).map((g, i) => (
         <div key={i} className="py-1 border-t border-[#26332E] first:border-t-0">
           <div className="font-mono text-[12.5px] leading-relaxed text-[#C4D2CB]">
-            {g.explanation}
-            {g.count > 1 && <span className="text-[#7B9089]"> — {g.count} candidates boosted</span>}
+            {g.count > 1
+              ? `${RULE_SHORT_LABELS[g.ruleId ?? ""] ?? g.explanation} → soft ranking nudge, ${g.count} candidates boosted`
+              : g.explanation}
           </div>
           {g.source && <div className="font-mono text-[11px] text-[#7B9089] mt-0.5">{g.source}</div>}
         </div>
