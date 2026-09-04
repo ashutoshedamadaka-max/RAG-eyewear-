@@ -4416,3 +4416,86 @@ state can be checked further without a browser tool) renders correctly
 themed. `npm run eval-conversation`, full 19-case suite, unaffected by a
 purely visual round as expected: **85/85**, including the pill case and
 the fishing-for-enthusiasm fix from the round just before this one.
+
+---
+
+## 2026-09-04 · Machinery panel stacks per turn; /how-it-works rebuilt with real data, not placeholders
+
+Two follow-ups, both against live feedback rather than a fresh spec.
+
+**Machinery panel: sticky single-turn view replaced with a stacked list.**
+A live report showed the panel visibly describing a different moment than
+the chat -- it's independent of chat scroll position, so scrolling UP to
+re-read an earlier exchange left the panel still pinned to the latest
+turn. First attempt was an IntersectionObserver-based scroll-sync
+(pin the panel to whichever turn's chat block is nearest the top of the
+viewport); asked to do something simpler instead. Dropped `position:
+sticky`, the single-turn view, and the turn-stepper entirely -- the panel
+now renders one `MachineryPanel` block per turn, labelled "Turn N," in
+the same order the chat shows them, plus a trailing "Turn N · live" block
+(`LiveMachineryPanel`) while one is in flight. Both columns just grow
+together as the conversation grows; there's nothing left to keep in sync
+because nothing is hidden behind a "current turn" view anymore.
+
+Separately, the SAME live report also flagged that the visual rebuild had
+shrunk type sizes and muted colors enough in four places (retrieval doc
+identifiers, retrieval scores/tags, token counts, the "estimated" cost
+badge) to read as genuinely less informative even though no data field
+had actually been removed -- verified by diffing against the pre-rebuild
+commit before touching anything. Restored all four to their pre-rebuild
+prominence, applied identically to the live panel so a turn reads the
+same whether watched live or reviewed after.
+
+**`/how-it-works` rebuilt against a second supplied prototype
+(`how-it-works.jsx`), "show, don't explain."** Converted to a client
+component (a slider and an auto-playing/click-to-select stage tracker
+both need client state) with its own `layout.tsx` carrying `metadata`,
+same split `/baseline` already established for exactly this reason.
+Three interactive sections replace the static six-box grid the previous
+round shipped:
+
+- **The fork**: catalogue (SQL, exact facts) vs. guidance (retrieval,
+  meaning) as two cards either side of "one agent," restating the
+  project's central premise visually instead of only in prose.
+- **The similarity slider**: NOT the prototype's placeholder numbers --
+  the real top-5 the naive Phase 1 baseline actually retrieved for
+  "titanium frames under 4500 rupees" (`docs/phase1-baseline-failures.md`
+  §4, real cosine scores, real prices). Dragging the budget flips each
+  frame's qualifies/over-budget verdict while the (real, static) score
+  bars don't move at all -- the whole point, shown rather than asserted.
+  The caption below states the actual score span (0.0073) against the
+  actual price span (₹4,850), both computed from the same array at
+  render time, never hand-typed. Added the "natural experiment" finding
+  from the same doc (Basalt Form 448's score *rising* from 0.527 to
+  0.539 as it crossed from valid to invalid when the ceiling dropped
+  from ₹8,000 to ₹4,500) -- a stronger, real, more surprising fact than
+  the prototype's generic version, already sitting in the repo unused
+  outside one write-up.
+- **The pipeline**: auto-advancing every 2.6s, pauses on manual stage
+  selection. Corrected a real miscount surfaced while writing accurate
+  copy for it: stage 4 (advice retrieval) is an EMBEDDING call, not "no
+  model" as the prototype's own badge scheme had it, and stage 5 (the
+  generation step) is two chat calls in parallel now (framing + glosses/
+  closing, since the real-streaming round split it), not one -- so "two
+  model calls" (this project's own earlier framing, and the prototype's)
+  undercounts. Corrected section copy to "four real calls: three chat,
+  one embedding," matching exactly what `MachineryPanel`'s own stage 5
+  note already derives from live `modelCalls` data.
+
+Every fact used -- 100 catalog frames, 17 fitting rules, the 32mm
+progressive minimum, the real advice-corpus source names (Zeiss, HOYA,
+Rodenstock), the `opinion` claim_type's exclusion at ingest -- checked
+against code or an existing doc before being written down, not
+reconstructed from memory of what sounded right.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` clean for both changes. Live-
+verified against the dev server: curled `/how-it-works` and confirmed
+all five real frame names, a real score, and the stage-tracker's tab
+labels and initial active-stage body text are present in the rendered
+HTML (the auto-playing stages beyond the first aren't in a curl
+snapshot by construction -- client state, not a bug). Machinery panel
+prominence restoration and the stacked-list rewrite both re-verified
+against `npx tsc --noEmit`/`npm run build` independently before being
+combined.

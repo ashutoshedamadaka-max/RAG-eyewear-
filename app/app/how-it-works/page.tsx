@@ -1,143 +1,388 @@
+"use client";
+
+// Architecture page (decisions.md, 2026-09-04), rebuilt against a supplied
+// prototype (how-it-works.jsx) treated as a visual spec, not copied as
+// code: "show, don't explain" -- three interactive visuals carry the
+// argument, prose is captioning. The prototype's own header/nav/theme-
+// toggle are dropped -- this app already has one, shared site-wide via
+// Header.tsx in the root shell, so this file is content only.
+//
+// The similarity-demo numbers are NOT invented to match the prototype's
+// placeholder shape -- they're the real top-5 the naive Phase 1 baseline
+// actually retrieved for "titanium frames under 4500 rupees"
+// (docs/phase1-baseline-failures.md, section 4), byte-for-byte. The
+// "natural experiment" callout below it is real too (same doc, "Natural
+// experiment: Basalt Form 448 across two budget ceilings").
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-// Architecture page (decisions.md, 2026-09-03). Static prose + a real,
-// working CSS diagram of the actual pipeline shape -- not a placeholder
-// box -- built while a fuller supplied diagram is still pending; this one
-// is real (matches MachineryPanel's six stages exactly) and can sit
-// alongside or be replaced by whatever's supplied later, not thrown away
-// meanwhile.
-function StageBox({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex-1 min-w-[150px] border border-[#DFE6E2] bg-[#FDFEFD] rounded-md p-3.5">
-      <div className="flex items-center gap-2 mb-1.5">
-        <div className="w-5 h-5 rounded-full bg-[#14201C] text-white text-[10.5px] leading-[20px] text-center flex-none tabular-nums">{n}</div>
-        <div className="text-[13px] font-medium text-[#14201C]">{title}</div>
-      </div>
-      <p className="text-[11.5px] leading-relaxed text-[#5F6F68] m-0">{children}</p>
-    </div>
-  );
+// docs/phase1-baseline-failures.md, section 4 -- the naive baseline's actual
+// retrieved top-5 for "titanium frames under 4500 rupees", real cosine scores.
+const TITANIUM_QUERY_RESULTS = [
+  { name: "Vayu Series 357", price: 6150, score: 0.5397 },
+  { name: "Basalt Form 448", price: 4800, score: 0.5391 },
+  { name: "Sundial Series 103", price: 5400, score: 0.5377 },
+  { name: "Truss Mark 538", price: 9650, score: 0.5341 },
+  { name: "Terra Optics Mark 282", price: 6000, score: 0.5324 },
+];
+const SCORE_SPAN = (
+  (Math.max(...TITANIUM_QUERY_RESULTS.map((f) => f.score)) - Math.min(...TITANIUM_QUERY_RESULTS.map((f) => f.score)))
+).toFixed(4);
+const PRICE_SPAN = Math.max(...TITANIUM_QUERY_RESULTS.map((f) => f.price)) - Math.min(...TITANIUM_QUERY_RESULTS.map((f) => f.price));
+
+type CallKind = "chat" | "embedding" | "none";
+
+interface Stage {
+  n: number;
+  title: string;
+  kind: CallKind;
+  headline: string;
+  body: React.ReactNode;
 }
 
-function Arrow() {
-  return <div className="hidden min-[860px]:flex items-center text-[#8A9992] text-[18px] px-1">→</div>;
-}
+const STAGES: Stage[] = [
+  {
+    n: 1,
+    title: "Read the conversation",
+    kind: "chat",
+    headline: "One call, reading only what changed",
+    body: (
+      <>
+        Extracts what THIS turn added — a partial update to what&apos;s already known, never a
+        re-reading of the whole conversation. Say &ldquo;actually make it ₹3,000&rdquo; and only the
+        budget moves.
+      </>
+    ),
+  },
+  {
+    n: 2,
+    title: "Applied the fitting rules",
+    kind: "none",
+    headline: "17 rules, checked every turn",
+    body: (
+      <>
+        Optical rules turn what you said into constraints. Some are hard and never dropped —
+        daytime driving needs UV400-rated lenses, progressives need at least 32mm of vertical
+        lens height. Others are soft nudges, like face shape.
+      </>
+    ),
+  },
+  {
+    n: 3,
+    title: "Queried the catalogue",
+    kind: "none",
+    headline: "Real SQL, no similarity involved",
+    body: (
+      <>
+        The constraints compile to a database query. A frame either matches or it doesn&apos;t. If
+        nothing matches, one constraint relaxes at a time — cheapest first, never a safety rule —
+        until something does.
+      </>
+    ),
+  },
+  {
+    n: 4,
+    title: "Retrieved optician guidance",
+    kind: "embedding",
+    headline: "This is the part that's actually RAG",
+    body: (
+      <>
+        The question is embedded and matched by meaning against a corpus of optical guidance.
+        Anything scoring below a similarity floor is discarded before the model ever sees it.
+      </>
+    ),
+  },
+  {
+    n: 5,
+    title: "Wrote the answer",
+    kind: "chat",
+    headline: "Two calls, run in parallel",
+    body: (
+      <>
+        One writes the opening line, one picks the frames and the wrap-up. Cards carry the facts
+        from the database; prose carries the judgement, drawn from the guidance. Every claim maps
+        back to a source.
+      </>
+    ),
+  },
+  {
+    n: 6,
+    title: "What it cost",
+    kind: "none",
+    headline: "Real token counts, not estimates",
+    body: (
+      <>
+        Read directly off the actual API responses. The embedding call&apos;s rate is OpenAI&apos;s
+        published price; the chat model&apos;s isn&apos;t public, so the total is a labelled
+        estimate, not a verified cost.
+      </>
+    ),
+  },
+];
+
+const KIND_LABEL: Record<CallKind, string> = { chat: "chat call", embedding: "embedding call", none: "no model" };
+const KIND_STYLE: Record<CallKind, { bg: string; color: string }> = {
+  chat: { bg: "var(--acc-lt)", color: "var(--acc)" },
+  embedding: { bg: "var(--ok-lt)", color: "var(--ok)" },
+  none: { bg: "var(--line2)", color: "var(--ink3)" },
+};
 
 export default function HowItWorksPage() {
+  const [budget, setBudget] = useState(4500);
+  const [stage, setStage] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const tick = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+  useEffect(() => {
+    if (!playing) return;
+    tick.current = setInterval(() => setStage((s) => (s + 1) % STAGES.length), 2600);
+    return () => clearInterval(tick.current);
+  }, [playing]);
+
+  const S = STAGES[stage];
+
   return (
     <div className="min-h-full">
-      <div className="max-w-[820px] mx-auto px-6 py-10">
-        <h1
-          className="text-[26px] leading-tight text-[#14201C] tracking-tight m-0"
-          style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 600 }}
-        >
-          How it works
-        </h1>
-        <p className="text-[13.5px] leading-relaxed text-[#5F6F68] mt-2 max-w-[64ch]">
-          The short version: the catalogue is a database, not a corpus. Prices, stock, and
-          dimensions are exact, checkable facts — they belong in SQL, where a query either
-          matches or it doesn&apos;t. Optical guidance is different: it&apos;s prose, best matched by
-          meaning, not exact fields. One system, two different jobs, one agent orchestrating both.
-        </p>
+      <div className="max-w-[900px] mx-auto px-6 py-10">
+        {/* ---- hero / the fork ---- */}
+        <section className="mb-16">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">How it works</p>
+          <h1
+            className="text-[32px] leading-[1.16] tracking-tight m-0 mb-3.5 max-w-[20ch]"
+            style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}
+          >
+            Two kinds of question need two kinds of answer
+          </h1>
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            A frame catalogue is a database. Optical advice is prose. Treating both the same way
+            is where most AI recommenders go wrong.
+          </p>
 
-        <section className="mt-9">
-          <h2 className="text-[16px] font-semibold text-[#14201C] m-0 mb-2.5">
-            Why the catalogue doesn&apos;t go through RAG
-          </h2>
-          <p className="text-[13.5px] leading-relaxed text-[#5F6F68] max-w-[64ch]">
-            Embedding product rows and doing similarity search is the standard failure mode of AI
-            recommender demos: it returns items that are semantically <em>close</em> to the query,
-            not items that actually satisfy it. &ldquo;Titanium frames under ₹4,500&rdquo; and &ldquo;titanium
-            frames around ₹4,800&rdquo; read as nearly identical vectors — but one is in budget and one
-            isn&apos;t, and a customer doesn&apos;t care how close the embedding was. This project builds that
-            failure on purpose first: the{" "}
-            <Link href="/baseline" className="underline text-[#14493E] font-medium">
-              naive Phase 1 baseline
-            </Link>{" "}
-            is pure vector RAG over the same catalogue, kept live specifically so the gap is a real
-            A/B, not a claim.
-          </p>
-          <p className="text-[13.5px] leading-relaxed text-[#5F6F68] mt-3 max-w-[64ch]">
-            The fix isn&apos;t a better embedding model — it&apos;s recognizing that price, stock, material,
-            and every dimension in the catalogue are <em>structured</em> facts a database already
-            handles exactly. They go through a compiled SQL filter instead: a constraint either
-            holds or it doesn&apos;t, with no similarity score standing in for a real answer.
-          </p>
-        </section>
-
-        <section className="mt-9">
-          <h2 className="text-[16px] font-semibold text-[#14201C] m-0 mb-3">The six-stage pipeline</h2>
-          <p className="text-[13.5px] leading-relaxed text-[#5F6F68] mb-4 max-w-[64ch]">
-            Every real recommendation turn goes through six stages, in this order — the same six
-            the live machinery panel on the{" "}
-            <Link href="/" className="underline text-[#14493E] font-medium">
-              demo
-            </Link>{" "}
-            traces in real time, not a simplified summary of it.
-          </p>
-          <div className="flex flex-wrap min-[860px]:flex-nowrap items-stretch gap-2.5">
-            <StageBox n={1} title="Read the conversation">
-              One LLM call extracts what THIS turn added to slot state — a partial update, never a
-              re-derivation of the whole conversation.
-            </StageBox>
-            <Arrow />
-            <StageBox n={2} title="Applied the fitting rules">
-              Derivation rules run against the cumulative slots — some hard (progressive lens
-              height, UV400), some soft ranking nudges (style, face shape).
-            </StageBox>
-            <Arrow />
-            <StageBox n={3} title="Queried the catalogue">
-              The compiled filter runs as real SQL against the frame database. A relaxation ladder
-              engages only if the exact query returns nothing, one constraint at a time.
-            </StageBox>
-          </div>
-          <div className="flex flex-wrap min-[860px]:flex-nowrap items-stretch gap-2.5 mt-2.5">
-            <StageBox n={4} title="Retrieved optician guidance">
-              The same turn is embedded and matched against the advice corpus — chunks tagged
-              physical or convention, below a similarity floor dropped before the model sees them.
-            </StageBox>
-            <Arrow />
-            <StageBox n={5} title="Wrote the answer">
-              Generation runs against both retrieved halves at once — cards carry the catalogue
-              facts, prose carries judgement, citations map every claim back to its source.
-            </StageBox>
-            <Arrow />
-            <StageBox n={6} title="What it cost">
-              Real token counts and timings from the actual API responses this turn made — never
-              estimated, labelled where the underlying rate genuinely is.
-            </StageBox>
+          <div className="grid grid-cols-1 min-[640px]:grid-cols-[1fr_auto_1fr] gap-3.5 min-[640px]:gap-0 items-center bg-[var(--sunk)] rounded-[14px] p-5 shadow-[var(--shadow-in)]">
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4.5 py-4">
+              <h3 className="text-[14px] font-semibold text-[var(--ink)] m-0 mb-1">The catalogue</h3>
+              <p className="text-[12px] text-[var(--ink3)] m-0 mb-3">100 frames · prices, sizes, materials, stock</p>
+              <span className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: "var(--ok-lt)", color: "var(--ok)" }}>
+                exact facts → SQL
+              </span>
+              <p className="text-[13px] leading-relaxed text-[var(--ink2)] mt-3 mb-0">
+                A query either matches or it doesn&apos;t. ₹4,800 is not under ₹4,500, no matter
+                how similar the words are.
+              </p>
+            </div>
+            <div className="flex flex-row min-[640px]:flex-col items-center gap-1.5 min-[640px]:w-[56px] justify-center py-2">
+              <svg width="40" height="60" viewBox="0 0 40 60" aria-hidden="true" className="min-[640px]:block hidden">
+                <path d="M20 4 L20 26 M20 34 L20 56" stroke="var(--line)" strokeWidth="2" />
+                <circle cx="20" cy="30" r="5" fill="var(--acc)" />
+              </svg>
+              <span className="text-[11px] text-[var(--ink3)] whitespace-nowrap">one agent</span>
+            </div>
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4.5 py-4">
+              <h3 className="text-[14px] font-semibold text-[var(--ink)] m-0 mb-1">The guidance</h3>
+              <p className="text-[12px] text-[var(--ink3)] m-0 mb-3">Zeiss, HOYA, Rodenstock, an optician&apos;s guide</p>
+              <span className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: "var(--acc-lt)", color: "var(--acc)" }}>
+                meaning → retrieval
+              </span>
+              <p className="text-[13px] leading-relaxed text-[var(--ink2)] mt-3 mb-0">
+                &ldquo;Why does my prescription rule out rimless?&rdquo; has no column. It&apos;s prose,
+                best matched by meaning.
+              </p>
+            </div>
           </div>
         </section>
 
-        <section className="mt-9">
-          <h2 className="text-[16px] font-semibold text-[#14201C] m-0 mb-2.5">
-            The split: structured filters vs. retrieval
+        {/* ---- the failure, shown ---- */}
+        <section className="mb-16">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">The problem, in one slider</p>
+          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            Similarity can&apos;t count
           </h2>
-          <p className="text-[13.5px] leading-relaxed text-[#5F6F68] max-w-[64ch]">
-            Stage 3 and stage 4 are deliberately two different mechanisms, not two configurations
-            of the same one. The catalogue is never embedded at all — <code className="text-[12.5px] bg-[#EEF2F0] px-1 py-0.5 rounded">app/lib/catalog-db.ts</code>{" "}
-            queries live SQL. The advice corpus is exactly what RAG is actually good at: unstructured
-            optical guidance, matched by meaning, where the right chunk isn&apos;t knowable in advance
-            from a fixed schema.
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            Drag the budget. Watch the scores not move at all while the verdict flips underneath
+            them.
           </p>
-          <p className="text-[13.5px] leading-relaxed text-[#5F6F68] mt-3 max-w-[64ch]">
-            One more split inside the advice half matters just as much: every retrieved chunk
-            carries a <code className="text-[12.5px] bg-[#EEF2F0] px-1 py-0.5 rounded">claim_type</code> — <b className="text-[#14201C] font-medium">physical</b>{" "}
-            (a measurable fact, stated plainly) or <b className="text-[#14201C] font-medium">convention</b>{" "}
-            (a styling norm, true by custom, always hedged and named as one). The system prompt
-            enforces this at generation time, and it&apos;s one of the things the{" "}
-            <Link href="/evals" className="underline text-[#14493E] font-medium">
-              evaluation report
-            </Link>{" "}
-            grades directly, not just describes.
+
+          <div className="bg-[var(--sunk)] rounded-[14px] p-6 shadow-[var(--shadow-in)]">
+            <p className="font-mono text-[13px] text-[var(--ink2)] m-0 mb-1">
+              &ldquo;titanium frames under ₹{budget.toLocaleString("en-IN")}&rdquo;
+            </p>
+            <div className="flex items-center gap-3.5 mb-6 flex-wrap">
+              <input
+                type="range"
+                min={4000}
+                max={10000}
+                step={50}
+                value={budget}
+                onChange={(e) => setBudget(Number(e.target.value))}
+                aria-label="Budget ceiling"
+                className="flex-1 min-w-[200px] accent-[var(--acc)]"
+              />
+              <b className="text-[18px] tabular-nums min-w-[96px] text-[var(--ink)]">₹{budget.toLocaleString("en-IN")}</b>
+            </div>
+
+            {TITANIUM_QUERY_RESULTS.map((f) => {
+              const ok = f.price <= budget;
+              return (
+                <div key={f.name} className="grid grid-cols-1 min-[560px]:grid-cols-[150px_1fr_96px] gap-2 min-[560px]:gap-4 items-center py-3.5 border-t border-[var(--line)] first:border-t-0">
+                  <div className="text-[13.5px] font-medium text-[var(--ink)]">
+                    {f.name}
+                    <small className="block text-[12px] font-normal text-[var(--ink3)] tabular-nums mt-0.5">₹{f.price.toLocaleString("en-IN")}</small>
+                  </div>
+                  <div className="h-[26px] bg-[var(--block)] border border-[var(--line)] rounded-[7px] relative overflow-hidden">
+                    <div
+                      className="absolute inset-y-0 left-0 flex items-center justify-end px-2 transition-[width] duration-500"
+                      style={{ width: `${(f.score - 0.5) * 1900}%`, background: "var(--acc-mid)" }}
+                    >
+                      <span className="text-[11px] font-medium text-[var(--shell)] tabular-nums">{f.score.toFixed(4)}</span>
+                    </div>
+                  </div>
+                  <div className="text-[12.5px] font-semibold min-[560px]:text-right" style={{ color: ok ? "var(--ok)" : "var(--warn)" }}>
+                    {ok ? "qualifies" : "over budget"}
+                  </div>
+                </div>
+              );
+            })}
+
+            <p className="text-[12.5px] leading-relaxed text-[var(--ink3)] mt-4 pt-3.5 border-t border-[var(--line)]">
+              These are the naive first build&apos;s real cosine similarity scores for this exact
+              query — they span <b className="text-[var(--ink)] font-semibold">{SCORE_SPAN}</b> across
+              the whole list, while price spans <b className="text-[var(--ink)] font-semibold">₹{PRICE_SPAN.toLocaleString("en-IN")}</b>.
+              It gets stranger: at a ₹8,000 ceiling, Basalt Form 448 scored 0.527 and correctly
+              qualified. Drop the ceiling to ₹4,500 and its score didn&apos;t fall as it became
+              invalid — it <b className="text-[var(--ink)] font-semibold">rose</b> to 0.539, ranked
+              as a <em>better</em> match at the exact moment it became the wrong answer.
+            </p>
+          </div>
+          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
+            This isn&apos;t hypothetical — to its credit, the naive baseline correctly says nothing
+            meets the requirement rather than asserting a false match, but it still recommends two
+            over-budget frames as &ldquo;stretch&rdquo; options without naming either overage (₹300 for
+            Basalt, ₹900 for Sundial).{" "}
+            <Link href="/baseline" className="text-[var(--acc)] font-medium border-b border-[var(--acc-lt)] no-underline">
+              It&apos;s still running, if you want to see it.
+            </Link>
           </p>
         </section>
 
-        <div className="mt-10 pt-5 border-t border-[#DFE6E2] flex gap-4 flex-wrap text-[13px]">
-          <Link href="/" className="underline text-[#14493E] font-medium">
+        {/* ---- pipeline ---- */}
+        <section className="mb-16">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">Every turn that recommends something</p>
+          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            Six stages, four real calls
+          </h2>
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            The same six the live panel traces in real time — not a simplified version of them.
+            Three calls go to the chat model, one to the embedding model. Every earlier turn only
+            ever runs stage 1.
+          </p>
+
+          <div className="bg-[var(--sunk)] rounded-[14px] p-5 shadow-[var(--shadow-in)]">
+            <div className="flex flex-wrap gap-1.5 mb-5">
+              {STAGES.map((s, i) => (
+                <button
+                  key={s.n}
+                  onClick={() => {
+                    setPlaying(false);
+                    setStage(i);
+                  }}
+                  className="flex-1 min-w-[110px] text-left rounded-[9px] border px-2.5 py-2.5 transition-colors"
+                  style={{
+                    borderColor: i === stage ? "var(--acc)" : "var(--line)",
+                    background: i === stage ? "var(--acc-lt)" : "var(--block)",
+                  }}
+                >
+                  <span className="block text-[10.5px] font-semibold tabular-nums mb-1.5" style={{ color: i === stage ? "var(--acc)" : "var(--ink3)" }}>
+                    {s.n}
+                  </span>
+                  <span className="block text-[12px] font-medium text-[var(--ink)] leading-tight">{s.title}</span>
+                  <span
+                    className="inline-block text-[9.5px] font-medium mt-1.5 px-1.5 py-0.5 rounded-full"
+                    style={{ background: KIND_STYLE[s.kind].bg, color: KIND_STYLE[s.kind].color }}
+                  >
+                    {KIND_LABEL[s.kind]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[11px] px-5 py-4.5 min-h-[118px]">
+              <h4 className="text-[15px] font-semibold text-[var(--ink)] m-0 mb-2">{S.headline}</h4>
+              <p className="text-[14px] leading-relaxed text-[var(--ink2)] m-0 max-w-[64ch]">{S.body}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-3.5">
+              <button
+                onClick={() => setPlaying((p) => !p)}
+                className="text-[12px] font-medium text-[var(--ink2)] border border-[var(--line)] bg-[var(--block)] rounded-full px-3.5 py-1.5"
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+              <span className="text-[12px] text-[var(--ink3)]">Stage {stage + 1} of {STAGES.length} · tap any stage</span>
+            </div>
+          </div>
+          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
+            Stages 3 and 4 are different mechanisms, not two settings of one. The catalogue is
+            never embedded. The guidance is never queried with SQL.
+          </p>
+        </section>
+
+        {/* ---- claim types ---- */}
+        <section className="mb-9">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">One more split</p>
+          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            Not every claim deserves the same confidence
+          </h2>
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            Every retrieved passage is tagged by what kind of claim it is. The answer&apos;s tone
+            follows the tag.
+          </p>
+
+          <div className="grid grid-cols-1 min-[640px]:grid-cols-2 gap-3">
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-5 py-4.5">
+              <span className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-full mb-3" style={{ background: "var(--ok-lt)", color: "var(--ok)" }}>
+                physical
+              </span>
+              <h4 className="text-[14.5px] font-semibold text-[var(--ink)] m-0 mb-1.5">A measurable fact</h4>
+              <p className="text-[13.5px] leading-relaxed text-[var(--ink2)] m-0 mb-3">
+                From manufacturer documentation. Stated plainly, with a citation.
+              </p>
+              <blockquote className="text-[14.5px] leading-relaxed m-0 px-3.5 py-3 bg-[var(--sunk)] rounded-[9px] border-l-2" style={{ borderColor: "var(--ok)", fontFamily: "var(--font-serif, inherit)" }}>
+                <span className="text-[var(--ink)]">
+                  At -6.00D, edge thickness rules out most rimless mounts — the frame needs a
+                  documented power rating that actually covers your prescription.
+                </span>
+              </blockquote>
+            </div>
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-5 py-4.5">
+              <span className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-full mb-3" style={{ background: "var(--warn-lt)", color: "var(--warn)" }}>
+                convention
+              </span>
+              <h4 className="text-[14.5px] font-semibold text-[var(--ink)] m-0 mb-1.5">A styling norm</h4>
+              <p className="text-[13.5px] leading-relaxed text-[var(--ink2)] m-0 mb-3">
+                True by custom, not by measurement. Always hedged, and named as convention.
+              </p>
+              <blockquote className="text-[14.5px] leading-relaxed m-0 px-3.5 py-3 bg-[var(--sunk)] rounded-[9px] border-l-2" style={{ borderColor: "var(--warn)", fontFamily: "var(--font-serif, inherit)" }}>
+                <span className="text-[var(--ink)]">
+                  Angular frames are conventionally suggested for a round face — a styling nudge,
+                  not a fitting requirement.
+                </span>
+              </blockquote>
+            </div>
+          </div>
+          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
+            A third tag, <code className="font-mono text-[12px] bg-[var(--sunk)] px-1.5 py-0.5 rounded">opinion</code>, exists for commercial
+            advocacy found in the sources. It&apos;s excluded at ingest, so it never reaches
+            retrieval at all.
+          </p>
+        </section>
+
+        <div className="flex gap-5 flex-wrap pt-5 border-t border-[var(--line)] text-[13.5px] font-medium">
+          <Link href="/" className="text-[var(--acc)]">
             ← Try the live demo
           </Link>
-          <Link href="/evals" className="underline text-[#14493E] font-medium">
+          <Link href="/evals" className="text-[var(--acc)]">
             Read the evaluation report
+          </Link>
+          <Link href="/baseline" className="text-[var(--acc)]">
+            See the naive version fail
           </Link>
         </div>
       </div>
