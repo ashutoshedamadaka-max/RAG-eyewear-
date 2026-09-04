@@ -256,31 +256,31 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
             too loosely related to trust, and is dropped before the model ever sees it.
           </Note>
           {advicedHitsWithCited.map((h, i) => (
-            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)]">
+            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[var(--line2)]">
               <div>
-                <div className="font-mono text-[11px] text-[var(--ink2)] break-words">
+                <div className="font-mono text-[12.5px] text-[var(--ink)] break-words">
                   [A{i + 1}] {h.doc_id} — {h.section_heading}
                 </div>
-                <div className="text-[10px] font-medium mt-0.5" style={{ color: h.cited ? "var(--ok)" : "var(--ink3)" }}>
+                <div className="text-[10.5px] font-medium mt-0.5" style={{ color: h.cited ? "var(--ok)" : "var(--ink3)" }}>
                   {h.cited ? "cited" : "retrieved, not cited"}
                 </div>
               </div>
-              <span className="text-[10px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink3)" }}>
+              <span className="text-[10.5px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink2)" }}>
                 {h.claim_type}
               </span>
-              <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
+              <span className="font-mono text-[12.5px] font-medium text-[var(--ink2)] text-right tabular-nums">{h.score.toFixed(3)}</span>
             </div>
           ))}
           {(rec.adviceNearMisses ?? []).map((h) => (
-            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
+            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
               <div>
-                <div className="font-mono text-[11px] text-[var(--ink3)] break-words">
+                <div className="font-mono text-[12.5px] text-[var(--ink3)] break-words">
                   {h.doc_id} — {h.section_heading}
                 </div>
-                <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
+                <div className="text-[10.5px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
               </div>
-              <span className="text-[10px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
-              <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
+              <span className="text-[10.5px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
+              <span className="font-mono text-[12.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
             </div>
           ))}
         </>
@@ -359,29 +359,31 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     stages.push({
       key: "cost",
       name: "What it cost",
-      headline: `~₹${totalCostInr.toFixed(2)}`,
+      headline: `~₹${totalCostInr.toFixed(2)} est.`,
       render: () => (
         <>
           {/* Token counts get the visual weight here -- they're the real, verifiable number
               (read directly off each API response). The ₹ total is one arithmetic step removed
-              from that, at a rate this project can't verify, so "estimated" sits right beside
-              the figure rather than in a long inline caveat a reader could miss or skim past. */}
-          <div className="grid grid-cols-[1fr_auto_auto] gap-3.5 pb-1.5 border-b border-[var(--line2)]">
-            <span className="text-[10px] font-medium text-[var(--ink3)]">Model call</span>
-            <span className="text-[10px] font-medium text-[var(--ink3)] min-w-[64px] text-right">Tokens in</span>
-            <span className="text-[10px] font-medium text-[var(--ink3)] min-w-[64px] text-right">Tokens out</span>
+              from that, at a rate this project can't verify, so "estimated" carries a highlighted
+              badge rather than being easy to skim past as plain small text. */}
+          <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-1.5 border-b border-[var(--line2)]">
+            <span className="text-[10.5px] font-medium text-[var(--ink3)]">Model call</span>
+            <span className="text-[10.5px] font-medium text-[var(--ink3)] min-w-[70px] text-right">Tokens in</span>
+            <span className="text-[10.5px] font-medium text-[var(--ink3)] min-w-[70px] text-right">Tokens out</span>
           </div>
           {entry.modelCalls.map((c, i) => (
-            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-3.5 py-2 border-b border-[var(--line2)] items-baseline">
+            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-4 py-2 border-b border-[var(--line2)] items-baseline">
               <span className="text-[13px] text-[var(--ink)]">{c.label}</span>
-              <span className="text-[14px] font-medium text-[var(--ink)] min-w-[64px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
-              <span className="text-[14px] font-medium text-[var(--ink)] min-w-[64px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
+              <span className="font-mono text-[15px] font-semibold text-[var(--ink)] min-w-[70px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
+              <span className="font-mono text-[15px] font-semibold text-[var(--ink)] min-w-[70px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
             </div>
           ))}
           <div className="flex gap-2.5 items-baseline pt-2.5 flex-wrap">
             <span className="text-[12px] text-[var(--ink3)] flex-1">Cost of this recommendation</span>
-            <span className="text-[13px] font-semibold text-[var(--ink)] tabular-nums">~₹{totalCostInr.toFixed(2)}</span>
-            <span className="text-[10.5px] text-[var(--ink3)]">estimated</span>
+            <span className="font-mono text-[12.5px] font-semibold text-[var(--ok)] tabular-nums">~₹{totalCostInr.toFixed(2)}</span>
+            <span className="text-[10.5px] font-medium text-[var(--warn)] bg-[var(--warn-lt)] px-1.5 py-0.5 rounded whitespace-nowrap">
+              estimated
+            </span>
           </div>
           <p className="text-[11px] leading-relaxed text-[var(--ink3)] mt-2">
             The token counts above are exact, read directly off each API response. The embedding
@@ -487,29 +489,29 @@ function renderLiveRetrieval(data: LiveRetrievalStage["data"]) {
         cited will show once the reply is written.
       </Note>
       {data.adviceHits.map((h, i) => (
-        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)]">
+        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[var(--line2)]">
           <div>
-            <div className="font-mono text-[11px] text-[var(--ink2)] break-words">
+            <div className="font-mono text-[12.5px] text-[var(--ink)] break-words">
               [A{i + 1}] {h.doc_id} — {h.section_heading}
             </div>
-            <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">retrieved</div>
+            <div className="text-[10.5px] font-medium mt-0.5 text-[var(--ink3)]">retrieved</div>
           </div>
-          <span className="text-[10px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink3)" }}>
+          <span className="text-[10.5px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink2)" }}>
             {h.claim_type}
           </span>
-          <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
+          <span className="font-mono text-[12.5px] font-medium text-[var(--ink2)] text-right tabular-nums">{h.score.toFixed(3)}</span>
         </div>
       ))}
       {data.adviceNearMisses.map((h) => (
-        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
+        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
           <div>
-            <div className="font-mono text-[11px] text-[var(--ink3)] break-words">
+            <div className="font-mono text-[12.5px] text-[var(--ink3)] break-words">
               {h.doc_id} — {h.section_heading}
             </div>
-            <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
+            <div className="text-[10.5px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
           </div>
-          <span className="text-[10px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
-          <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
+          <span className="text-[10.5px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
+          <span className="font-mono text-[12.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
         </div>
       ))}
     </>
