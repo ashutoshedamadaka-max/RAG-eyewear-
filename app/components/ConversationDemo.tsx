@@ -131,8 +131,6 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
   // point of a LIVE panel). A number pins the panel to that history index instead, so a
   // reader can step back through previous turns without the panel yanking them back on every
   // re-render -- only a genuinely NEW message (post()) resets this back to null.
-  const [pinnedTurnIndex, setPinnedTurnIndex] = useState<number | null>(null);
-
   function applyTurnResult(result: TurnResult) {
     setState(result.state);
     if (result.recommendation) setRecommendation(result.recommendation);
@@ -143,7 +141,6 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
     setError(null);
     setStreamingText("");
     setLiveStages([]);
-    setPinnedTurnIndex(null);
     try {
       const res = await fetch("/api/conversation", {
         method: "POST",
@@ -271,29 +268,14 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
       : undefined;
   const replayExhausted = Boolean(replayScenario) && replayStep >= (replayScenario?.turns.length ?? 0);
 
-  // Turn stepper (decisions.md, 2026-09-02): the panel shows the CURRENT turn by default --
-  // "live" while one is actually in flight (real streaming, not replay), otherwise the latest
-  // completed entry -- with a way to step back through history. Replay never has a live phase
-  // (fixtures apply a complete TurnResult synchronously on each "Continue" click), so it always
-  // falls through to the historical per-index view, same rendering path a live turn uses once done.
-  const isLiveView = pinnedTurnIndex === null && loading && !inReplay;
-  const viewIndex = pinnedTurnIndex ?? (state ? state.history.length - 1 : -1);
-  const totalKnownTurns = state ? state.history.length + (isLiveView ? 1 : 0) : 0;
-  const displayTurnNumber = isLiveView ? totalKnownTurns : viewIndex + 1;
-  const stepperPrevDisabled = displayTurnNumber <= 1;
-  const stepperNextDisabled = pinnedTurnIndex === null;
-
-  function stepTurn(delta: number) {
-    if (!state) return;
-    const base = pinnedTurnIndex ?? state.history.length - 1;
-    const target = base + delta;
-    if (target < 0) return;
-    // Stepping forward past the second-to-last real entry returns to "follow the live/current
-    // turn" (null) rather than pinning to the last index explicitly -- so a reader who steps
-    // forward lands back in auto-follow mode, not in a stale pin that happens to equal latest.
-    if (delta > 0 && target >= state.history.length - 1) setPinnedTurnIndex(null);
-    else setPinnedTurnIndex(target);
-  }
+  // Machinery panel now stacks one block per turn, growing with the chat, instead of a
+  // sticky single-turn view with a stepper (decisions.md, 2026-09-04) -- fixed after a live
+  // report that the two visibly described different moments: the panel is independent of
+  // chat scroll position, so scrolling UP to re-read an earlier exchange left the panel still
+  // pinned to the latest turn. Showing every turn's machinery, in the same order the chat
+  // shows them, means there's nothing to keep in sync -- both columns just grow together.
+  // A live turn still gets its own trailing block (LiveMachineryPanel) while in flight.
+  const isLiveTurn = loading && !inReplay;
 
   const showingDemo = started && state;
 
@@ -546,51 +528,41 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
             </div>
           </section>
 
-          {/* Live machinery panel (decisions.md, 2026-09-04): a recessed surface (--sunk,
-              inset shadow) sticky alongside the chat -- what's in it is evidence, not code, so
-              it's styled as a light panel of real cards, not a dark terminal log. Shows the
-              CURRENT turn by default -- live while one is in flight, otherwise the latest
-              completed entry -- with a stepper to walk back through history. Stacks below the
-              chat, still fully visible (never hidden behind a toggle), under 1061px. */}
-          <aside className="bg-[var(--sunk)] rounded-[14px] shadow-[var(--shadow-in)] p-4 min-[1061px]:sticky min-[1061px]:top-3.5 min-[1061px]:max-h-[calc(100vh-100px)] min-[1061px]:overflow-y-auto">
+          {/* Machinery panel (decisions.md, 2026-09-04): a recessed surface (--sunk, inset
+              shadow) alongside the chat -- what's in it is evidence, not code, so it's styled
+              as a light panel of real cards, not a dark terminal log. No longer sticky/single-
+              turn: it stacks one block per turn, in the same order the chat shows them, and
+              grows exactly as the chat grows -- fixed after a live report that a sticky
+              "current turn only" panel visibly described a different moment than whatever the
+              reader had scrolled up to re-read in the chat column. A turn in flight gets its
+              own trailing block (LiveMachineryPanel) while it's still generating. */}
+          <aside className="bg-[var(--sunk)] rounded-[14px] shadow-[var(--shadow-in)] p-4">
             <div className="px-0.5 pb-3">
               <h2 className="text-[13.5px] font-semibold text-[var(--ink)] m-0">How this is built</h2>
-              {state.history.length > 0 && (
-                <div className="flex items-center gap-2 mt-2.5">
-                  <button
-                    onClick={() => stepTurn(-1)}
-                    disabled={stepperPrevDisabled}
-                    className="w-6 h-6 rounded-full border border-[var(--line)] bg-[var(--block)] text-[var(--ink)] text-[12px] leading-none disabled:opacity-30"
-                    aria-label="Previous turn"
-                  >
-                    ‹
-                  </button>
-                  <span className="text-[11.5px] text-[var(--ink3)] tabular-nums">
-                    Turn {displayTurnNumber} of {totalKnownTurns}
-                    {isLiveView && <span className="text-[var(--acc)]"> · live</span>}
-                  </span>
-                  <button
-                    onClick={() => stepTurn(1)}
-                    disabled={stepperNextDisabled}
-                    className="w-6 h-6 rounded-full border border-[var(--line)] bg-[var(--block)] text-[var(--ink)] text-[12px] leading-none disabled:opacity-30"
-                    aria-label="Next turn"
-                  >
-                    ›
-                  </button>
-                  {pinnedTurnIndex !== null && (
-                    <button onClick={() => setPinnedTurnIndex(null)} className="text-[11px] underline text-[var(--acc)] ml-auto">
-                      Jump to current
-                    </button>
-                  )}
-                </div>
-              )}
+              <p className="text-[11.5px] text-[var(--ink3)] mt-1 mb-0">
+                One block per turn, in step with the conversation on the left.
+              </p>
             </div>
 
-            {isLiveView ? (
-              <LiveMachineryPanel stages={liveStages} generating={loading} streamingText={streamingText} />
-            ) : viewIndex >= 0 ? (
-              <MachineryPanel entry={state.history[viewIndex]} cumulativeSlots={cumulativeSlotsAt(state.history, viewIndex, state.slots)} />
-            ) : (
+            {state.history.map((entry, i) => (
+              <div key={entry.turnIndex} className="mb-3">
+                <div className="text-[10.5px] font-semibold text-[var(--ink3)] uppercase tracking-wide px-0.5 mb-1.5">
+                  Turn {i + 1}
+                </div>
+                <MachineryPanel entry={entry} cumulativeSlots={cumulativeSlotsAt(state.history, i, state.slots)} />
+              </div>
+            ))}
+
+            {isLiveTurn && (
+              <div className="mb-1">
+                <div className="text-[10.5px] font-semibold text-[var(--acc)] uppercase tracking-wide px-0.5 mb-1.5">
+                  Turn {state.history.length + 1} · live
+                </div>
+                <LiveMachineryPanel stages={liveStages} generating={loading} streamingText={streamingText} />
+              </div>
+            )}
+
+            {state.history.length === 0 && !isLiveTurn && (
               <div className="text-[12.5px] text-[var(--ink3)] px-0.5">Nothing to show yet.</div>
             )}
           </aside>
