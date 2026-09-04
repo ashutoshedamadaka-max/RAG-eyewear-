@@ -6,6 +6,7 @@
 import OpenAI from "openai";
 import type { ChatCompletionTool, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { CHAT_MODEL, CHAT_TEMPERATURE } from "../config/model";
+import { PRODUCT_TYPES, PURPOSE_TAGS, FIT_ISSUES, LENS_TYPES, STYLE_PREFS } from "./types";
 import type { PartialSlots, SafetyFlag, Slots, Turn } from "./types";
 
 const SYSTEM_PROMPT = `You extract what a customer's LATEST message adds to an eyewear-shopping conversation. Only report fields that message actually addresses -- do not restate, re-infer, or re-guess fields already known from earlier turns (they're listed below so you have context, not so you re-emit them). An empty/near-empty result is correct and expected when the message is small talk or doesn't add new information.
@@ -31,23 +32,27 @@ const EXTRACTION_TOOL: ChatCompletionTool = {
     parameters: {
       type: "object",
       properties: {
-        product_type: { type: "string", enum: ["eyeglasses", "sunglasses", "reading", "computer", "sports"] },
-        purpose: { type: "array", items: { type: "string" } },
+        product_type: { type: "string", enum: PRODUCT_TYPES },
+        // Enum added 2026-09-04 (previously free-form array, constrained only by the prose
+        // tag list above) -- now the answer-pills feature needed a real, importable list of
+        // valid values, and a schema without one was never actually enforcing "do not invent
+        // a tag" at the API level, only asking nicely for it in prose.
+        purpose: { type: "array", items: { type: "string", enum: PURPOSE_TAGS } },
         screen_hours: { type: "number" },
         rx_status: { type: "string", enum: ["none", "has_rx", "unknown"] },
         rx_power: { type: "number" },
-        lens_type: { type: "string", enum: ["single", "progressive", "bifocal", "reading"] },
+        lens_type: { type: "string", enum: LENS_TYPES },
         reading_power: { type: "number" },
         fit_issues: {
           type: "array",
-          items: { type: "string", enum: ["slipping", "splaying", "pressing", "cheekbone_contact", "pinching", "marks", "heavy", "slides_sport"] },
+          items: { type: "string", enum: FIT_ISSUES },
         },
         budget_min: { type: "number" },
         budget_max: { type: "number" },
         face_shape: { type: "string", enum: ["oval", "round", "square", "heart", "rectangle", "unsure"] },
         style_prefs: {
           type: "array",
-          items: { type: "string", enum: ["minimal", "bold", "retro", "professional", "sporty", "playful"] },
+          items: { type: "string", enum: STYLE_PREFS },
         },
         nose_profile: { type: "string", enum: ["flat", "prominent"] },
         eye_spacing: { type: "string", enum: ["close_set", "wide_set"] },

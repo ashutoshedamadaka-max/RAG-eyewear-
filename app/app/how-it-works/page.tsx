@@ -24,7 +24,7 @@ function Arrow() {
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-full bg-[#F6F8F7]">
+    <div className="min-h-full">
       <div className="max-w-[820px] mx-auto px-6 py-10">
         <h1
           className="text-[26px] leading-tight text-[#14201C] tracking-tight m-0"

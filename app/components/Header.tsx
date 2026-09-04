@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
-// Shared across all four pages (decisions.md, 2026-09-03) -- rendered once
-// in the root layout, not per-page, so it can never drift between routes.
-// A client component only because `usePathname` needs it -- everything it
-// renders is otherwise static.
+// Visual rebuild (decisions.md, 2026-09-04): the prototype's `.bar`, now
+// inside the shell (root layout.tsx) rather than a separate full-width
+// strip above it. Shared across all four pages -- a client component
+// only because `usePathname` needs it, everything else here is static.
 const NAV = [
   { href: "/", label: "Demo" },
   { href: "/how-it-works", label: "How it works" },
@@ -17,11 +18,14 @@ const NAV = [
 export default function Header() {
   const pathname = usePathname();
   return (
-    <header className="h-14 flex-none border-b border-[#DFE6E2] bg-[#FDFEFD] px-6 flex items-center justify-between gap-4">
-      <Link href="/" className="text-[14px] font-semibold text-[#14201C] tracking-tight">
-        Eyewear RAG
+    <header className="h-[54px] flex-none flex items-center gap-[22px] px-5 border-b border-[var(--line2)]">
+      <Link href="/" className="text-[15px] font-semibold text-[var(--ink)] tracking-tight flex items-center gap-2">
+        Specs
+        <span className="text-[12px] font-normal text-[var(--ink3)] border-l border-[var(--line)] pl-2">
+          eyewear recommender
+        </span>
       </Link>
-      <nav className="flex items-center gap-1 text-[13px]">
+      <nav className="ml-auto flex items-center gap-0.5">
         {NAV.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
@@ -29,8 +33,8 @@ export default function Header() {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`px-2.5 py-1.5 rounded-md ${
-                active ? "bg-[#14201C] text-white font-medium" : "text-[#5F6F68] hover:text-[#14201C] hover:bg-[#EEF2F0]"
+              className={`px-2.5 py-1.5 rounded-[7px] text-[13px] font-medium transition-colors ${
+                active ? "bg-[var(--acc-lt)] text-[var(--acc)]" : "text-[var(--ink2)] hover:bg-[var(--sunk)]"
               }`}
             >
               {item.label}
@@ -38,6 +42,7 @@ export default function Header() {
           );
         })}
       </nav>
+      <ThemeToggle />
     </header>
   );
 }

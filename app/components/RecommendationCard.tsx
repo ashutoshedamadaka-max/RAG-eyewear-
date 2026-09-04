@@ -15,7 +15,7 @@ interface Props {
 /** "conventionally suggested" reads for face_shape_suits/style_tags boosts get a tag; nothing else does -- matches derive.ts's own rule that only face_shape/style produce a citable convention claim on a card, price/fit facts are just facts. */
 function ConventionTag() {
   return (
-    <span className="inline-block mt-2.5 text-[11px] font-medium bg-[#E7F0EC] text-[#14493E] px-2.5 py-1 rounded">
+    <span className="inline-block mt-2.5 text-[11px] font-medium bg-[var(--acc-lt)] text-[var(--acc)] px-2.5 py-1 rounded-full">
       styling convention
     </span>
   );
@@ -25,19 +25,14 @@ export default function RecommendationCard({ frame, gloss, citationMarker, claim
   const isNearMiss = Boolean(droppedClause);
 
   return (
-    <div className="border border-[#DFE6E2] rounded-md bg-[#FDFEFD] mb-3 overflow-hidden">
+    <div className="border border-[var(--line)] rounded-[14px] bg-[var(--block)] mb-3 overflow-hidden">
       {isNearMiss && (
-        <div className="bg-[#FBF1E0] text-[#8A5A0B] text-[13px] font-medium px-4 py-2 border-b border-[#EAD9B4]">
+        <div className="bg-[var(--warn-lt)] text-[var(--warn)] text-[12.5px] font-medium px-4 py-2 border-b border-[var(--line)]">
           Closest option — doesn&apos;t meet: {droppedClause}
         </div>
       )}
       <div className="flex gap-4 p-4 items-start flex-wrap">
-        {/* Backdrop darkened + bordered (decisions.md, 2026-09-02): the old #F1F4F3 sat too
-            close to pale/crystal frame fill colors (#DCE6E6 base, #F2F8F8 light -- see
-            FrameIllustration's PALETTE) for the illustration to read against it, the same
-            near-white-on-near-white pattern the face-shape picker had. A border gives pale
-            frames a real edge regardless of how close their fill lands to the backdrop. */}
-        <div className="w-[150px] min-w-[130px] flex-none bg-[#E4EAE7] border border-[#C9D3CD] rounded p-1.5">
+        <div className="w-[142px] min-w-[124px] flex-none bg-[var(--sunk)] rounded-[10px] p-1.5">
           <FrameIllustration
             frame={{
               frame_id: frame.frame_id,
@@ -55,11 +50,11 @@ export default function RecommendationCard({ frame, gloss, citationMarker, claim
         </div>
 
         <div className="flex-1 min-w-[210px]">
-          <div className="flex justify-between gap-3 items-baseline border-b border-[#DFE6E2] pb-2">
-            <div className="font-semibold text-[20px] leading-tight text-[#14201C] tracking-tight">
+          <div className="flex justify-between gap-3 items-baseline border-b border-[var(--line2)] pb-2">
+            <div className="font-semibold text-[18px] leading-tight text-[var(--ink)] tracking-tight">
               {frame.brand} {frame.model}
             </div>
-            <div className="font-semibold text-[20px] leading-tight text-[#14201C] tabular-nums whitespace-nowrap">
+            <div className="font-semibold text-[18px] leading-tight text-[var(--ink)] tabular-nums whitespace-nowrap">
               ₹{frame.price_frame_only.toLocaleString("en-IN")}
             </div>
           </div>
@@ -73,20 +68,22 @@ export default function RecommendationCard({ frame, gloss, citationMarker, claim
               ["Build", `${frame.material}, ${frame.rim_type}-rim`],
             ].map(([k, v]) => (
               <div key={k}>
-                <div className="text-[10.5px] font-medium text-[#8A9992] mb-0.5">{k}</div>
-                <div className="text-[13.5px] text-[#14201C] tabular-nums">{v}</div>
+                <div className="text-[10.5px] font-medium text-[var(--ink3)] mb-0.5">{k}</div>
+                <div className="text-[13.5px] text-[var(--ink)] tabular-nums">{v}</div>
               </div>
             ))}
           </div>
 
           {!frame.in_stock && (
-            <div className="mt-2 text-[12px] font-medium text-[#8A5A0B]">Currently out of stock</div>
+            <div className="mt-2 text-[12px] font-medium" style={{ color: "var(--warn)" }}>
+              Currently out of stock
+            </div>
           )}
 
           {gloss && (
-            <p className="text-[15px] leading-relaxed text-[#14201C] mt-3 max-w-[56ch]" style={{ fontFamily: "var(--font-serif)" }}>
+            <p className="text-[15px] leading-relaxed text-[var(--ink)] mt-3 max-w-[50ch]" style={{ fontFamily: "var(--font-serif)" }}>
               {gloss}
-              {citationMarker && <sup className="text-[10px] font-medium text-[#14493E] ml-0.5">[{citationMarker}]</sup>}
+              {citationMarker && <sup className="text-[10px] font-medium text-[var(--acc)] ml-0.5">[{citationMarker}]</sup>}
             </p>
           )}
 
@@ -95,9 +92,17 @@ export default function RecommendationCard({ frame, gloss, citationMarker, claim
       </div>
 
       {isNearMiss && (
-        <div className="border-t border-[#DFE6E2] px-4 py-2.5 flex flex-wrap gap-x-6 gap-y-1 text-[12px]">
-          <span className="text-[#8A5A0B]"><b className="font-medium">Gives up:</b> {droppedClause}</span>
-          <span className="text-[#5F6F68]"><b className="font-medium text-[#14201C]">Keeps:</b> everything else you asked for</span>
+        <div className="border-t border-[var(--line2)] flex flex-wrap">
+          <div className="flex-1 min-w-[165px] px-4 py-3">
+            <div className="text-[10.5px] font-medium text-[var(--ink3)] mb-1.5">Gives up</div>
+            <div className="text-[13px] leading-[1.55]" style={{ color: "var(--warn)" }}>
+              {droppedClause}
+            </div>
+          </div>
+          <div className="flex-1 min-w-[165px] px-4 py-3 border-l border-[var(--line2)]">
+            <div className="text-[10.5px] font-medium text-[var(--ink3)] mb-1.5">Keeps</div>
+            <div className="text-[13px] leading-[1.55] text-[var(--ink2)]">everything else you asked for</div>
+          </div>
         </div>
       )}
     </div>

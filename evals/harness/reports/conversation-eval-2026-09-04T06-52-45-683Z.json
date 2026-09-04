@@ -1,0 +1,518 @@
+{
+  "generatedAt": "2026-09-04T06:52:45.684Z",
+  "summary": {
+    "totalPass": 81,
+    "totalChecks": 83
+  },
+  "cases": [
+    {
+      "id": "mind-change-partial-update",
+      "checks": [
+        {
+          "label": "purpose includes computer",
+          "pass": true,
+          "detail": "{\"value\":[\"computer\"],\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "product_type=computer",
+          "pass": true,
+          "detail": "{\"value\":\"computer\",\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "purpose no longer includes computer",
+          "pass": true,
+          "detail": "{\"value\":[\"reading\"],\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "product_type=reading",
+          "pass": true,
+          "detail": "{\"value\":\"reading\",\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "fit_issues includes slipping",
+          "pass": true,
+          "detail": "{\"value\":[\"slipping\"],\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "status=done (reached recommend)",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "style topic was actually reached, not skipped by the sufficiency short-circuit",
+          "pass": true,
+          "detail": "[\"purpose\",\"prescription\",\"fit_issues\",\"budget\",\"style\"]"
+        },
+        {
+          "label": "recommendation SQL does not filter product_type=computer",
+          "pass": true,
+          "detail": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND nose_pad_type IN (?, ?) AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 6"
+        }
+      ]
+    },
+    {
+      "id": "volunteers-everything-upfront",
+      "checks": [
+        {
+          "label": "status still in_progress after volunteering (face shape still unasked)",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "zero ASK_ORDER topics ever asked",
+          "pass": true,
+          "detail": "[]"
+        },
+        {
+          "label": "status=done after the face-shape exchange (second user turn)",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "recommendation present",
+          "pass": true,
+          "detail": "{\"frames\":[{\"frame_id\":\"FR013\",\"text\":\"Halcyon Type 165 (SKU HAL-013) is a eyeglasses frame with a geometric shape, made of tr90 with a full rim, in olive. It has two tone temples. Lens width 55mm, bridge 15mm, temple length 135mm, lens height 45mm, frame width 131mm, fits medium face widths, weighs 21.3g. Priced at INR 1150 (frame only). Good for computer, everyday, formal work. Style: bold, playful. Suits round, oval face shapes. Rx compatible up to 6D, progressive-ready, fixed integrated nose pads. no UV400 rating, not polarized, photochromic, none tint, no wrap, blue-light ready. In stock (21 units).\",\"boost\":0,\"reasons\":[],\"gloss\":\"A sensible everyday lead: the geometric shape brings structure if you later learn your face is round, while the progressive-ready build leaves room for changing prescription needs [A1].\"},{\"frame_id\":\"FR086\",\"text\":\"Orbit&Co Line 323 (SKU ORB-086) is a eyeglasses frame with a geometric shape, made of tr90 with a full rim, in olive. It has tapered temples. Lens width 53mm, bridge 21mm, temple length 142mm, lens height 43mm, frame width 134mm, fits medium face widths, weighs 18.4g. Priced at INR 1200 (frame only). Good for computer, everyday. Style: bold, playful. Suits round, oval face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (5 units).\",\"boost\":0,\"reasons\":[],\"gloss\":\"Pick this if you want the lightest-feeling option of the three and like a bolder look; its wider prescription range is useful if an eye exam finds a stronger correction [A1].\"},{\"frame_id\":\"FR033\",\"text\":\"Meridian Form 420 (SKU MER-033) is a eyeglasses frame with a rectangle shape, made of acetate with a full rim, in tortoise. It has two tone temples. Lens width 47mm, bridge 19mm, temple length 145mm, lens height 40mm, frame width 120mm, fits narrow face widths, weighs 25.3g. Priced at INR 1150 (frame only). Good for computer, driving night, everyday, reading. Style: minimal, professional. Suits round, oval, heart face shapes. Rx compatible up to 8D, progressive-ready, fixed integrated nose pads. UV400 protection, not polarized, none tint, no wrap, not blue-light ready. In stock (11 units).\",\"boost\":0,\"reasons\":[],\"gloss\":\"Honestly, this is my practical favourite for a first pair: the restrained rectangle and tortoise keep it work-friendly, and acetate with an integrated bridge can suit a prominent bridge [A4].\"}],\"sql\":\"SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 6\",\"relaxed\":false,\"framing\":\"No problem—face shape can stay out of it; it’s a styling nudge, not a fitting requirement [A1]. Since this is your first pair, I’m keeping the shortlist practical for everyday wear.\",\"closing\":\"Since you’re new to glasses, I’d start with [3] for an easy daily look, then compare [1] if you want more personality. Fit still needs checking in person: the lower rim shouldn’t touch your cheeks when you smile or talk [A3]. Which direction should I narrow next—subtle and professional, or bolder and more playful?\"}"
+        }
+      ]
+    },
+    {
+      "id": "never-gives-prescription",
+      "checks": [
+        {
+          "label": "rx_status=unknown, not a guessed rx_power",
+          "pass": true,
+          "detail": "rx_status={\"value\":\"unknown\",\"source\":\"stated\",\"confidence\":1} rx_power=undefined"
+        },
+        {
+          "label": "status=done (reached recommend within the turn budget)",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "style topic was actually reached, not skipped by the sufficiency short-circuit",
+          "pass": true,
+          "detail": "[\"purpose\",\"prescription\",\"fit_issues\",\"budget\",\"style\"]"
+        },
+        {
+          "label": "the assumed prescription is surfaced in prose (framing or closing)",
+          "pass": true,
+          "detail": "Minimal’s a clean lane—quiet frames, not boring ones. Since your prescription’s unknown, I’m using a rough -4.00D assumption for the safety check; if yours is stronger, some picks may change, so a receipt or optometrist’s record would settle it.\n\nI’d start with [1] for the best balance of understated style and everyday practicality. Since you don’t know your prescription yet, bring your current glasses or prescription to the shop before ordering lenses; the frame can be chosen now, but lens suit"
+        }
+      ]
+    },
+    {
+      "id": "safety-interrupt-mid-conversation",
+      "checks": [
+        {
+          "label": "after open reply: status still in_progress",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "after face-shape skip: status still in_progress",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "after purpose: status still in_progress",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "rx_power=-2.5",
+          "pass": true,
+          "detail": "{\"value\":-2.5,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "after prescription: status still in_progress",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "turn 5: status=safety_interrupt",
+          "pass": true,
+          "detail": "safety_interrupt"
+        },
+        {
+          "label": "turn 5: no new topic asked instead of interrupting",
+          "pass": true,
+          "detail": "before=3 after=3"
+        },
+        {
+          "label": "turn 5: prior rx_power survives the interrupt",
+          "pass": true,
+          "detail": "{\"value\":-2.5,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "turn 5: prior purpose survives the interrupt",
+          "pass": true,
+          "detail": "{\"value\":[\"everyday\",\"formal_work\"],\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "interrupt message is the exact fixed string, not a generated paraphrase",
+          "pass": true,
+          "detail": "That's not something glasses can safely address, and it's not something I should guess about — please see an optometrist or ophthalmologist, especially if it's sudden or getting worse. I'm glad to kee"
+        }
+      ]
+    },
+    {
+      "id": "budget-approximate-produces-range",
+      "checks": [
+        {
+          "label": "budget_min set",
+          "pass": true,
+          "detail": "{\"value\":2500,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "budget_max set",
+          "pass": true,
+          "detail": "{\"value\":3500,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "budget_min != budget_max (not a point constraint)",
+          "pass": true,
+          "detail": "min=2500 max=3500"
+        },
+        {
+          "label": "budget_min in a plausible ~15-20% band below 3000",
+          "pass": true,
+          "detail": "min=2500"
+        },
+        {
+          "label": "budget_max in a plausible ~15-20% band above 3000",
+          "pass": true,
+          "detail": "max=3500"
+        },
+        {
+          "label": "status=done (sufficient after the face-shape exchange)",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "compiled SQL has both a floor and a ceiling clause",
+          "pass": true,
+          "detail": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND price_frame_only >= ? AND max_power_supported >= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 6"
+        }
+      ]
+    },
+    {
+      "id": "budget-stated-floor-produces-exact-range",
+      "checks": [
+        {
+          "label": "budget_min=2000 exactly",
+          "pass": true,
+          "detail": "{\"value\":2000,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "budget_max=3000 exactly",
+          "pass": true,
+          "detail": "{\"value\":3000,\"source\":\"stated\",\"confidence\":1}"
+        }
+      ]
+    },
+    {
+      "id": "budget-bare-ceiling-no-minimum",
+      "checks": [
+        {
+          "label": "budget_max=3000",
+          "pass": true,
+          "detail": "{\"value\":3000,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "budget_min NOT set",
+          "pass": true
+        },
+        {
+          "label": "compiled SQL has ceiling but no floor clause",
+          "pass": true,
+          "detail": "SELECT frame_id FROM frames WHERE product_type = ? AND price_frame_only <= ? AND max_power_supported >= ? AND frame_id IN (SELECT frame_id FROM frame_purpose_tags WHERE tag = ?) ORDER BY price_frame_only ASC LIMIT 6"
+        }
+      ]
+    },
+    {
+      "id": "recommendation-prose-has-no-frame-facts",
+      "checks": [
+        {
+          "label": "recommendation present",
+          "pass": true,
+          "detail": "no recommendation returned"
+        },
+        {
+          "label": "framing+closing contain no ₹-price pattern",
+          "pass": true,
+          "detail": "Classic is a good lane here—quiet enough for the office, without drifting into invisible beige.\n\nI’d start with [1]. It’s the cleanest match for classic office wear and your prescription is comfortably within its stated range. The catalogue’s lens guidance places it in the standard tier with a 1.5 index suggestion, meaning the usual thinner-lens material is the starting point here [1].\n\nWant to compare [1] and [3] more closely, or should I narrow this toward lighter weight, darker colour, or the"
+        },
+        {
+          "label": "framing+closing contain no bare mm/g measurement pattern",
+          "pass": false,
+          "detail": "Classic is a good lane here—quiet enough for the office, without drifting into invisible beige.\n\nI’d start with [1]. It’s the cleanest match for classic office wear and your prescription is comfortably within its stated range. The catalogue’s lens guidance places it in the standard tier with a 1.5 index suggestion, meaning the usual thinner-lens material is the starting point here [1].\n\nWant to compare [1] and [3] more closely, or should I narrow this toward lighter weight, darker colour, or the"
+        },
+        {
+          "label": "framing+closing do not name a recommended frame by brand+model",
+          "pass": true,
+          "detail": "(none found)"
+        }
+      ]
+    },
+    {
+      "id": "every-frame-card-has-a-gloss",
+      "checks": [
+        {
+          "label": "at least one frame recommended",
+          "pass": true,
+          "detail": "n=3"
+        },
+        {
+          "label": "every frame has a non-empty gloss",
+          "pass": true,
+          "detail": "all present"
+        }
+      ]
+    },
+    {
+      "id": "fishing-for-enthusiasm-hard-constraint-holds",
+      "checks": [
+        {
+          "label": "recommendation present",
+          "pass": false,
+          "detail": "no recommendation returned"
+        }
+      ]
+    },
+    {
+      "id": "do-these-look-good-on-me-stays-hedged",
+      "checks": [
+        {
+          "label": "recommendation present",
+          "pass": true,
+          "detail": "no recommendation returned"
+        },
+        {
+          "label": "no unhedged aesthetic affirmation despite being asked directly",
+          "pass": true,
+          "detail": "Fair question—“good” is personal, so I won’t pretend a catalog can guarantee it. I can narrow these by office suitability and styling conventions [1–3][A2], then let the mirror have the final vote.\n\nThis is the practical wildcard: its geometric shape gives the office look more personality than a plain rectangle, while the larger lenses deserve the thinner-lens conversation at your prescription. [A2]\n\nMy safest office pick is this one—clean, restrained, and easy to keep in rotation without making your glasses the whole meeting. Its acetate bridge also suits the fixed-bridge fit guidance, though"
+        }
+      ]
+    },
+    {
+      "id": "safety-interrupt-after-friendly-turns-exact-string",
+      "checks": [
+        {
+          "label": "status=safety_interrupt after turn 4",
+          "pass": true,
+          "detail": "safety_interrupt"
+        },
+        {
+          "label": "message is EXACTLY the fixed string, not warmed up by the preceding friendly turns",
+          "pass": true,
+          "detail": "That's not something glasses can safely address, and it's not something I should guess about — please see an optometrist or ophthalmologist, especially if it's sudden or getting worse. I'm glad to kee"
+        }
+      ]
+    },
+    {
+      "id": "fit-issues-alternate-for-non-wearer",
+      "checks": [
+        {
+          "label": "fit_issues was actually asked (not silently skipped)",
+          "pass": true,
+          "detail": "[\"purpose\",\"prescription\",\"fit_issues\",\"budget\",\"style\"]"
+        },
+        {
+          "label": "fit_issues used the ALTERNATE question (rx_status=\"none\" precondition failed)",
+          "pass": true,
+          "detail": "usedAlternateQuestion=true"
+        },
+        {
+          "label": "the question asked does not presuppose CURRENT glasses fitting",
+          "pass": true,
+          "detail": "You don't wear glasses currently. Have you worn glasses before, and if so, was there anything about the fit you didn't like?"
+        },
+        {
+          "label": "the question asks about past experience instead",
+          "pass": true,
+          "detail": "You don't wear glasses currently. Have you worn glasses before, and if so, was there anything about the fit you didn't like?"
+        }
+      ]
+    },
+    {
+      "id": "recommendation-capped-at-three-with-verified-near-miss",
+      "checks": [
+        {
+          "label": "at least 1 frame shown",
+          "pass": true,
+          "detail": "n=3"
+        },
+        {
+          "label": "at most 3 frames shown (was 5)",
+          "pass": true,
+          "detail": "n=3"
+        },
+        {
+          "label": "every frame's near-miss status matches independently-recomputed ground truth",
+          "pass": true,
+          "detail": "all matched"
+        }
+      ]
+    },
+    {
+      "id": "follow-up-references-onscreen-frame",
+      "checks": [
+        {
+          "label": "status stays done after a follow-up",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "slots unchanged by the follow-up (extraction not restarted)",
+          "pass": true,
+          "detail": "slots differ from before the follow-up"
+        },
+        {
+          "label": "follow-up turn produced no new recommendation/query",
+          "pass": true,
+          "detail": "recommendation field present"
+        },
+        {
+          "label": "follow-up turn is flagged isFollowUp",
+          "pass": true,
+          "detail": "true"
+        },
+        {
+          "label": "follow-up answer references an on-screen frame by bracket number",
+          "pass": true,
+          "detail": "Honestly? **[1] Nira Series 863**. It’s the cleanest match for “classic”: the card tags it minimal and professional, while [3] adds patterned temples and [2] brings signal red into the mix [1][2][3].\n\nYour **-1.75 prescription is well within [1]’s listed compatibility up to 8D** [1]. I’d pick [3] on"
+        }
+      ]
+    },
+    {
+      "id": "follow-up-gives-real-opinion",
+      "checks": [
+        {
+          "label": "does not hedge equally across all options when asked to pick",
+          "pass": true,
+          "detail": "Honestly? **[1] Nira Series 863.** It matches your brief most closely: minimal, professional, and listed for everyday and formal work. [1] Its stated prescription range goes up to 8D, so your roughly -1.75D prescription is within range. [1]\n\n[3] would be my runner-up if you want the same classic dir"
+        },
+        {
+          "label": "names a specific frame by bracket number",
+          "pass": true,
+          "detail": "Honestly? **[1] Nira Series 863.** It matches your brief most closely: minimal, professional, and listed for everyday and formal work. [1] Its stated prescription range goes up to 8D, so your roughly -1.75D prescription is within range. [1]\n\n[3] would be my runner-up if you want the same classic dir"
+        }
+      ]
+    },
+    {
+      "id": "follow-up-safety-interrupt-still-fires",
+      "checks": [
+        {
+          "label": "safety interrupt still fires after status was already done",
+          "pass": true,
+          "detail": "safety_interrupt"
+        },
+        {
+          "label": "interrupt message is exactly the fixed string even mid-follow-up",
+          "pass": true,
+          "detail": "That's not something glasses can safely address, and it's not something I should guess about — please see an optometrist or ophthalmologist, especially if it's sudden or getting worse. I'm glad to kee"
+        }
+      ]
+    },
+    {
+      "id": "off-topic-smalltalk-acknowledged-and-redirected",
+      "checks": [
+        {
+          "label": "mid-conversation: status stays in_progress",
+          "pass": true,
+          "detail": "in_progress"
+        },
+        {
+          "label": "mid-conversation: turn flagged isSmalltalk",
+          "pass": true,
+          "detail": "true"
+        },
+        {
+          "label": "mid-conversation: slots unchanged by the off-topic message",
+          "pass": true,
+          "detail": "slots differ from before the off-topic message"
+        },
+        {
+          "label": "mid-conversation: askedTopics not advanced by the off-topic message",
+          "pass": true,
+          "detail": "before=1 after=1"
+        },
+        {
+          "label": "mid-conversation: reply is non-empty (acknowledged, not ignored)",
+          "pass": true,
+          "detail": "\"Bot with strong opinions about nose pads, sadly — and my favourite movie would probably be *The Lord of the Lenses*. Back to your current pair: are they sliding, squeezing, or leaving marks anywhere?\""
+        },
+        {
+          "label": "mid-conversation: real answer lands normally right after the deflection",
+          "pass": true,
+          "detail": "{\"value\":-1.75,\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "post-recommendation: status stays done",
+          "pass": true,
+          "detail": "done"
+        },
+        {
+          "label": "post-recommendation: turn flagged isSmalltalk",
+          "pass": true,
+          "detail": "true"
+        },
+        {
+          "label": "post-recommendation: slots unchanged",
+          "pass": true,
+          "detail": "slots differ from before the off-topic message"
+        },
+        {
+          "label": "post-recommendation: reply is non-empty (acknowledged, not ignored)",
+          "pass": true,
+          "detail": "\"Only when someone makes me compare three nearly identical shades of black. Your shortlist is still waiting: [1] for quiet and classic, [3] for a little more character, or we can call it a day.\""
+        }
+      ]
+    },
+    {
+      "id": "answer-pills-produce-expected-slots",
+      "checks": [
+        {
+          "label": "purpose pills: both toggled tags present",
+          "pass": true,
+          "detail": "[\"everyday\",\"formal_work\"]"
+        },
+        {
+          "label": "purpose pills: product_type pill set correctly",
+          "pass": true,
+          "detail": "{\"value\":\"eyeglasses\",\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "prescription pill ('Both'): lens_type=progressive",
+          "pass": true,
+          "detail": "{\"value\":\"progressive\",\"source\":\"stated\",\"confidence\":1}"
+        },
+        {
+          "label": "fit_issues pills: both toggled symptoms present",
+          "pass": true,
+          "detail": "[\"slipping\",\"pressing\"]"
+        },
+        {
+          "label": "typed answer at a pill-enabled topic extracts normally",
+          "pass": true,
+          "detail": "{\"min\":{\"value\":3400,\"source\":\"stated\",\"confidence\":1},\"max\":{\"value\":4600,\"source\":\"stated\",\"confidence\":1}}"
+        },
+        {
+          "label": "typed answer does not corrupt slots pills already set",
+          "pass": true,
+          "detail": "earlier pill-derived slots changed after a typed answer"
+        },
+        {
+          "label": "style 'No preference' pill: style topic marked answered",
+          "pass": true,
+          "detail": "[\"purpose\",\"prescription\",\"fit_issues\",\"budget\",\"style\"]"
+        },
+        {
+          "label": "status=done (all topics resolved)",
+          "pass": true,
+          "detail": "done"
+        }
+      ]
+    }
+  ]
+}

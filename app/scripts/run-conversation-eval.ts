@@ -17,6 +17,7 @@ import { emptyState, type ConversationState } from "../lib/conversation/types";
 import { getFrameById } from "../lib/retrieval";
 import { assessLensIndex } from "../lib/derivation";
 import { styleMismatchClause } from "../lib/conversation/derive";
+import { TOPIC_PILLS } from "../components/pill-options";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const GOLDEN_PATH = path.join(ROOT, "evals", "golden", "conversation.json");
@@ -346,8 +347,16 @@ async function runEveryCardHasGloss(): Promise<Check[]> {
 async function runFishingForEnthusiasm(): Promise<Check[]> {
   const checks: Check[] = [];
 
+  // Rephrased 2026-09-04 (decisions.md): the original wording -- "tell me it'll work great
+  // with my prescription!" -- read closely enough to "will this treat/fix a condition" that
+  // the safety_flag classifier misfired it to medical_question on a real, reproducible ~1-in-3
+  // share of runs (confirmed via a dedicated debug script, not assumed), short-circuiting the
+  // whole conversation into safety_interrupt before any recommendation was possible and
+  // failing this case on an unrelated axis. Restated as the customer's own (mistaken)
+  // confidence rather than a question directed at the assistant about medical efficacy --
+  // same enthusiasm-despite-a-hard-constraint setup, without the accidental medical framing.
   const { last: r } = await driveConversation(
-    "I really love the idea of rimless frames, they look so light -- tell me it'll work great with my prescription!",
+    "I really love the idea of rimless frames, they look so light -- I've got a pretty strong prescription but I'm sure it'll be totally fine!",
     {
       faceShape: "Skip face shape.",
       purpose: "Eyeglasses for everyday wear.",
@@ -626,6 +635,75 @@ async function runOffTopicSmalltalk(): Promise<Check[]> {
   return checks;
 }
 
+/** Pulls a pill's exact composed phrase straight from the same config AnswerPills.tsx renders from -- so this case tests the literal string a tap sends, never a hand-retyped copy that could drift from it. */
+function pillPhrase(topic: string, id: string): string {
+  const config = TOPIC_PILLS[topic];
+  for (const group of config?.groups ?? []) {
+    const opt = group.options.find((o) => o.id === id);
+    if (opt) return opt.phrase;
+  }
+  throw new Error(`pillPhrase: no option "${id}" found for topic "${topic}"`);
+}
+
+/**
+ * Answer pills (decisions.md, 2026-09-04): pills are a pure client-side
+ * shortcut -- a tap composes a message and sends it through the exact
+ * same `send()`/extraction path typed text uses, so there is no separate
+ * server-side "pill mode" to test. What this case actually verifies:
+ * the REAL composed phrases (pulled from pill-options.ts, not retyped)
+ * produce the intended slot state, multi-select accumulates every
+ * toggled value into one message rather than losing any, and a plain
+ * TYPED answer landing on a later pill-enabled topic (standing in for
+ * "tapped the escape hatch and typed instead") still extracts normally
+ * and leaves earlier pill-derived slots untouched -- pills and free text
+ * interoperate turn to turn, neither corrupts the other.
+ */
+async function runAnswerPillsProduceExpectedSlots(): Promise<Check[]> {
+  const checks: Check[] = [];
+  let state = await opening();
+  let r = await runTurn(state, "I'm just starting to look, not sure exactly what I need yet.");
+  state = r.state;
+  r = await runTurn(state, "Not sure about my face shape, let's skip that.");
+  state = r.state;
+
+  // Multi-select: two purpose tags + one product-type pill toggled together, one Continue.
+  const purposeMessage = `${pillPhrase("purpose", "purpose-everyday")}, ${pillPhrase("purpose", "purpose-formal_work")}, ${pillPhrase("purpose", "product-eyeglasses")}.`;
+  r = await runTurn(state, purposeMessage);
+  state = r.state;
+  checks.push(check("purpose pills: both toggled tags present", JSON.stringify(state.slots.purpose?.value) === JSON.stringify(["everyday", "formal_work"]), JSON.stringify(state.slots.purpose?.value)));
+  checks.push(check("purpose pills: product_type pill set correctly", state.slots.product_type?.value === "eyeglasses", JSON.stringify(state.slots.product_type)));
+
+  // Single immediate-submit pill (prescription's lens_type group).
+  r = await runTurn(state, pillPhrase("prescription", "lens-progressive"));
+  state = r.state;
+  checks.push(check("prescription pill ('Both'): lens_type=progressive", state.slots.lens_type?.value === "progressive", JSON.stringify(state.slots.lens_type)));
+
+  // Multi-select again, a different slot: two fit_issues symptoms toggled together.
+  const fitMessage = `${pillPhrase("fit_issues", "fit-slipping")}, ${pillPhrase("fit_issues", "fit-pressing")}.`;
+  r = await runTurn(state, fitMessage);
+  state = r.state;
+  checks.push(check("fit_issues pills: both toggled symptoms present", JSON.stringify(state.slots.fit_issues?.value) === JSON.stringify(["slipping", "pressing"]), JSON.stringify(state.slots.fit_issues?.value)));
+
+  // Escape hatch, structurally: a later pill-enabled topic (budget) answered by plain TYPED
+  // text instead of any pill -- stands in for "tapped Something else, typed instead." Must
+  // extract normally AND leave everything decided by pills above completely untouched.
+  const slotsBeforeTyped = JSON.stringify({ purpose: state.slots.purpose, product_type: state.slots.product_type, lens_type: state.slots.lens_type, fit_issues: state.slots.fit_issues });
+  r = await runTurn(state, "Honestly around four thousand rupees or so, roughly.");
+  state = r.state;
+  const slotsAfterTyped = JSON.stringify({ purpose: state.slots.purpose, product_type: state.slots.product_type, lens_type: state.slots.lens_type, fit_issues: state.slots.fit_issues });
+  checks.push(check("typed answer at a pill-enabled topic extracts normally", state.slots.budget_min !== undefined && state.slots.budget_max !== undefined, JSON.stringify({ min: state.slots.budget_min, max: state.slots.budget_max })));
+  checks.push(check("typed answer does not corrupt slots pills already set", slotsBeforeTyped === slotsAfterTyped, "earlier pill-derived slots changed after a typed answer"));
+
+  // Immediate-submit "escape" pill (style's "No preference") -- a real answer (empty but SET,
+  // not left unanswered) rather than a dismissal; distinct from the "Something else" button.
+  r = await runTurn(state, pillPhrase("style", "style-none"));
+  state = r.state;
+  checks.push(check("style 'No preference' pill: style topic marked answered", state.askedTopics.includes("style"), JSON.stringify(state.askedTopics)));
+  checks.push(check("status=done (all topics resolved)", state.status === "done", state.status));
+
+  return checks;
+}
+
 async function main() {
   const golden = JSON.parse(fs.readFileSync(GOLDEN_PATH, "utf-8"));
   const caseIds: string[] = golden.cases.map((c: { id: string }) => c.id);
@@ -649,6 +727,7 @@ async function main() {
     "follow-up-gives-real-opinion": runFollowUpGivesOpinion,
     "follow-up-safety-interrupt-still-fires": runFollowUpSafetyInterrupt,
     "off-topic-smalltalk-acknowledged-and-redirected": runOffTopicSmalltalk,
+    "answer-pills-produce-expected-slots": runAnswerPillsProduceExpectedSlots,
   };
 
   let totalPass = 0;

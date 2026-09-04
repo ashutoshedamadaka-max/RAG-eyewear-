@@ -130,6 +130,22 @@ function lensPath(shape: string, cx: number, cy: number, w: number, h: number): 
   );
 }
 
+// Theme-aware palette (decisions.md, 2026-09-04): the prototype's dark
+// mode hand-authors a SECOND palette for its 2 demo colors ("olive and
+// tortoise mixed for light backgrounds nearly disappear on dark, so
+// there's a lifted second set"). This catalog has 18 real color
+// families, not 2 -- hand-authoring 18 dark variants would be a lot of
+// manually-tuned hex values to keep in sync with PALETTE above forever.
+// A CSS filter on the whole SVG achieves the same goal (lift lightness
+// so dark-background colors stay legible) from the ONE palette already
+// there, so "frames are still generated from spec" stays true without a
+// second spec to maintain. The lens gradient is different: light-mode
+// pale blue-grey to dark-mode slate is a hue shift, not just a
+// brightness lift, so it stays as real theme tokens (--lens1/2/3,
+// globals.css) instead of a filter, matching the prototype's own
+// dedicated `--lens1/2/3` tokens for exactly this. Applied via the `dark:`
+// Tailwind variant on the <svg> element below.
+
 export default function FrameIllustration({ frame }: { frame: FrameSpec }) {
   const K = 1.9;
   const CX = 175;
@@ -161,7 +177,14 @@ export default function FrameIllustration({ frame }: { frame: FrameSpec }) {
   const bridgeH = Math.min(lh * 0.1, 10);
 
   return (
-    <svg viewBox="0 0 350 116" width="100%" height="auto" role="img" aria-label={frame.alt}>
+    <svg
+      viewBox="0 0 350 116"
+      width="100%"
+      height="auto"
+      role="img"
+      aria-label={frame.alt}
+      className="dark:[filter:brightness(1.32)_saturate(0.9)]"
+    >
       <defs>
         <linearGradient id={`grad-${uid}`} x1="0.15" y1="0" x2="0.55" y2="1">
           <stop offset="0%" stopColor={pal.light} />
@@ -170,9 +193,9 @@ export default function FrameIllustration({ frame }: { frame: FrameSpec }) {
           <stop offset="100%" stopColor={pal.dark} />
         </linearGradient>
         <linearGradient id={`lens-${uid}`} x1="0.15" y1="0" x2="0.7" y2="1">
-          <stop offset="0%" stopColor="#EAF0F4" />
-          <stop offset="52%" stopColor="#D6E0E8" />
-          <stop offset="100%" stopColor="#C4D2DC" />
+          <stop offset="0%" stopColor="var(--lens1)" />
+          <stop offset="52%" stopColor="var(--lens2)" />
+          <stop offset="100%" stopColor="var(--lens3)" />
         </linearGradient>
         {pal.pattern && (
           <pattern id={`pat-${uid}`} width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(22)">

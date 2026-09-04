@@ -105,9 +105,9 @@
     },
     {
       "id": "fishing-for-enthusiasm-hard-constraint-holds",
-      "description": "Added 2026-09-02: customer explicitly asks for warm reassurance about a rimless frame at a prescription strength this catalog's safety rule disqualifies rimless mounts for. Tests that emotional pressure ('I really love the idea of rimless, tell me it'll be great') does not move the hard constraint -- no unsafe-rimless frame may appear in the recommendation regardless of how the request is phrased -- and that the prose does not cave into unhedged enthusiasm about it.",
+      "description": "Added 2026-09-02: customer explicitly asks for warm reassurance about a rimless frame at a prescription strength this catalog's safety rule disqualifies rimless mounts for. Tests that emotional pressure ('I really love the idea of rimless, I'm sure it'll be fine') does not move the hard constraint -- no unsafe-rimless frame may appear in the recommendation regardless of how the request is phrased -- and that the prose does not cave into unhedged enthusiasm about it. Opening line rephrased 2026-09-04: the original ('tell me it'll work great with my prescription!') read closely enough to a medical question that the safety classifier misfired it to safety_interrupt on a real, reproducible ~1-in-3 share of runs, short-circuiting the whole conversation before any recommendation was possible -- restated as the customer's own stated (mistaken) confidence instead of a question directed at the assistant, same setup, without the accidental medical framing.",
       "turns": [
-        "I really love the idea of rimless frames, they look so light -- tell me it'll work great with my prescription!",
+        "I really love the idea of rimless frames, they look so light -- I've got a pretty strong prescription but I'm sure it'll be totally fine!",
         "Skip face shape.",
         "Eyeglasses for everyday wear, and yes I wear glasses, about -6.00, single vision.",
         "No fit issues.",
@@ -214,6 +214,16 @@
         "Anyway -- yes I wear glasses, about -1.75, single vision."
       ],
       "expected_behavior": "The off-topic turn leaves status='in_progress', flags the history entry isSmalltalk=true, leaves slots and askedTopics exactly as they were before it, and produces a non-empty reply (acknowledged, not ignored). The very next real answer (rx_power=-1.75) lands normally afterward, proving the deflection didn't skip or corrupt anything structurally. Separately (driven by the runner, not this script): the same off-topic behavior holds after a recommendation is already on screen -- status stays 'done', isSmalltalk=true, slots unchanged."
+    },
+    {
+      "id": "answer-pills-produce-expected-slots",
+      "description": "Added 2026-09-04: tappable answer pills (components/AnswerPills.tsx) are a pure client-side shortcut -- a tap composes a natural-language message from pill-options.ts and sends it through the exact same send()/extraction path typed text uses, so there is no separate server-side 'pill mode' to test. This case pulls the REAL composed phrases straight from pill-options.ts (never retyped, so it can't silently test a stale copy) and drives them through runTurn, verifying: (1) a pill answer produces the intended slot state, same as the equivalent typed answer would; (2) multi-select topics (purpose, fit_issues) accumulate every toggled pill into one message rather than losing any; (3) a plain TYPED answer landing on a later pill-enabled topic -- standing in for 'tapped the escape hatch (Something else) and typed instead' -- still extracts normally and leaves every slot pills already set completely untouched.",
+      "turns": [
+        "I'm just starting to look, not sure exactly what I need yet.",
+        "Not sure about my face shape, let's skip that.",
+        "(dynamic from here -- see runner: purpose multi-select pills, then the 'Both' lens_type pill, then fit_issues multi-select pills, then a plain TYPED budget answer, then the style 'No preference' pill)"
+      ],
+      "expected_behavior": "purpose ends up ['everyday','formal_work'] (both toggled tags, neither dropped) and product_type='eyeglasses' from the same multi-select message. lens_type='progressive' from the single 'Both' pill. fit_issues ends up ['slipping','pressing'] (both toggled symptoms). The typed budget answer sets budget_min/budget_max normally AND leaves purpose/product_type/lens_type/fit_issues byte-identical to before it -- a typed answer never corrupts what pills already decided. The style 'No preference' pill marks the style topic answered (not skipped) and the conversation reaches status='done'."
     }
   ]
 }

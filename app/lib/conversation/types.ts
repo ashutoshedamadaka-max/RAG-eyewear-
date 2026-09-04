@@ -30,6 +30,33 @@ export type FaceShape = "oval" | "round" | "square" | "heart" | "rectangle" | "u
 export type StylePref = "minimal" | "bold" | "retro" | "professional" | "sporty" | "playful";
 export type SafetyFlag = "vision_symptom" | "medical_question" | "none";
 
+// Answer pills (decisions.md, 2026-09-04): the canonical value lists for
+// every fixed-enum slot, in one place with zero imports so both the
+// server-side extraction schema (extract-turn.ts) and the client-side
+// pill UI (components/pill-options.ts) import the SAME arrays -- neither
+// hardcodes a second list that could drift from the other. This file
+// already had the matching TS union types; these are their runtime
+// counterparts, one array per union, so the union can't silently gain a
+// member the array doesn't know about or vice versa (a caller can always
+// `as const satisfies T[]`-style check them against each other).
+export const PRODUCT_TYPES: ProductType[] = ["eyeglasses", "sunglasses", "reading", "computer", "sports"];
+/** No dedicated union type existed for this before -- purpose was always just `string[]`, since nothing enforced it. Added here as the enum this whole feature needed to exist as code, not just prose inside extract-turn.ts's system prompt. */
+export const PURPOSE_TAGS = [
+  "sports",
+  "outdoor",
+  "everyday",
+  "computer",
+  "driving_day",
+  "driving_night",
+  "formal_work",
+  "reading",
+  "dust_travel",
+] as const;
+export type PurposeTag = (typeof PURPOSE_TAGS)[number];
+export const FIT_ISSUES: FitIssue[] = ["slipping", "splaying", "pressing", "cheekbone_contact", "pinching", "marks", "heavy", "slides_sport"];
+export const LENS_TYPES: LensType[] = ["single", "progressive", "bifocal", "reading"];
+export const STYLE_PREFS: StylePref[] = ["minimal", "bold", "retro", "professional", "sporty", "playful"];
+
 /**
  * The STATED slot table (PROJECT_CONTEXT.md §3). Deliberately does NOT
  * include rim_type, material, lens index, or nose_pad_type -- those are

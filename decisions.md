@@ -4216,3 +4216,203 @@ stage names despite the page's own copy claiming they were "the same
 six" -- caught by grepping the rendered HTML for the exact panel
 strings, not by re-reading the source and assuming it matched. Fixed to
 match verbatim.
+
+---
+
+## 2026-09-04 · Tappable answer pills, a shortcut never a replacement
+
+Added pills alongside the text input for every ASK_ORDER topic with a
+genuinely closed answer set -- purpose, prescription's lens_type,
+fit_issues, budget (as bands), style. Deliberately NOT prescription
+power: that value drives a real hard constraint (the rimless edge-
+thickness check), and offering "-1.00 / -2.00 / -3.00" pills would push
+people toward the nearest button instead of their actual number -- free
+text stays the only path there, with "I don't know" as the single pill
+covering the genuine unknown case. Not on the opening turn either -- the
+greeting is a real open question, and pills would close off exactly the
+kind of answer it's designed to invite.
+
+**Architecture turned out simpler than expected.** A pill never talks to
+slots directly -- tapping one composes a natural-language message and
+calls the exact same `send()`/extraction path typed text already goes
+through, so "the transcript reads identically whether typed or tapped"
+was true by construction, not something to separately guarantee.
+`AnswerPills.tsx` handles two interaction modes per group: "immediate"
+(product-type-flavored single answers, budget bands, lens_type -- tap
+submits right away) and "toggle" (purpose, fit_issues, style_prefs --
+genuinely multi-valued slots, accumulate then hit Continue). Every pill
+turn gets a "Something else" escape hatch that dismisses the pills for
+that turn without submitting anything, routing back to free text.
+
+**"Derive the pill options from the same enums the extraction schema
+uses" surfaced a real gap while doing it, not just a style question.**
+`purpose` never actually had a JSON-schema `enum` -- the 9 valid tags
+only existed as prose inside `extract-turn.ts`'s system prompt, so
+nothing was really enforcing "do not invent a tag" at the API level, and
+there was no array to import for pills even if I'd wanted to skip this.
+Added `PRODUCT_TYPES`/`PURPOSE_TAGS`/`FIT_ISSUES`/`LENS_TYPES`/
+`STYLE_PREFS` to `lib/conversation/types.ts` (already a zero-import file,
+so safe to import directly into client code without the usual
+conversation-types.ts mirror) -- `extract-turn.ts`'s schema and
+`components/pill-options.ts`'s pill definitions both import the same
+arrays now, and `pill-options.ts` types each pill's `value` against the
+real union type (`Partial<Record<PurposeTag, ...>>`) so a renamed or
+removed enum member fails to compile here instead of silently drifting.
+
+**Verified against real extraction, not assumed from the composed
+strings.** Wrote every candidate phrase, ran each through `runTurn`
+directly via a throwaway script, and read back the actual resulting
+slots before trusting any of them. Caught one genuine ambiguity this
+way: combining the "Sports" purpose pill with the "Eyeglasses" product-
+type pill in one message resolved `product_type` to `"sports"`, not
+`"eyeglasses"` -- investigated rather than assumed a bug, and it isn't
+one: the two pills describe a genuinely contradictory combination (a
+customer wouldn't normally want both plain eyeglasses AND state
+sports purpose), and typing the identical sentence by hand hits the same
+resolution. Confirmed separately that "eyeglasses" alone, with no
+competing purpose tag, resolves cleanly. Every other phrase -- lens_type
+across all three pills, the "I don't know" prescription pill, both
+fit_issues symptoms together, all four budget bands, the style toggle
+and its "No preference" pill -- matched the intended slot exactly.
+
+New golden case, `answer-pills-produce-expected-slots`, pulls the real
+composed phrases straight from `pill-options.ts` (never retyped, so it
+can't silently test a stale copy) and asserts: a pill answer produces
+the same slot state as the equivalent typed answer; multi-select
+accumulates every toggled value, not just the last one; a plain typed
+answer landing on a later pill-enabled topic -- standing in for "tapped
+Something else, typed instead" -- extracts normally and leaves every
+slot pills already set completely untouched.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` clean. Live-verified every
+composed pill phrase against real `runTurn` calls before writing the
+golden case (see above). `npm run eval-conversation`, full 19-case
+suite: first run surfaced a failure in an UNRELATED pre-existing case
+(`fishing-for-enthusiasm-hard-constraint-holds`, "no recommendation
+returned") -- investigated with a dedicated debug script rather than
+assumed transient, and it reproduced on 1 of 3 runs: the case's opening
+line ("tell me it'll work great with my prescription!") reads closely
+enough to a medical question that `safety_flag` misfired to
+`medical_question`, short-circuiting the whole conversation into
+`safety_interrupt` before any recommendation was possible. Rephrased to
+state the customer's own (mistaken) confidence rather than ask the
+assistant to confirm something works for a condition -- same enthusiasm-
+despite-a-hard-constraint setup, confirmed clean on 4/4 re-runs after
+the fix. Full suite, clean: **85/85**.
+
+---
+
+## 2026-09-04 · Visual rebuild: one continuous light surface, against a supplied prototype
+
+A React prototype (`specs-light-dark.jsx`) supplied as a visual spec, not
+copied as code -- rebuilt against the live pipeline the same way every
+prior interface round has been. The core complaint the prototype was
+answering: the machinery panel read as a developer console (dark
+background, mono everywhere, syntax-highlighted SQL) when what's in it
+is evidence -- what was understood, which rule applied, what was found,
+what it cost -- not code. Styling it as a log undersold it and made it
+louder than the conversation, inverting the priority.
+
+**Theme system: CSS variables, not a `dark` prop threaded through every
+component.** `globals.css` defines the full light token set on `:root`
+and the dark set twice -- once under `@media (prefers-color-scheme:
+dark)` guarded by `:not([data-theme="light"])` (first-visit default,
+before any explicit choice), once under `:root[data-theme="dark"]`
+(after an explicit toggle, which always wins). Every component
+references tokens (`bg-[var(--shell)]`, `text-[var(--ink)]`, ...)
+instead of literal hex, so the whole app re-themes from one place.
+Tailwind v4's `dark:` variant is redefined via `@custom-variant dark
+(&:where([data-theme="dark"], [data-theme="dark"] *));` so `dark:`
+utility classes and the CSS variables can never disagree about which
+theme is active -- two independent theming mechanisms that happened to
+agree would have been a bug waiting to happen the first time someone
+used one without the other. `ThemeToggle.tsx` persists the choice to
+localStorage; a raw inline `<script>` in `layout.tsx`'s `<head>` (before
+hydration) applies a stored choice immediately, so there's no flash of
+the wrong theme while React boots.
+
+**FrameIllustration's dark mode is a CSS filter, not 18 hand-authored
+color pairs.** The prototype's own dark mode hand-tunes lifted values
+for its 2 demo colors ("olive and tortoise mixed for light backgrounds
+nearly disappear on dark"). This catalog has 18 real color families --
+hand-authoring 18 dark variants would be a second palette to keep in
+sync with the first forever. A `dark:[filter:brightness(1.32)_saturate(0.9)]`
+on the whole SVG lifts all 18 at once from the ONE palette that already
+exists, so "frames are still generated from spec" stays true without a
+second spec. The lens gradient is different in kind -- pale blue-grey to
+dark slate is a hue shift, not just a brightness lift -- so it stays as
+real theme tokens (`--lens1/2/3`) instead of a filter, matching the
+prototype's own dedicated tokens for exactly that gradient.
+
+**Machinery panel: mono only for genuine code or identifiers.** The
+prototype's own rule, applied literally: the SQL query text, slot keys,
+and advice source filenames stay `font-mono`; every value, rule
+sentence, timing, cost figure, and tag became the same sans as the rest
+of the page. The previous round's connected-circle timeline is gone,
+replaced by independent rounded cards (`--block` surfaces on the panel's
+`--sunk` background) -- the prototype dropped the timeline entirely in
+favor of real padding and spacing per stage. `StageWrap`'s `pending`
+prop (the live panel's in-flight stage) is now an accent-colored ring
+and a pulsing badge on its own card rather than a dashed connector, same
+distinction, no timeline to hang it off of. The outer sticky/recessed
+wrapper moved OUT of `MachineryPanel.tsx`/`LiveMachineryPanel` and into
+`ConversationDemo.tsx`'s panel column, which now also owns the "How this
+is built" title and turn stepper -- one sunk surface holding all three,
+not a panel-inside-a-panel.
+
+**Layout: the app as an object, not edge-to-edge.** Root `layout.tsx`
+now renders a `max-w-[1240px]` rounded (18px), shadowed shell centered
+on a tinted `--field` page background, with `Header` (the prototype's
+`.bar`, now including `ThemeToggle`) inside it, shared by all four
+routes. The previous round's fixed-viewport dual-scroll-region shell
+(`h-full` + `overflow-hidden` on `<body>`, two independent
+`overflow-y-auto` columns) is gone -- the supplied prototype's machinery
+panel uses plain `position: sticky` with its own bounded
+`overflow-y: auto` instead, which needs a normally-scrolling page
+underneath it, not a second competing scroll container. Simpler than
+what it replaced. Grid: `1.3fr` chat / `1fr` panel above 1061px
+(matching the prototype's own breakpoint, not the previous round's
+1080px), stacking below it.
+
+**Starter pills are a different feature from answer pills, not a
+contradiction of "not on the opening turn."** `STARTER_PROMPTS` ("Glasses
+for office work," "Sunglasses for driving," "Reading glasses," "Not sure
+yet") answer PROJECT_CONTEXT.md §7's original, never-implemented demo-
+scope line ("seed the landing state with 3-4 clickable example queries"),
+resurfaced by the supplied prototype. A tap sends the label as plain
+text through the same extraction path typing would -- there's no
+TOPIC_PILLS entry for the greeting and there still isn't one; these are
+open-ended example prompts for a free-text question, not a closed-enum
+answer, which is exactly why the earlier "not on the opening turn" rule
+for answer pills doesn't apply to them.
+
+**Not done this round, disclosed rather than left implicit:** `/evals`,
+`/how-it-works`, and `/baseline` had their outer wrapper backgrounds
+fixed to stop competing with the new shell (a hardcoded `bg-[#F6F8F7]`
+would otherwise sit as a flat box inside the shell's own `--shell`
+surface), and `/baseline`'s EXISTING `dark:` Tailwind classes now
+automatically follow the site-wide toggle for free (a side effect of
+redefining the `dark:` variant globally) -- but none of the three got a
+full pass converting their own hardcoded hex content to theme tokens.
+In light mode this is invisible (the old hardcoded palette closely
+matches the new light theme's defaults). In dark mode, `/evals` and
+`/how-it-works` will still render their own content in light colors
+while sitting inside a dark-styled shell -- a real, known mismatch, not
+fixed this round because the request's scope was the demo page
+specifically.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` clean throughout, checked after
+each file (the theme system, then each restyled component, then the
+`ConversationDemo.tsx` rewrite). Live-verified against the running dev
+server: the Tailwind v4 `@custom-variant` syntax compiles without error
+(the highest-risk, least-precedented part of this round) and the
+init script/shell classes are present in the rendered HTML; the
+pre-start screen (before any turn exists, so before hydration-dependent
+state can be checked further without a browser tool) renders correctly
+themed. `npm run eval-conversation`, full 19-case suite, unaffected by a
+purely visual round as expected: **85/85**, including the pill case and
+the fishing-for-enthusiasm fix from the round just before this one.

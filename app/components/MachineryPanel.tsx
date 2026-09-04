@@ -8,10 +8,21 @@ interface Props {
   cumulativeSlots: Slots;
 }
 
+// Visual rebuild (decisions.md, 2026-09-04), against a supplied prototype
+// (specs-light-dark.jsx) treated as a visual spec, not copied as code:
+// what's in this panel is evidence -- what was understood, which rule
+// applied, what was found, what it cost -- not code, and styling it like
+// a dark terminal log undersold that. Every color below is a CSS custom
+// property (globals.css, light+dark tokens), never a literal hex, so the
+// whole panel re-themes with the rest of the app. Mono is now used ONLY
+// where something genuinely is code or an identifier -- the SQL query,
+// slot keys, advice source filenames -- per the explicit rule this round
+// was built against; everything else (values, rule sentences, timings,
+// costs, tags) is the same sans as the rest of the page.
 export function sourceColor(source: string): string {
-  if (source === "assumed") return "#E8CF9B";
-  if (source === "derived") return "#9FC8E0";
-  return "#9FE0C0"; // stated
+  if (source === "assumed") return "var(--warn)";
+  if (source === "derived") return "var(--acc)";
+  return "var(--ok)"; // stated
 }
 
 export function fmtSlotValue(v: unknown): string {
@@ -65,33 +76,71 @@ const RULE_SHORT_LABELS: Record<string, string> = {
   long_face_lens_height: "face length",
 };
 
-/** `pending` (live panel only, decisions.md 2026-09-02): the stage that's actually in flight right now -- a dashed, pulsing ring instead of the solid completed-stage circle, so "still working on this" reads as visibly different from "done." */
-export function StageWrap({ n, name, headline, children, isLast, pending }: { n: number; total: number; name: string; headline: string; children: React.ReactNode; isLast: boolean; pending?: boolean }) {
+/**
+ * One stage, one card (decisions.md, 2026-09-04) -- the prototype dropped
+ * the previous round's connected-circle timeline entirely in favor of
+ * independent rounded blocks with real padding, each a `--block` surface
+ * sitting on the panel's `--sunk` background (the same elevation
+ * relationship stage cards use elsewhere in the app: raised surface on a
+ * recessed one). `pending` (live panel only) marks the one stage actually
+ * in flight right now -- an accent-colored ring and a pulsing badge
+ * instead of the neutral completed-stage badge, so "still working on
+ * this" reads as visibly different from "done" without needing a
+ * timeline connector to imply sequence.
+ */
+export function StageWrap({
+  n,
+  name,
+  headline,
+  children,
+  pending,
+}: {
+  n: number;
+  total: number;
+  name: string;
+  headline: string;
+  children: React.ReactNode;
+  isLast: boolean;
+  pending?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-[26px_1fr] gap-3.5">
-      <div className="flex flex-col items-center">
+    <div
+      className="rounded-[11px] bg-[var(--block)] border px-[15px] py-[13px] mb-2"
+      style={{ borderColor: pending ? "var(--acc)" : "var(--line2)" }}
+    >
+      <div className="flex items-baseline gap-2.5 mb-2.5">
         <div
-          className={`w-[22px] h-[22px] rounded-full flex-none border text-[11px] leading-[20px] text-center tabular-nums ${
-            pending ? "border-dashed border-[#4E7F6B] bg-[#131E1B] text-[#9FE0C0] animate-pulse" : "border-[#26332E] bg-[#131E1B] text-[#C4D2CB]"
+          className={`w-[19px] h-[19px] rounded-full flex-none text-[10.5px] font-semibold leading-[19px] text-center tabular-nums bg-[var(--acc-lt)] text-[var(--acc)] ${
+            pending ? "animate-pulse" : ""
           }`}
         >
           {n}
         </div>
-        {!isLast && <div className="w-px flex-1 bg-[#26332E] mt-1" />}
+        <div className="text-[13px] font-semibold text-[var(--ink)] flex-1">{name}</div>
+        <div className="text-[11.5px] text-[var(--ink3)] tabular-nums whitespace-nowrap">{headline}</div>
       </div>
-      <div className={isLast ? "pb-0" : "pb-6"}>
-        <div className="flex justify-between gap-3 items-baseline flex-wrap mb-2.5">
-          <div className="text-[14px] font-medium text-[#C4D2CB]">{name}</div>
-          <div className={`text-[12px] font-mono tabular-nums ${pending ? "text-[#9FE0C0]" : "text-[#7B9089]"}`}>{headline}</div>
-        </div>
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
 
 export function Note({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] leading-relaxed text-[#7B9089] mb-3 max-w-[72ch]">{children}</p>;
+  return <p className="text-[11.5px] leading-relaxed text-[var(--ink3)] mb-2.5 -mt-0.5">{children}</p>;
+}
+
+/** A key/value row -- the ONLY place a name is mono (a slot key is a real identifier); the value beside it is plain sans, per this round's mono-only-for-code rule. */
+function KVRow({ k, v, tag }: { k: string; v: string; tag?: { label: string; color: string } }) {
+  return (
+    <div className="grid grid-cols-[minmax(78px,auto)_1fr_auto] gap-2.5 py-1 border-t border-[var(--line2)] first:border-t-0 items-baseline">
+      <span className="font-mono text-[11px] text-[var(--ink3)]">{k}</span>
+      <span className="text-[13px] text-[var(--ink)] tabular-nums">{v}</span>
+      {tag && (
+        <span className="text-[10px] font-medium" style={{ color: tag.color }}>
+          {tag.label}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
@@ -122,13 +171,9 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     headline: `${slotEntries.length} field${slotEntries.length === 1 ? "" : "s"}${assumedCount > 0 ? ` · ${assumedCount} assumed` : ""}`,
     render: () => (
       <div>
-        {slotEntries.length === 0 && <div className="text-[12.5px] text-[#7B9089] font-mono">nothing known yet</div>}
+        {slotEntries.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">nothing known yet</div>}
         {slotEntries.map(([key, slot]) => (
-          <div key={key} className="flex gap-3 items-baseline py-0.5">
-            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[110px]">{key}</span>
-            <span className="font-mono text-[12.5px] text-[#C4D2CB] flex-1 tabular-nums">{fmtSlotValue(slot.value)}</span>
-            <span className="text-[10.5px] font-medium" style={{ color: sourceColor(slot.source) }}>{slot.source}</span>
-          </div>
+          <KVRow key={key} k={key} v={fmtSlotValue(slot.value)} tag={{ label: slot.source, color: sourceColor(slot.source) }} />
         ))}
       </div>
     ),
@@ -140,20 +185,22 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     headline: `${rulesFired.size} of ${entry.fittingRulesTotalCount} fired`,
     render: () => (
       <div>
-        {entry.derivedFacts.length === 0 && <div className="text-[12.5px] text-[#5E7269] font-mono">none fired this turn</div>}
+        {entry.derivedFacts.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">none fired this turn</div>}
         {groupFactsForDisplay(entry.derivedFacts).map((g, i) => (
-          <div key={i} className="py-1 border-t border-[#26332E] first:border-t-0">
-            <div className="font-mono text-[12.5px] leading-relaxed text-[#C4D2CB]">
+          <div key={i} className="py-1.5 border-t border-[var(--line2)] first:border-t-0">
+            <p className="text-[13px] leading-relaxed text-[var(--ink)] m-0">
               {g.count > 1
                 ? `${RULE_SHORT_LABELS[g.ruleId ?? ""] ?? g.explanation} → soft ranking nudge, ${g.count} candidates boosted`
                 : g.explanation}
-            </div>
-            {g.source && <div className="font-mono text-[11px] text-[#7B9089] mt-0.5">{g.source}</div>}
+            </p>
+            {g.source && <div className="font-mono text-[10.5px] text-[var(--ink3)] mt-1">{g.source}</div>}
           </div>
         ))}
         {entry.assumptions.map((a, i) => (
-          <div key={`a${i}`} className="py-1 border-t border-[#26332E]">
-            <div className="font-mono text-[12.5px] leading-relaxed text-[#E8CF9B]">{a.explanation}</div>
+          <div key={`a${i}`} className="py-1.5 border-t border-[var(--line2)]">
+            <p className="text-[13px] leading-relaxed m-0" style={{ color: "var(--warn)" }}>
+              {a.explanation}
+            </p>
           </div>
         ))}
       </div>
@@ -167,22 +214,26 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
       headline: `${rec.sqlMatchCount} of ${rec.catalogTotalCount} frames matched`,
       render: () => (
         <>
-          <pre className="font-mono text-[12px] leading-relaxed text-[#B9D4C6] bg-[#080F0D] px-3.5 py-3 rounded border-l-2 border-[#14493E] overflow-x-auto m-0">
+          <pre className="font-mono text-[11.5px] leading-relaxed text-[var(--ink2)] bg-[var(--sunk)] px-3.5 py-3 rounded-[8px] border-l-2 border-[var(--acc)] overflow-x-auto m-0">
             {rec.sql}
           </pre>
           {rec.relaxed && (
-            <div className="mt-2.5 text-[12px] text-[#E8CF9B]">
+            <div className="mt-2.5 text-[12.5px] leading-relaxed" style={{ color: "var(--warn)" }}>
               Exact match failed — relaxation ladder engaged.
               {rec.relaxedDetails && rec.relaxedDetails.length > 0 && (
                 <ul className="list-disc list-inside mt-1">
                   {rec.relaxedDetails.map((d, i) => (
-                    <li key={i} className="font-mono text-[11.5px]">dropped <code>{d.droppedClause}</code> → {d.frame_id}</li>
+                    <li key={i} className="text-[12.5px]">
+                      dropped <code className="font-mono text-[11.5px]">{d.droppedClause}</code> → {d.frame_id}
+                    </li>
                   ))}
                 </ul>
               )}
               {rec.neverRelaxBlocked && rec.neverRelaxBlocked.length > 0 && (
-                <div className="mt-1.5 text-[11.5px] text-[#7B9089]">
-                  Never-relax constraint{rec.neverRelaxBlocked.length > 1 ? "s" : ""} blocked a would-be match and {rec.neverRelaxBlocked.length > 1 ? "were" : "was"} correctly NOT offered: {rec.neverRelaxBlocked.map((b) => b.describe).join("; ")}
+                <div className="mt-1.5 text-[11.5px] text-[var(--ink3)]">
+                  Never-relax constraint{rec.neverRelaxBlocked.length > 1 ? "s" : ""} blocked a would-be match and{" "}
+                  {rec.neverRelaxBlocked.length > 1 ? "were" : "was"} correctly NOT offered:{" "}
+                  {rec.neverRelaxBlocked.map((b) => b.describe).join("; ")}
                 </div>
               )}
             </div>
@@ -198,32 +249,38 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
       render: () => (
         <>
           <Note>
-            Guidance is tagged by how certain it is. <b className="text-[#C4D2CB] font-medium">Physical</b> means a
-            measurable fact from manufacturer documentation, stated plainly. <b className="text-[#C4D2CB] font-medium">Convention</b> means
+            Guidance is tagged by how certain it is. <b className="text-[var(--ink)] font-medium">Physical</b> means a
+            measurable fact from manufacturer documentation, stated plainly. <b className="text-[var(--ink)] font-medium">Convention</b> means
             style guidance — true by custom, not by measurement — so the answer hedges it rather than stating it as fact.
-            The score is how closely each passage matches the question; anything under <b className="text-[#C4D2CB] font-medium">0.25</b> is
+            The score is how closely each passage matches the question; anything under <b className="text-[var(--ink)] font-medium">0.25</b> is
             too loosely related to trust, and is dropped before the model ever sees it.
           </Note>
           {advicedHitsWithCited.map((h, i) => (
-            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[#26332E]">
+            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)]">
               <div>
-                <div className="font-mono text-[12.5px] text-[#C4D2CB]">[A{i + 1}] {h.doc_id} — {h.section_heading}</div>
-                <div className="text-[10.5px] font-medium mt-0.5" style={{ color: h.cited ? "#9FE0C0" : "#7B9089" }}>
+                <div className="font-mono text-[11px] text-[var(--ink2)] break-words">
+                  [A{i + 1}] {h.doc_id} — {h.section_heading}
+                </div>
+                <div className="text-[10px] font-medium mt-0.5" style={{ color: h.cited ? "var(--ok)" : "var(--ink3)" }}>
                   {h.cited ? "cited" : "retrieved, not cited"}
                 </div>
               </div>
-              <span className="text-[10.5px] font-medium" style={{ color: h.claim_type === "convention" ? "#9FE0C0" : "#9FC8E0" }}>{h.claim_type}</span>
-              <span className="font-mono text-[12.5px] text-[#7B9089] text-right tabular-nums">{h.score.toFixed(3)}</span>
+              <span className="text-[10px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink3)" }}>
+                {h.claim_type}
+              </span>
+              <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
             </div>
           ))}
           {(rec.adviceNearMisses ?? []).map((h) => (
-            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[#26332E] opacity-60">
+            <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
               <div>
-                <div className="font-mono text-[12.5px] text-[#5E7269]">{h.doc_id} — {h.section_heading}</div>
-                <div className="text-[10.5px] font-medium mt-0.5 text-[#5E7269]">below 0.25 floor</div>
+                <div className="font-mono text-[11px] text-[var(--ink3)] break-words">
+                  {h.doc_id} — {h.section_heading}
+                </div>
+                <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
               </div>
-              <span className="text-[10.5px] font-medium text-[#5E7269]">{h.claim_type}</span>
-              <span className="font-mono text-[12.5px] text-[#5E7269] text-right tabular-nums">{h.score.toFixed(3)}</span>
+              <span className="text-[10px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
+              <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
             </div>
           ))}
         </>
@@ -248,51 +305,51 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
             {" "}{entry.modelCalls.map((c) => c.label.toLowerCase()).join(", ")}. Everything else is database work, which is why it barely registers.
           </Note>
         )}
-        <div className="flex gap-0.5 mb-3">
+        <div className="flex gap-0.5 mb-2.5">
           {entry.modelCalls.map((c, i) => (
-            <div key={i} title={`${c.label} — ${c.ms}ms`} className="h-[7px] rounded-sm" style={{ flexGrow: c.ms, background: "#4E7F6B" }} />
+            <div key={i} title={`${c.label} — ${c.ms}ms`} className="h-[6px] rounded-sm" style={{ flexGrow: c.ms, background: "var(--acc)" }} />
           ))}
           {entry.timingsMs.sqlQuery !== undefined && (
-            <div title={`SQL — ${entry.timingsMs.sqlQuery}ms`} className="h-[7px] rounded-sm bg-[#26332E]" style={{ flexGrow: Math.max(entry.timingsMs.sqlQuery, 1) }} />
+            <div title={`SQL — ${entry.timingsMs.sqlQuery}ms`} className="h-[6px] rounded-sm bg-[var(--line)]" style={{ flexGrow: Math.max(entry.timingsMs.sqlQuery, 1) }} />
           )}
           {entry.timingsMs.adviceSearch !== undefined && (
-            <div title={`Similarity search — ${entry.timingsMs.adviceSearch}ms`} className="h-[7px] rounded-sm bg-[#26332E]" style={{ flexGrow: Math.max(entry.timingsMs.adviceSearch, 1) }} />
+            <div title={`Similarity search — ${entry.timingsMs.adviceSearch}ms`} className="h-[6px] rounded-sm bg-[var(--line)]" style={{ flexGrow: Math.max(entry.timingsMs.adviceSearch, 1) }} />
           )}
           {entry.timingsMs.relaxationSearch !== undefined && (
-            <div title={`Relaxation search — ${entry.timingsMs.relaxationSearch}ms`} className="h-[7px] rounded-sm bg-[#26332E]" style={{ flexGrow: Math.max(entry.timingsMs.relaxationSearch, 1) }} />
+            <div title={`Relaxation search — ${entry.timingsMs.relaxationSearch}ms`} className="h-[6px] rounded-sm bg-[var(--line)]" style={{ flexGrow: Math.max(entry.timingsMs.relaxationSearch, 1) }} />
           )}
         </div>
         {entry.modelCalls.map((c, i) => (
-          <div key={i} className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
-            <span className="text-[12.5px] text-[#C4D2CB] flex-1">{c.label}</span>
-            <span className="text-[10.5px] font-medium text-[#9FE0C0]">model call</span>
-            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{c.ms} ms</span>
+          <div key={i} className="flex gap-2.5 items-baseline py-1 border-t border-[var(--line2)]">
+            <span className="text-[13px] text-[var(--ink)] flex-1">{c.label}</span>
+            <span className="text-[10px] font-medium text-[var(--acc)]">model call</span>
+            <span className="text-[12px] text-[var(--ink3)] min-w-[48px] text-right tabular-nums">{c.ms} ms</span>
           </div>
         ))}
         {entry.timingsMs.sqlQuery !== undefined && (
-          <div className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
-            <span className="text-[12.5px] text-[#C4D2CB] flex-1">Searching the catalogue</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089]">SQL</span>
-            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{entry.timingsMs.sqlQuery} ms</span>
+          <div className="flex gap-2.5 items-baseline py-1 border-t border-[var(--line2)]">
+            <span className="text-[13px] text-[var(--ink)] flex-1">Searching the catalogue</span>
+            <span className="text-[10px] font-medium text-[var(--ink3)]">SQL</span>
+            <span className="text-[12px] text-[var(--ink3)] min-w-[48px] text-right tabular-nums">{entry.timingsMs.sqlQuery} ms</span>
           </div>
         )}
         {entry.timingsMs.adviceSearch !== undefined && (
-          <div className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
-            <span className="text-[12.5px] text-[#C4D2CB] flex-1">Finding matching guidance</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089]">similarity search</span>
-            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{entry.timingsMs.adviceSearch} ms</span>
+          <div className="flex gap-2.5 items-baseline py-1 border-t border-[var(--line2)]">
+            <span className="text-[13px] text-[var(--ink)] flex-1">Finding matching guidance</span>
+            <span className="text-[10px] font-medium text-[var(--ink3)]">similarity search</span>
+            <span className="text-[12px] text-[var(--ink3)] min-w-[48px] text-right tabular-nums">{entry.timingsMs.adviceSearch} ms</span>
           </div>
         )}
         {entry.timingsMs.relaxationSearch !== undefined && (
-          <div className="flex gap-3 items-baseline py-1 border-t border-[#26332E]">
-            <span className="text-[12.5px] text-[#C4D2CB] flex-1">Searching for the nearest alternative</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089]">relaxation ladder</span>
-            <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[52px] text-right tabular-nums">{entry.timingsMs.relaxationSearch} ms</span>
+          <div className="flex gap-2.5 items-baseline py-1 border-t border-[var(--line2)]">
+            <span className="text-[13px] text-[var(--ink)] flex-1">Searching for the nearest alternative</span>
+            <span className="text-[10px] font-medium text-[var(--ink3)]">relaxation ladder</span>
+            <span className="text-[12px] text-[var(--ink3)] min-w-[48px] text-right tabular-nums">{entry.timingsMs.relaxationSearch} ms</span>
           </div>
         )}
-        <div className="flex gap-3 pt-2 mt-1 border-t border-[#26332E]">
-          <span className="text-[12.5px] font-medium text-[#C4D2CB] flex-1">Total</span>
-          <span className="font-mono text-[12.5px] font-medium text-[#C4D2CB] tabular-nums">{totalMs} ms</span>
+        <div className="flex gap-2.5 pt-2 mt-1 border-t border-[var(--line)]">
+          <span className="text-[13px] font-semibold text-[var(--ink)] flex-1">Total</span>
+          <span className="text-[13px] font-semibold text-[var(--ink)] tabular-nums">{totalMs} ms</span>
         </div>
       </>
     ),
@@ -302,33 +359,31 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     stages.push({
       key: "cost",
       name: "What it cost",
-      headline: `~₹${totalCostInr.toFixed(2)} est.`,
+      headline: `~₹${totalCostInr.toFixed(2)}`,
       render: () => (
         <>
           {/* Token counts get the visual weight here -- they're the real, verifiable number
               (read directly off each API response). The ₹ total is one arithmetic step removed
-              from that, at a rate this project can't verify, so it's deliberately smaller and
-              carries its caveat inline rather than in a footnote a reader could miss. */}
-          <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-1.5 border-b border-[#26332E]">
-            <span className="text-[10.5px] font-medium text-[#7B9089]">Model call</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[70px] text-right">Tokens in</span>
-            <span className="text-[10.5px] font-medium text-[#7B9089] min-w-[70px] text-right">Tokens out</span>
+              from that, at a rate this project can't verify, so "estimated" sits right beside
+              the figure rather than in a long inline caveat a reader could miss or skim past. */}
+          <div className="grid grid-cols-[1fr_auto_auto] gap-3.5 pb-1.5 border-b border-[var(--line2)]">
+            <span className="text-[10px] font-medium text-[var(--ink3)]">Model call</span>
+            <span className="text-[10px] font-medium text-[var(--ink3)] min-w-[64px] text-right">Tokens in</span>
+            <span className="text-[10px] font-medium text-[var(--ink3)] min-w-[64px] text-right">Tokens out</span>
           </div>
           {entry.modelCalls.map((c, i) => (
-            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-4 py-2 border-b border-[#26332E] items-baseline">
-              <span className="text-[13px] text-[#C4D2CB]">{c.label}</span>
-              <span className="font-mono text-[15px] font-medium text-[#E4EEE8] min-w-[70px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
-              <span className="font-mono text-[15px] font-medium text-[#E4EEE8] min-w-[70px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
+            <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-3.5 py-2 border-b border-[var(--line2)] items-baseline">
+              <span className="text-[13px] text-[var(--ink)]">{c.label}</span>
+              <span className="text-[14px] font-medium text-[var(--ink)] min-w-[64px] text-right tabular-nums">{c.promptTokens.toLocaleString()}</span>
+              <span className="text-[14px] font-medium text-[var(--ink)] min-w-[64px] text-right tabular-nums">{c.completionTokens.toLocaleString()}</span>
             </div>
           ))}
           <div className="flex gap-2.5 items-baseline pt-2.5 flex-wrap">
-            <span className="text-[12px] text-[#7B9089] flex-1">Cost of this recommendation</span>
-            <span className="font-mono text-[12.5px] text-[#9FE0C0] tabular-nums">~₹{totalCostInr.toFixed(2)}</span>
-            <span className="text-[10.5px] font-medium text-[#E8CF9B] bg-[#26332E] px-1.5 py-0.5 rounded whitespace-nowrap">
-              estimated
-            </span>
+            <span className="text-[12px] text-[var(--ink3)] flex-1">Cost of this recommendation</span>
+            <span className="text-[13px] font-semibold text-[var(--ink)] tabular-nums">~₹{totalCostInr.toFixed(2)}</span>
+            <span className="text-[10.5px] text-[var(--ink3)]">estimated</span>
           </div>
-          <p className="text-[11px] leading-relaxed text-[#5E7269] mt-2 max-w-[72ch]">
+          <p className="text-[11px] leading-relaxed text-[var(--ink3)] mt-2">
             The token counts above are exact, read directly off each API response. The embedding
             call&apos;s rate is OpenAI&apos;s real published price; the chat model&apos;s rate has
             no public list to cite, so the ₹ total is a labelled estimate, not a verified cost.
@@ -339,14 +394,10 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
   }
 
   return (
-    <div className="bg-[#0E1614] rounded-md px-5 pt-5 pb-5 mt-1.5">
-      <div className="flex justify-between gap-3 items-baseline flex-wrap pb-3.5 mb-4 border-b border-[#26332E]">
-        <div className="text-[13px] font-medium text-[#C4D2CB]">
-          {stages.length} stage{stages.length === 1 ? "" : "s"} ran this turn
-        </div>
-        <div className="text-[12px] font-mono text-[#7B9089]">
-          {rec ? "catalogue → SQL · advice → retrieval" : "no query compiled yet"}
-        </div>
+    <div>
+      <div className="text-[12px] text-[var(--ink3)] mb-2.5">
+        {stages.length} stage{stages.length === 1 ? "" : "s"} ran this turn. Only {chatCallCount + embeddingCallCount} of them{" "}
+        {chatCallCount + embeddingCallCount === 1 ? "calls" : "call"} a model.
       </div>
       {stages.map((s, i) => (
         <StageWrap key={s.key} n={i + 1} total={stages.length} name={s.name} headline={s.headline} isLast={i === stages.length - 1}>
@@ -361,13 +412,9 @@ function renderLiveSlots(data: LiveSlotsStage["data"]) {
   const entries = Object.entries(data.cumulativeSlots).filter(([, v]) => v !== undefined) as [string, SlotValue<unknown>][];
   return (
     <div>
-      {entries.length === 0 && <div className="text-[12.5px] text-[#7B9089] font-mono">nothing known yet</div>}
+      {entries.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">nothing known yet</div>}
       {entries.map(([key, slot]) => (
-        <div key={key} className="flex gap-3 items-baseline py-0.5">
-          <span className="font-mono text-[12.5px] text-[#7B9089] min-w-[110px]">{key}</span>
-          <span className="font-mono text-[12.5px] text-[#C4D2CB] flex-1 tabular-nums">{fmtSlotValue(slot.value)}</span>
-          <span className="text-[10.5px] font-medium" style={{ color: sourceColor(slot.source) }}>{slot.source}</span>
-        </div>
+        <KVRow key={key} k={key} v={fmtSlotValue(slot.value)} tag={{ label: slot.source, color: sourceColor(slot.source) }} />
       ))}
     </div>
   );
@@ -376,20 +423,22 @@ function renderLiveSlots(data: LiveSlotsStage["data"]) {
 function renderLiveRules(data: LiveRulesStage["data"]) {
   return (
     <div>
-      {data.derivedFacts.length === 0 && <div className="text-[12.5px] text-[#5E7269] font-mono">none fired this turn</div>}
+      {data.derivedFacts.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">none fired this turn</div>}
       {groupFactsForDisplay(data.derivedFacts).map((g, i) => (
-        <div key={i} className="py-1 border-t border-[#26332E] first:border-t-0">
-          <div className="font-mono text-[12.5px] leading-relaxed text-[#C4D2CB]">
+        <div key={i} className="py-1.5 border-t border-[var(--line2)] first:border-t-0">
+          <p className="text-[13px] leading-relaxed text-[var(--ink)] m-0">
             {g.count > 1
               ? `${RULE_SHORT_LABELS[g.ruleId ?? ""] ?? g.explanation} → soft ranking nudge, ${g.count} candidates boosted`
               : g.explanation}
-          </div>
-          {g.source && <div className="font-mono text-[11px] text-[#7B9089] mt-0.5">{g.source}</div>}
+          </p>
+          {g.source && <div className="font-mono text-[10.5px] text-[var(--ink3)] mt-1">{g.source}</div>}
         </div>
       ))}
       {data.assumptions.map((a, i) => (
-        <div key={`a${i}`} className="py-1 border-t border-[#26332E]">
-          <div className="font-mono text-[12.5px] leading-relaxed text-[#E8CF9B]">{a.explanation}</div>
+        <div key={`a${i}`} className="py-1.5 border-t border-[var(--line2)]">
+          <p className="text-[13px] leading-relaxed m-0" style={{ color: "var(--warn)" }}>
+            {a.explanation}
+          </p>
         </div>
       ))}
     </div>
@@ -399,21 +448,23 @@ function renderLiveRules(data: LiveRulesStage["data"]) {
 function renderLiveSql(data: LiveSqlStage["data"]) {
   return (
     <>
-      <pre className="font-mono text-[12px] leading-relaxed text-[#B9D4C6] bg-[#080F0D] px-3.5 py-3 rounded border-l-2 border-[#14493E] overflow-x-auto m-0">
+      <pre className="font-mono text-[11.5px] leading-relaxed text-[var(--ink2)] bg-[var(--sunk)] px-3.5 py-3 rounded-[8px] border-l-2 border-[var(--acc)] overflow-x-auto m-0">
         {data.sql}
       </pre>
       {data.relaxed && (
-        <div className="mt-2.5 text-[12px] text-[#E8CF9B]">
+        <div className="mt-2.5 text-[12.5px] leading-relaxed" style={{ color: "var(--warn)" }}>
           Exact match failed — relaxation ladder engaged.
           {data.relaxedDetails && data.relaxedDetails.length > 0 && (
             <ul className="list-disc list-inside mt-1">
               {data.relaxedDetails.map((d, i) => (
-                <li key={i} className="font-mono text-[11.5px]">dropped <code>{d.droppedClause}</code> → {d.frame_id}</li>
+                <li key={i} className="text-[12.5px]">
+                  dropped <code className="font-mono text-[11.5px]">{d.droppedClause}</code> → {d.frame_id}
+                </li>
               ))}
             </ul>
           )}
           {data.neverRelaxBlocked && data.neverRelaxBlocked.length > 0 && (
-            <div className="mt-1.5 text-[11.5px] text-[#7B9089]">
+            <div className="mt-1.5 text-[11.5px] text-[var(--ink3)]">
               Never-relax constraint{data.neverRelaxBlocked.length > 1 ? "s" : ""} blocked a would-be match and{" "}
               {data.neverRelaxBlocked.length > 1 ? "were" : "was"} correctly NOT offered: {data.neverRelaxBlocked.map((b) => b.describe).join("; ")}
             </div>
@@ -428,31 +479,37 @@ function renderLiveRetrieval(data: LiveRetrievalStage["data"]) {
   return (
     <>
       <Note>
-        Guidance is tagged by how certain it is. <b className="text-[#C4D2CB] font-medium">Physical</b> means a
-        measurable fact from manufacturer documentation, stated plainly. <b className="text-[#C4D2CB] font-medium">Convention</b> means
+        Guidance is tagged by how certain it is. <b className="text-[var(--ink)] font-medium">Physical</b> means a
+        measurable fact from manufacturer documentation, stated plainly. <b className="text-[var(--ink)] font-medium">Convention</b> means
         style guidance — true by custom, not by measurement — so the answer hedges it rather than stating it as fact.
-        The score is how closely each passage matches the question; anything under <b className="text-[#C4D2CB] font-medium">0.25</b> is
+        The score is how closely each passage matches the question; anything under <b className="text-[var(--ink)] font-medium">0.25</b> is
         too loosely related to trust, and is dropped before the model ever sees it. Which of these end up actually
         cited will show once the reply is written.
       </Note>
       {data.adviceHits.map((h, i) => (
-        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[#26332E]">
+        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)]">
           <div>
-            <div className="font-mono text-[12.5px] text-[#C4D2CB]">[A{i + 1}] {h.doc_id} — {h.section_heading}</div>
-            <div className="text-[10.5px] font-medium mt-0.5 text-[#7B9089]">retrieved</div>
+            <div className="font-mono text-[11px] text-[var(--ink2)] break-words">
+              [A{i + 1}] {h.doc_id} — {h.section_heading}
+            </div>
+            <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">retrieved</div>
           </div>
-          <span className="text-[10.5px] font-medium" style={{ color: h.claim_type === "convention" ? "#9FE0C0" : "#9FC8E0" }}>{h.claim_type}</span>
-          <span className="font-mono text-[12.5px] text-[#7B9089] text-right tabular-nums">{h.score.toFixed(3)}</span>
+          <span className="text-[10px] font-medium" style={{ color: h.claim_type === "convention" ? "var(--acc)" : "var(--ink3)" }}>
+            {h.claim_type}
+          </span>
+          <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
         </div>
       ))}
       {data.adviceNearMisses.map((h) => (
-        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_48px] gap-3 py-1.5 items-baseline border-t border-[#26332E] opacity-60">
+        <div key={h.chunk_id} className="grid grid-cols-[1fr_auto_44px] gap-2.5 py-1.5 items-baseline border-t border-[var(--line2)] opacity-55">
           <div>
-            <div className="font-mono text-[12.5px] text-[#5E7269]">{h.doc_id} — {h.section_heading}</div>
-            <div className="text-[10.5px] font-medium mt-0.5 text-[#5E7269]">below 0.25 floor</div>
+            <div className="font-mono text-[11px] text-[var(--ink3)] break-words">
+              {h.doc_id} — {h.section_heading}
+            </div>
+            <div className="text-[10px] font-medium mt-0.5 text-[var(--ink3)]">below 0.25 floor</div>
           </div>
-          <span className="text-[10.5px] font-medium text-[#5E7269]">{h.claim_type}</span>
-          <span className="font-mono text-[12.5px] text-[#5E7269] text-right tabular-nums">{h.score.toFixed(3)}</span>
+          <span className="text-[10px] font-medium text-[var(--ink3)]">{h.claim_type}</span>
+          <span className="text-[11.5px] text-[var(--ink3)] text-right tabular-nums">{h.score.toFixed(3)}</span>
         </div>
       ))}
     </>
@@ -519,12 +576,9 @@ function renderLiveStage(s: LiveStageEvent): React.ReactNode {
 export function LiveMachineryPanel({ stages, generating, streamingText }: { stages: LiveStageEvent[]; generating: boolean; streamingText: string }) {
   const total = stages.length + (generating ? 1 : 0);
   return (
-    <div className="bg-[#0E1614] rounded-md px-5 pt-5 pb-5 mt-1.5">
-      <div className="flex justify-between gap-3 items-baseline flex-wrap pb-3.5 mb-4 border-b border-[#26332E]">
-        <div className="text-[13px] font-medium text-[#C4D2CB]">Watching this turn process…</div>
-        <div className="text-[12px] font-mono text-[#7B9089]">
-          {total === 0 ? "waiting…" : `${total} stage${total === 1 ? "" : "s"} so far`}
-        </div>
+    <div>
+      <div className="text-[12px] text-[var(--ink3)] mb-2.5">
+        {total === 0 ? "Watching this turn process…" : `${total} stage${total === 1 ? "" : "s"} so far`}
       </div>
       {stages.map((s, i) => (
         <StageWrap key={i} n={i + 1} total={total} name={liveStageName(s.stage)} headline={liveStageHeadline(s)} isLast={!generating && i === stages.length - 1}>
@@ -533,9 +587,9 @@ export function LiveMachineryPanel({ stages, generating, streamingText }: { stag
       ))}
       {generating && (
         <StageWrap n={stages.length + 1} total={total} name="Writing the reply" headline="in progress" isLast pending>
-          <div className="font-mono text-[12.5px] leading-relaxed text-[#8FADA0] whitespace-pre-wrap min-h-[1.4em]">
+          <div className="text-[13px] leading-relaxed text-[var(--ink2)] whitespace-pre-wrap min-h-[1.4em]">
             {streamingText || "…"}
-            <span className="inline-block w-[2px] h-[13px] bg-[#9FE0C0] ml-0.5 align-text-bottom animate-pulse" />
+            <span className="inline-block w-[2px] h-[13px] bg-[var(--acc)] ml-0.5 align-text-bottom animate-pulse" />
           </div>
         </StageWrap>
       )}

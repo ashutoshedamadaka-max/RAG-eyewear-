@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
+/* Light/dark theme system (decisions.md, 2026-09-04) -- rebuilt against a
+   supplied prototype (specs-light-dark.jsx) treated as a visual spec, not
+   copied as code. Tokens below are its exact light/dark values, ported
+   from inline CSS custom properties into a real :root/[data-theme]
+   cascade so every component can reference them via Tailwind arbitrary
+   values (`bg-[var(--shell)]`, `text-[var(--ink)]`, ...) instead of each
+   component branching on a `dark` boolean prop. `--field` is the page
+   background the app "floats" on; `--shell` is the rounded floating
+   container itself; `--sunk`/`--block` are the two surfaces inside it
+   (the machinery panel's recessed background and the raised blocks
+   inside it, respectively) -- same relationship in both themes, just
+   different lightness direction (dark mode raises elevation by getting
+   LIGHTER, light mode by shadow, per the prototype's own framing).
+   `--lens1/2/3` are FrameIllustration's lens-glass gradient stops, kept
+   as tokens because the shift from pale blue-grey (light) to dark slate
+   (dark) is a hue change, not just a brightness lift, unlike the 18
+   frame body colors below (see FrameIllustration.tsx for why those are
+   handled with a CSS filter instead of 18 hand-authored dark variants). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --field: #e8ecec;
+  --shell: #fcfdfd;
+  --sunk: #f2f5f5;
+  --block: #ffffff;
+  --ink: #131a1b;
+  --ink2: #4c5859;
+  --ink3: #82908f;
+  --line: #e1e7e7;
+  --line2: #eff3f3;
+  --acc: #155e63;
+  --acc-lt: #e4f0f1;
+  --warn: #8a5a0b;
+  --warn-lt: #fcf3e3;
+  --ok: #2f6b58;
+  --edge: transparent;
+  --shadow: 0 1px 2px rgba(16, 36, 38, 0.05), 0 8px 26px -8px rgba(16, 36, 38, 0.14);
+  --shadow-in: inset 0 1px 3px rgba(16, 36, 38, 0.07);
+  --lens1: #e9eff2;
+  --lens2: #d6e0e5;
+  --lens3: #c2d0d7;
 }
 
+/* Explicit dark, OR no explicit choice yet and the OS prefers dark (first-visit default --
+   ThemeToggle.tsx writes data-theme after that, which then always wins via the plain
+   attribute selector below, higher specificity than a media query on :root). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --field: #0c1112;
+    --shell: #161d1e;
+    --sunk: #111819;
+    --block: #1b2324;
+    --ink: #e4ebea;
+    --ink2: #a3b2b1;
+    --ink3: #75847e;
+    --line: #283233;
+    --line2: #222b2c;
+    --acc: #6fc4c2;
+    --acc-lt: #1c3436;
+    --warn: #d9a85e;
+    --warn-lt: #2e2617;
+    --ok: #78c4a0;
+    --edge: #242e2f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 40px -12px rgba(0, 0, 0, 0.55);
+    --shadow-in: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+    --lens1: #39474c;
+    --lens2: #2c383d;
+    --lens3: #232d31;
+  }
+}
+
+:root[data-theme="dark"] {
+  --field: #0c1112;
+  --shell: #161d1e;
+  --sunk: #111819;
+  --block: #1b2324;
+  --ink: #e4ebea;
+  --ink2: #a3b2b1;
+  --ink3: #75847e;
+  --line: #283233;
+  --line2: #222b2c;
+  --acc: #6fc4c2;
+  --acc-lt: #1c3436;
+  --warn: #d9a85e;
+  --warn-lt: #2e2617;
+  --ok: #78c4a0;
+  --edge: #242e2f;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 40px -12px rgba(0, 0, 0, 0.55);
+  --shadow-in: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  --lens1: #39474c;
+  --lens2: #2c383d;
+  --lens3: #232d31;
+}
+
+/* Tailwind v4's `dark:` variant defaults to a bare prefers-color-scheme media query --
+   redefined to key off the same data-theme attribute the tokens above use (and its
+   ancestors, since data-theme is set once on <html>), so `dark:` classes and the CSS
+   variables above always agree on which theme is active instead of two independent
+   theme signals that could disagree. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--field);
+  --color-foreground: var(--ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--field);
+  color: var(--ink);
 }
