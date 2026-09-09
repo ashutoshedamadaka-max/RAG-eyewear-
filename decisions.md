@@ -4753,3 +4753,82 @@ confirmed the image element is present and actually loaded
 (`naturalWidth > 0`), and reviewed screenshots of both themes directly --
 the diagram card reads cleanly in each. Playwright and the verification
 script were removed after use.
+
+## 2026-09-09 · Architecture diagram rebuilt as a real component -- the static SVG couldn't be fixed
+
+Live feedback on the diagram above: text unreadable, doesn't fit its
+container, and asked for animation. All three trace back to the same root
+cause -- a static image can't do any of them. The SVG's viewBox (1420x1300)
+scaled down to the page's ~900px column shrunk every label to a fraction
+of its nominal size (a "12px" label rendered under 8px on screen); a fixed-
+size image can only ever get blurrier when asked to "fit" a container
+it wasn't sized for, not reflow; and there's no way to animate or re-theme
+a flat raster/vector export short of re-authoring it as markup.
+
+Deleted `app/public/architecture-diagram.svg` and rebuilt the whole thing
+as `app/components/ArchitectureDiagram.tsx` -- real HTML at the app's own
+font-size scale (matching `MachineryPanel`'s and the rest of `/how-it-
+works`'s existing sizes, not the SVG's cramped 10.5-17px-at-1420-width
+scale), styled with the same CSS custom properties as everything else
+(`var(--ink)`, `var(--acc)`, `var(--sunk)`, ...) so it re-themes
+automatically instead of carrying its own baked-in light palette, and
+laid out with ordinary flex/grid so it reflows correctly at any width
+instead of scaling a fixed canvas. Every fact from the original diagram is
+preserved verbatim (the exact SQL fragment, the 0.25 similarity floor, "17
+rules checked every turn", "101 frames", the physical/convention/opinion
+three-way split) -- only the rendering mechanism changed.
+
+Two animations, both serving the diagram's actual point (this is a real,
+ordered pipeline) rather than decoration for its own sake:
+- **Scroll-triggered entrance**: each stage rises and fades in once, via
+  an IntersectionObserver-backed `Reveal` wrapper, staggered by source
+  order -- a passive preview of "this happens, then this."
+- **A travelling dot on each connector**, looping via a `flow-dot`
+  keyframe (added to `globals.css` alongside `rise-in`, since Tailwind
+  can only reference an existing `@keyframes`, not generate one from an
+  arbitrary `animate-[]` value) -- the "machinery trace" idea from the
+  original SVG's rotated side-label, which was itself hard to read,
+  replaced with something that shows the same fact (every stage is
+  logged, in order) instead of stating it in nearly-illegible text.
+
+### A real bug found and fixed while verifying, not by inspection
+
+Testing with an instant scroll jump (Playwright's `scrollIntoViewIfNeeded`
+straight to the diagram's closing caption) left a large mid-diagram gap
+completely blank. Diagnosed by comparing that against a second test that
+scrolled the same distance gradually in small steps, which revealed
+everything correctly -- isolating the difference to how the jump happened,
+not whether the content or logic was wrong. `IntersectionObserver` can
+genuinely miss an element entirely if a single scroll jump moves the
+viewport past it between two frames with no intermediate paint -- ordinary
+wheel/trackpad/keyboard scrolling doesn't do this (many frames per
+gesture), but a same-page anchor link or a browser scroll-restore on back/
+forward navigation can. Fixed with two additional safety nets in `Reveal`,
+both cheap once revealed (removed via the same `reveal()` call): a
+`scroll`-event listener that checks actual bounding-rect position (catches
+ordinary scrolling immediately, and any jump that fires at least one
+scroll event), and a 200ms poll for the first 3 seconds after mount
+(catches a resting position reached with *no* scroll event at all, such as
+landing already-scrolled on page load).
+
+A second, real but less severe issue surfaced during that same
+investigation: an early check (opacity read after a fixed short wait)
+seemed to show the same blank gap even after the fix, until a longer wait
+showed every element reaching opacity 1 -- the elements *were* revealing
+correctly, just later, because per-element stagger delay (`i++ * 90`,
+uncapped) grew large enough by the 16th call that its animation hadn't
+started within the wait window. Capped at 360ms (`Math.min(i++ * 60,
+360)`) so the tail of the diagram settles quickly once revealed, without
+touching the (already correct, per-element, scroll-driven) timing of
+*when* each one reveals in the first place.
+
+### Verification
+
+`npx tsc --noEmit`, `eslint`, and `npm run build` all clean throughout.
+Live-verified with Playwright against a production server: confirmed no
+horizontal overflow at 380px, confirmed the reveal fires (`opacity: 1`)
+under both gradual and instant-jump scrolling after the fix, and reviewed
+screenshots at desktop light, desktop dark, and mobile widths directly --
+legible at every size, no clipped or blank regions, both themes correct.
+Playwright and every debug/verification script and screenshot were removed
+after use.

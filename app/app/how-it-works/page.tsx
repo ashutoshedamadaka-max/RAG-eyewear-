@@ -15,6 +15,7 @@
 // experiment: Basalt Form 448 across two budget ceilings").
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import ArchitectureDiagram from "@/components/ArchitectureDiagram";
 
 // docs/phase1-baseline-failures.md, section 4 -- the naive baseline's actual
 // retrieved top-5 for "titanium frames under 4500 rupees", real cosine scores.
@@ -274,13 +275,7 @@ export default function HowItWorksPage() {
             Every box below is a real stage the code actually runs, in order — the same fork the
             two cards above describe, now traced from the first message to the finished answer.
           </p>
-          <div className="rounded-[14px] border border-[var(--line)] shadow-[var(--shadow)] overflow-hidden bg-white">
-            <img
-              src="/architecture-diagram.svg"
-              alt="Diagram: a user message is read for what the turn added, merged into cumulative slot state, turned into constraints, then forks into two mechanisms — a SQL query against the 101-frame catalogue (never embedded) and a cosine-similarity retrieval against the tagged advice corpus (never queried with SQL) — before both halves are written into one answer, with every stage logged to the machinery trace shown live in the demo."
-              className="w-full h-auto block"
-            />
-          </div>
+          <ArchitectureDiagram />
         </section>
 
         {/* ---- pipeline ---- */}
