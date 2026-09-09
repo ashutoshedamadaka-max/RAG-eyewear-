@@ -1,24 +1,53 @@
 "use client";
 
-import type { TurnMachinery, Slots, SlotValue, LiveStageEvent, LiveSlotsStage, LiveRulesStage, LiveSqlStage, LiveRetrievalStage } from "./conversation-types";
+import { useEffect, useState } from "react";
+import type {
+  TurnMachinery,
+  Slots,
+  SlotValue,
+  LiveStageEvent,
+  LiveSlotsStage,
+  LiveRulesStage,
+  LiveSqlStage,
+  LiveRetrievalStage,
+} from "./conversation-types";
 
 interface Props {
-  entry: TurnMachinery;
-  /** Cumulative slots as of this turn -- the full page computes this by replaying extractedPartial deltas up to this entry (or, for the last entry, using the live final state, which also carries any cap-assumed slots that never appear in a single turn's extractedPartial). */
-  cumulativeSlots: Slots;
+  /** Every completed turn, oldest first. */
+  history: TurnMachinery[];
+  /** Cumulative slots as of the last completed turn -- `state.slots` from the server, which is
+      the one place the full accumulated picture (including any cap-assumed slot that never
+      shows up in a single turn's own extractedPartial) actually lives. */
+  finalSlots: Slots;
+  /** True while a new turn is being generated (and not a replay). */
+  isLiveTurn: boolean;
+  liveStages: LiveStageEvent[];
+  streamingText: string;
 }
 
+// Single live instrument, not a per-turn log (decisions.md, 2026-09-09) -- the
+// previous round (2026-09-04) rendered one full six-stage block per history
+// entry, so by turn seven there were seven copies of "Read the conversation"
+// stacked on top of each other. Live report: that's a transcript, not an
+// instrument. Rebuilt around the actual shape of the six stages, which split
+// into two kinds. Stage 1 (slots) is genuinely CUMULATIVE -- it never resets,
+// so it's now the one persistent card at the top, growing turn over turn,
+// with whatever changed on the currently-viewed turn briefly highlighted.
+// Stages 2-6 describe one turn's work and nothing else, so they're replaced
+// wholesale when the viewed turn changes rather than appended below the
+// previous turn's copies. A small stepper (kept from the pre-2026-09-04
+// design, reintroduced here on purpose) lets a reader step back through
+// completed turns; the default view always snaps back to whichever turn is
+// most current the moment a new one starts generating.
+
 // Visual rebuild (decisions.md, 2026-09-04), against a supplied prototype
-// (specs-light-dark.jsx) treated as a visual spec, not copied as code:
-// what's in this panel is evidence -- what was understood, which rule
-// applied, what was found, what it cost -- not code, and styling it like
-// a dark terminal log undersold that. Every color below is a CSS custom
-// property (globals.css, light+dark tokens), never a literal hex, so the
-// whole panel re-themes with the rest of the app. Mono is now used ONLY
-// where something genuinely is code or an identifier -- the SQL query,
-// slot keys, advice source filenames -- per the explicit rule this round
-// was built against; everything else (values, rule sentences, timings,
-// costs, tags) is the same sans as the rest of the page.
+// (specs-light-dark.jsx) treated as a visual spec, not copied as code: what's
+// in this panel is evidence -- what was understood, which rule applied, what
+// was found, what it cost -- not code, and styling it like a dark terminal
+// log undersold that. Every color below is a CSS custom property (globals.css,
+// light+dark tokens), never a literal hex. Mono is used ONLY where something
+// genuinely is code or an identifier -- the SQL query, slot keys, advice
+// source filenames -- everything else is the same sans as the rest of the page.
 export function sourceColor(source: string): string {
   if (source === "assumed") return "var(--warn)";
   if (source === "derived") return "var(--acc)";
@@ -43,10 +72,7 @@ export function distinctRules(facts: { ruleId?: string }[]): Set<string> {
  * because one ruleId genuinely produces different text per frame
  * (lens_index_annotation cites that frame's own lens width and suggested
  * index) -- those rows must NOT collapse, since each carries different,
- * frame-specific information. A rule whose text never varies by frame
- * (style_prefs_overlap, face_shape_boost, the eye-spacing/nose-profile
- * nudges) naturally lands in one group per distinct explanation, which in
- * practice means one group per rule.
+ * frame-specific information.
  */
 export function groupFactsForDisplay(facts: { explanation: string; source?: string; ruleId?: string }[]) {
   const groups = new Map<string, { explanation: string; source?: string; ruleId?: string; count: number }>();
@@ -59,14 +85,7 @@ export function groupFactsForDisplay(facts: { explanation: string; source?: stri
   return [...groups.values()];
 }
 
-/**
- * Short, human names for the ranking-nudge rules specifically -- the only
- * ones `rankCandidates` pushes once per matching FRAME (decisions.md,
- * 2026-09-03), so the only ones that ever collapse into a >1 group below.
- * Naming a stable `ruleId`, same pattern as `ASK_LABELS` elsewhere in this
- * app -- not a hand-written summary sentence that could drift from the
- * real count next to it.
- */
+/** Short, human names for the ranking-nudge rules specifically -- the only ones that ever collapse into a >1 group above. */
 const RULE_SHORT_LABELS: Record<string, string> = {
   style_prefs_overlap: "style preference",
   face_shape_boost: "face shape",
@@ -76,18 +95,7 @@ const RULE_SHORT_LABELS: Record<string, string> = {
   long_face_lens_height: "face length",
 };
 
-/**
- * One stage, one card (decisions.md, 2026-09-04) -- the prototype dropped
- * the previous round's connected-circle timeline entirely in favor of
- * independent rounded blocks with real padding, each a `--block` surface
- * sitting on the panel's `--sunk` background (the same elevation
- * relationship stage cards use elsewhere in the app: raised surface on a
- * recessed one). `pending` (live panel only) marks the one stage actually
- * in flight right now -- an accent-colored ring and a pulsing badge
- * instead of the neutral completed-stage badge, so "still working on
- * this" reads as visibly different from "done" without needing a
- * timeline connector to imply sequence.
- */
+/** One stage, one card -- independent rounded blocks with real padding, each a `--block` surface on the panel's `--sunk` background. `pending` marks the one stage actually in flight right now. */
 export function StageWrap({
   n,
   name,
@@ -96,11 +104,9 @@ export function StageWrap({
   pending,
 }: {
   n: number;
-  total: number;
   name: string;
   headline: string;
   children: React.ReactNode;
-  isLast: boolean;
   pending?: boolean;
 }) {
   return (
@@ -128,10 +134,19 @@ export function Note({ children }: { children: React.ReactNode }) {
   return <p className="text-[11.5px] leading-relaxed text-[var(--ink3)] mb-2.5 -mt-0.5">{children}</p>;
 }
 
-/** A key/value row -- the ONLY place a name is mono (a slot key is a real identifier); the value beside it is plain sans, per this round's mono-only-for-code rule. */
-function KVRow({ k, v, tag }: { k: string; v: string; tag?: { label: string; color: string } }) {
+function slotChanged(prev: SlotValue<unknown> | undefined, next: SlotValue<unknown>): boolean {
+  if (!prev) return true;
+  if (prev.source !== next.source) return true;
+  return JSON.stringify(prev.value) !== JSON.stringify(next.value);
+}
+
+/** A key/value row -- the ONLY place a name is mono (a slot key is a real identifier). `highlighted` briefly tints a row that's new or changed on the turn currently being viewed -- the negative margin cancels the added padding so the text itself doesn't shift when the tint appears. */
+function KVRow({ k, v, tag, highlighted }: { k: string; v: string; tag?: { label: string; color: string }; highlighted?: boolean }) {
   return (
-    <div className="grid grid-cols-[minmax(78px,auto)_1fr_auto] gap-2.5 py-1 border-t border-[var(--line2)] first:border-t-0 items-baseline">
+    <div
+      className="grid grid-cols-[minmax(78px,auto)_1fr_auto] gap-2.5 py-1 px-1.5 -mx-1.5 rounded-[6px] border-t border-[var(--line2)] first:border-t-0 items-baseline transition-colors duration-700"
+      style={{ background: highlighted ? "var(--acc-lt)" : "transparent" }}
+    >
       <span className="font-mono text-[11px] text-[var(--ink3)]">{k}</span>
       <span className="text-[13px] text-[var(--ink)] tabular-nums">{v}</span>
       {tag && (
@@ -143,43 +158,67 @@ function KVRow({ k, v, tag }: { k: string; v: string; tag?: { label: string; col
   );
 }
 
-export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
-  const slotEntries = Object.entries(cumulativeSlots).filter(([, v]) => v !== undefined) as [string, SlotValue<unknown>][];
+/** Stage 1: cumulative, persistent, never replaced -- the one stage a reader can watch build up.
+    The caller keys this component by `turnKey` (which turn is being viewed: a history index, or
+    "live"), so a change of turn remounts it and `highlightOn` naturally restarts at its initial
+    `true` -- no setState-on-mount inside the effect, just the fade-out timer and its cleanup. */
+function SlotsStageCard({ slots, previousSlots }: { slots: Slots; previousSlots: Slots }) {
+  const slotEntries = Object.entries(slots).filter(([, v]) => v !== undefined) as [string, SlotValue<unknown>][];
   const assumedCount = slotEntries.filter(([, v]) => v.source === "assumed").length;
 
-  const rulesFired = distinctRules(entry.derivedFacts);
+  const [highlightOn, setHighlightOn] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setHighlightOn(false), 2600);
+    return () => clearTimeout(t);
+  }, []);
 
+  return (
+    <StageWrap
+      n={1}
+      name="Read the conversation"
+      headline={`${slotEntries.length} field${slotEntries.length === 1 ? "" : "s"}${assumedCount > 0 ? ` · ${assumedCount} assumed` : ""}`}
+    >
+      {slotEntries.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">nothing known yet</div>}
+      {slotEntries.map(([key, slot]) => (
+        <KVRow
+          key={key}
+          k={key}
+          v={fmtSlotValue(slot.value)}
+          tag={{ label: slot.source, color: sourceColor(slot.source) }}
+          highlighted={highlightOn && slotChanged(previousSlots[key], slot)}
+        />
+      ))}
+    </StageWrap>
+  );
+}
+
+function cumulativeSlotsThrough(history: TurnMachinery[], index: number, finalSlots: Slots): Slots {
+  if (index === history.length - 1) return finalSlots;
+  let acc: Slots = {};
+  for (let i = 0; i <= index; i++) acc = { ...acc, ...history[i].extractedPartial };
+  return acc;
+}
+
+type PerTurnStage = { n: number; key: string; name: string; headline: string; pending?: boolean; render: () => React.ReactNode };
+
+/** Stages 2-6, for one COMPLETED turn: fixed numbering per stage identity (rules is always 2, timing is
+    always 5, whichever of them actually show up) rather than positional, so a reader who's stepped through
+    several turns sees the same stage keep the same number whether it appears or not. Stages 3/4/6
+    (sql/advice/cost) simply don't exist on an ask-turn -- no placeholder box, matching what already ran. */
+function historicalPerTurnStages(entry: TurnMachinery): PerTurnStage[] {
+  const rulesFired = distinctRules(entry.derivedFacts);
   const rec = entry.recommendation;
   const citedMarkerSet = new Set((rec?.citations ?? []).flatMap((c) => c.citedMarkers));
   const advicedHitsWithCited = (rec?.adviceHits ?? []).map((h, i) => ({ ...h, cited: citedMarkerSet.has(`[A${i + 1}]`) }));
   const citedCount = advicedHitsWithCited.filter((h) => h.cited).length;
   const belowFloorCount = rec?.adviceNearMisses.length ?? 0;
-
   const totalMs = entry.timingsMs.total;
-  const chatCallCount = entry.modelCalls.filter((c) => c.kind === "chat").length;
-  const embeddingCallCount = entry.modelCalls.filter((c) => c.kind === "embedding").length;
   const totalCostInr = entry.modelCalls.reduce((sum, c) => sum + c.costInr, 0);
 
-  // Which stages actually ran this turn -- an ask/interrupt turn only ever runs extraction
-  // (stage 1/2 are pure compute over slots already known, stage 5 covers the one model call);
-  // no SQL, no retrieval, no cost stage, because no query was compiled at all this turn.
-  const stages: { key: string; name: string; headline: string; render: () => React.ReactNode }[] = [];
+  const stages: PerTurnStage[] = [];
 
   stages.push({
-    key: "slots",
-    name: "Read the conversation",
-    headline: `${slotEntries.length} field${slotEntries.length === 1 ? "" : "s"}${assumedCount > 0 ? ` · ${assumedCount} assumed` : ""}`,
-    render: () => (
-      <div>
-        {slotEntries.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">nothing known yet</div>}
-        {slotEntries.map(([key, slot]) => (
-          <KVRow key={key} k={key} v={fmtSlotValue(slot.value)} tag={{ label: slot.source, color: sourceColor(slot.source) }} />
-        ))}
-      </div>
-    ),
-  });
-
-  stages.push({
+    n: 2,
     key: "rules",
     name: "Applied the fitting rules",
     headline: `${rulesFired.size} of ${entry.fittingRulesTotalCount} fired`,
@@ -209,6 +248,7 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
 
   if (rec) {
     stages.push({
+      n: 3,
       key: "sql",
       name: "Queried the catalogue",
       headline: `${rec.sqlMatchCount} of ${rec.catalogTotalCount} frames matched`,
@@ -243,6 +283,7 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     });
 
     stages.push({
+      n: 4,
       key: "advice",
       name: "Retrieved optician guidance",
       headline: `${advicedHitsWithCited.length} retrieved · ${citedCount} cited${belowFloorCount > 0 ? ` · ${belowFloorCount} below floor` : ""}`,
@@ -289,20 +330,22 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
   }
 
   stages.push({
+    n: 5,
     key: "timing",
     name: "Wrote the answer",
     headline: `${(totalMs / 1000).toFixed(1)}s total`,
     render: () => (
       <>
-        {/* Derived from the same modelCalls this turn actually made, not hand-written (decisions.md,
-            2026-09-02) -- a chat call and an embedding call are different things (a language-model
-            generation vs. turning text into a vector for similarity search) and the copy has to say
-            so, or it drifts out of sync with the table right below it the moment the call count changes. */}
-        {chatCallCount > 0 && (
+        {entry.modelCalls.length > 0 && (
           <Note>
-            {chatCallCount} call{chatCallCount === 1 ? "" : "s"} to the language model this turn
-            {embeddingCallCount > 0 ? `, plus ${embeddingCallCount} embedding call${embeddingCallCount === 1 ? "" : "s"} to turn the question into a vector` : ""} —
-            {" "}{entry.modelCalls.map((c) => c.label.toLowerCase()).join(", ")}. Everything else is database work, which is why it barely registers.
+            {entry.modelCalls.filter((c) => c.kind === "chat").length} call
+            {entry.modelCalls.filter((c) => c.kind === "chat").length === 1 ? "" : "s"} to the language model this turn
+            {entry.modelCalls.some((c) => c.kind === "embedding")
+              ? `, plus ${entry.modelCalls.filter((c) => c.kind === "embedding").length} embedding call${
+                  entry.modelCalls.filter((c) => c.kind === "embedding").length === 1 ? "" : "s"
+                } to turn the question into a vector`
+              : ""}{" "}
+            — {entry.modelCalls.map((c) => c.label.toLowerCase()).join(", ")}. Everything else is database work, which is why it barely registers.
           </Note>
         )}
         <div className="flex gap-0.5 mb-2.5">
@@ -357,15 +400,12 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
 
   if (rec) {
     stages.push({
+      n: 6,
       key: "cost",
       name: "What it cost",
       headline: `~₹${totalCostInr.toFixed(2)} est.`,
       render: () => (
         <>
-          {/* Token counts get the visual weight here -- they're the real, verifiable number
-              (read directly off each API response). The ₹ total is one arithmetic step removed
-              from that, at a rate this project can't verify, so "estimated" carries a highlighted
-              badge rather than being easy to skim past as plain small text. */}
           <div className="grid grid-cols-[1fr_auto_auto] gap-4 pb-1.5 border-b border-[var(--line2)]">
             <span className="text-[10.5px] font-medium text-[var(--ink3)]">Model call</span>
             <span className="text-[10.5px] font-medium text-[var(--ink3)] min-w-[70px] text-right">Tokens in</span>
@@ -395,31 +435,33 @@ export default function MachineryPanel({ entry, cumulativeSlots }: Props) {
     });
   }
 
-  return (
-    <div>
-      <div className="text-[12px] text-[var(--ink3)] mb-2.5">
-        {stages.length} stage{stages.length === 1 ? "" : "s"} ran this turn. Only {chatCallCount + embeddingCallCount} of them{" "}
-        {chatCallCount + embeddingCallCount === 1 ? "calls" : "call"} a model.
-      </div>
-      {stages.map((s, i) => (
-        <StageWrap key={s.key} n={i + 1} total={stages.length} name={s.name} headline={s.headline} isLast={i === stages.length - 1}>
-          {s.render()}
-        </StageWrap>
-      ))}
-    </div>
-  );
+  return stages;
 }
 
-function renderLiveSlots(data: LiveSlotsStage["data"]) {
-  const entries = Object.entries(data.cumulativeSlots).filter(([, v]) => v !== undefined) as [string, SlotValue<unknown>][];
-  return (
-    <div>
-      {entries.length === 0 && <div className="text-[12.5px] text-[var(--ink3)]">nothing known yet</div>}
-      {entries.map(([key, slot]) => (
-        <KVRow key={key} k={key} v={fmtSlotValue(slot.value)} tag={{ label: slot.source, color: sourceColor(slot.source) }} />
-      ))}
-    </div>
-  );
+type PerTurnLiveStageEvent = Exclude<LiveStageEvent, LiveSlotsStage>;
+
+function liveStageName(stage: PerTurnLiveStageEvent["stage"]): string {
+  switch (stage) {
+    case "rules":
+      return "Applied the fitting rules";
+    case "sql":
+      return "Queried the catalogue";
+    case "retrieval":
+      return "Retrieved optician guidance";
+  }
+}
+
+function liveStageHeadline(s: PerTurnLiveStageEvent): string {
+  switch (s.stage) {
+    case "rules": {
+      const distinct = distinctRules(s.data.derivedFacts);
+      return `${distinct.size} of ${s.data.fittingRulesTotalCount} fired`;
+    }
+    case "sql":
+      return `${s.data.sqlMatchCount} of ${s.data.catalogTotalCount} frames matched`;
+    case "retrieval":
+      return `${s.data.adviceHits.length} retrieved${s.data.adviceNearMisses.length > 0 ? ` · ${s.data.adviceNearMisses.length} below floor` : ""}`;
+  }
 }
 
 function renderLiveRules(data: LiveRulesStage["data"]) {
@@ -518,41 +560,8 @@ function renderLiveRetrieval(data: LiveRetrievalStage["data"]) {
   );
 }
 
-function liveStageName(stage: LiveStageEvent["stage"]): string {
-  switch (stage) {
-    case "slots":
-      return "Read the conversation";
-    case "rules":
-      return "Applied the fitting rules";
-    case "sql":
-      return "Queried the catalogue";
-    case "retrieval":
-      return "Retrieved optician guidance";
-  }
-}
-
-function liveStageHeadline(s: LiveStageEvent): string {
+function renderLiveStage(s: PerTurnLiveStageEvent): React.ReactNode {
   switch (s.stage) {
-    case "slots": {
-      const entries = Object.entries(s.data.cumulativeSlots).filter(([, v]) => v !== undefined) as [string, SlotValue<unknown>][];
-      const assumed = entries.filter(([, v]) => v.source === "assumed").length;
-      return `${entries.length} field${entries.length === 1 ? "" : "s"}${assumed > 0 ? ` · ${assumed} assumed` : ""}`;
-    }
-    case "rules": {
-      const distinct = distinctRules(s.data.derivedFacts);
-      return `${distinct.size} of ${s.data.fittingRulesTotalCount} fired`;
-    }
-    case "sql":
-      return `${s.data.sqlMatchCount} of ${s.data.catalogTotalCount} frames matched`;
-    case "retrieval":
-      return `${s.data.adviceHits.length} retrieved${s.data.adviceNearMisses.length > 0 ? ` · ${s.data.adviceNearMisses.length} below floor` : ""}`;
-  }
-}
-
-function renderLiveStage(s: LiveStageEvent): React.ReactNode {
-  switch (s.stage) {
-    case "slots":
-      return renderLiveSlots(s.data);
     case "rules":
       return renderLiveRules(s.data);
     case "sql":
@@ -562,39 +571,168 @@ function renderLiveStage(s: LiveStageEvent): React.ReactNode {
   }
 }
 
+/** Stages 2-6 for the turn currently generating -- positional numbering as events actually arrive
+    (rules, then sql/retrieval on a recommend turn), starting at 2 since stage 1 is rendered
+    separately. "Writing the reply" fills the gap between the last known stage and the `done`
+    event with a real streaming preview, and keeps sliding down as later stages land. */
+function livePerTurnStages(liveStages: LiveStageEvent[], generating: boolean, streamingText: string): PerTurnStage[] {
+  const perTurnEvents = liveStages.filter((s): s is PerTurnLiveStageEvent => s.stage !== "slots");
+  const stages: PerTurnStage[] = [];
+  let n = 2;
+
+  for (const s of perTurnEvents) {
+    stages.push({ n: n++, key: s.stage, name: liveStageName(s.stage), headline: liveStageHeadline(s), render: () => renderLiveStage(s) });
+  }
+
+  if (generating) {
+    stages.push({
+      n,
+      key: "writing",
+      name: "Writing the reply",
+      headline: "in progress",
+      pending: true,
+      render: () => (
+        <div className="text-[13px] leading-relaxed text-[var(--ink2)] whitespace-pre-wrap min-h-[1.4em]">
+          {streamingText || "…"}
+          <span className="inline-block w-[2px] h-[13px] bg-[var(--acc)] ml-0.5 align-text-bottom animate-pulse" />
+        </div>
+      ),
+    });
+  }
+
+  return stages;
+}
+
+/** "N stages ran this turn" always names a real count; the connecting word is generated from the
+    ratio of model calls to stages rather than a fixed "Only N of them..." template, which read
+    oddly once N was most of the total (decisions.md, 2026-09-09: "3 of them" vs "4 of 6" both
+    used to say "Only", even though one is a minority and the other a majority). */
+function modelTouchPhrase(modelCallCount: number, totalStages: number): string {
+  if (modelCallCount <= 0) return "None of them call a model.";
+  if (modelCallCount >= totalStages) return "All of them call a model.";
+  const ratio = modelCallCount / totalStages;
+  if (ratio > 0.5) return "Most of them call a model.";
+  if (ratio === 0.5) return "Half of them call a model.";
+  return `Only ${modelCallCount} ${modelCallCount === 1 ? "of them calls" : "of them call"} a model.`;
+}
+
+function StepButton({ dir, onClick, disabled }: { dir: "prev" | "next"; onClick: () => void; disabled: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === "prev" ? "Previous turn" : "Next turn"}
+      className="w-[22px] h-[22px] rounded-full flex-none flex items-center justify-center text-[13px] leading-none text-[var(--ink2)] border border-[var(--line)] disabled:opacity-30 enabled:hover:border-[var(--acc)] enabled:hover:text-[var(--acc)] transition-colors"
+    >
+      {dir === "prev" ? "‹" : "›"}
+    </button>
+  );
+}
+
 /**
- * The live panel (decisions.md, 2026-09-02): renders progressively from
- * whatever "stage" SSE events have actually arrived for the turn in
- * flight, in the order the server actually processed them -- genuinely
- * staged, not a fake sequence played back from already-complete data.
- * `stages` grows one element at a time as real computation finishes
- * server-side; each render is a real snapshot of "how far the turn has
- * gotten," not a simulated pace. `generating` covers the gap between the
- * last known stage and the `done` event -- the recommend turn's structured
- * gloss/closing call never streams, so this can span real silence, which
- * is exactly the pre-first-token wait the machinery panel exists to fill
- * with something other than a blank screen.
+ * The instrument (decisions.md, 2026-09-09): one persistent slots card (stage 1) plus whichever
+ * of stages 2-6 apply to the turn currently being viewed. `following` tracks whether the panel is
+ * pinned to a reader-chosen turn (`false`) or auto-tracking the latest one (`true`, the default --
+ * and what a brand-new turn starting generation always snaps back to, so "the default view is
+ * always the current turn" holds even mid-review).
  */
-export function LiveMachineryPanel({ stages, generating, streamingText }: { stages: LiveStageEvent[]; generating: boolean; streamingText: string }) {
-  const total = stages.length + (generating ? 1 : 0);
+export default function MachineryPanel({ history, finalSlots, isLiveTurn, liveStages, streamingText }: Props) {
+  const [following, setFollowing] = useState(true);
+  const [manualPosition, setManualPosition] = useState(0);
+
+  // "The default view is always the current turn": whenever a NEW turn starts generating, snap
+  // back to following it, even if a reader had stepped away to review an earlier one. Adjusted
+  // during render (React's documented pattern for state that tracks a prop but can be locally
+  // overridden) rather than in a useEffect, so this doesn't cost an extra render pass.
+  const [prevIsLiveTurn, setPrevIsLiveTurn] = useState(isLiveTurn);
+  if (isLiveTurn !== prevIsLiveTurn) {
+    setPrevIsLiveTurn(isLiveTurn);
+    if (isLiveTurn) setFollowing(true);
+  }
+
+  const totalPositions = history.length + (isLiveTurn ? 1 : 0);
+
+  if (totalPositions === 0) {
+    return <div className="text-[12.5px] text-[var(--ink3)] px-0.5">Nothing to show yet.</div>;
+  }
+
+  const lastPosition = totalPositions - 1;
+  const currentPosition = following ? lastPosition : Math.min(manualPosition, lastPosition);
+  const viewingLive = isLiveTurn && currentPosition === history.length;
+  const historyIndex = viewingLive ? -1 : currentPosition;
+
+  function goPrev() {
+    setFollowing(false);
+    setManualPosition(Math.max(0, currentPosition - 1));
+  }
+  function goNext() {
+    const next = currentPosition + 1;
+    if (next >= lastPosition) setFollowing(true);
+    else {
+      setFollowing(false);
+      setManualPosition(next);
+    }
+  }
+
+  const currentSlots = viewingLive
+    ? liveStages.find((s): s is LiveSlotsStage => s.stage === "slots")?.data.cumulativeSlots ?? finalSlots
+    : cumulativeSlotsThrough(history, historyIndex, finalSlots);
+  const previousSlots = viewingLive
+    ? finalSlots
+    : historyIndex === 0
+      ? {}
+      : cumulativeSlotsThrough(history, historyIndex - 1, finalSlots);
+  const turnKey = viewingLive ? "live" : `h${historyIndex}`;
+
+  let perTurn: PerTurnStage[];
+  let summary: React.ReactNode;
+
+  if (viewingLive) {
+    perTurn = livePerTurnStages(liveStages, true, streamingText);
+    summary = perTurn.length === 0 ? "Watching this turn process…" : `${perTurn.length} stage${perTurn.length === 1 ? "" : "s"} so far`;
+  } else {
+    const entry = history[historyIndex];
+    perTurn = historicalPerTurnStages(entry);
+    const totalStages = 1 + perTurn.length;
+    const modelCallCount = entry.modelCalls.length;
+    summary = (
+      <>
+        {totalStages} stage{totalStages === 1 ? "" : "s"} ran this turn. {modelTouchPhrase(modelCallCount, totalStages)}
+      </>
+    );
+  }
+
   return (
     <div>
-      <div className="text-[12px] text-[var(--ink3)] mb-2.5">
-        {total === 0 ? "Watching this turn process…" : `${total} stage${total === 1 ? "" : "s"} so far`}
+      <div className="flex items-center justify-between px-0.5 mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-[11px] font-semibold text-[var(--ink3)] uppercase tracking-wide whitespace-nowrap">Turn {currentPosition + 1}</span>
+          {viewingLive && (
+            <span className="text-[10px] font-semibold text-[var(--acc)] uppercase tracking-wide bg-[var(--acc-lt)] px-1.5 py-0.5 rounded-full whitespace-nowrap">
+              live
+            </span>
+          )}
+          {!following && (
+            <button onClick={() => setFollowing(true)} className="text-[10.5px] font-medium text-[var(--acc)] whitespace-nowrap truncate">
+              Jump to latest →
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-none">
+          <StepButton dir="prev" onClick={goPrev} disabled={currentPosition <= 0} />
+          <StepButton dir="next" onClick={goNext} disabled={currentPosition >= lastPosition} />
+        </div>
       </div>
-      {stages.map((s, i) => (
-        <StageWrap key={i} n={i + 1} total={total} name={liveStageName(s.stage)} headline={liveStageHeadline(s)} isLast={!generating && i === stages.length - 1}>
-          {renderLiveStage(s)}
+
+      <div className="text-[12px] text-[var(--ink3)] mb-2.5">{summary}</div>
+
+      <SlotsStageCard key={turnKey} slots={currentSlots} previousSlots={previousSlots} />
+
+      {perTurn.map((s) => (
+        <StageWrap key={s.key} n={s.n} name={s.name} headline={s.headline} pending={s.pending}>
+          {s.render()}
         </StageWrap>
       ))}
-      {generating && (
-        <StageWrap n={stages.length + 1} total={total} name="Writing the reply" headline="in progress" isLast pending>
-          <div className="text-[13px] leading-relaxed text-[var(--ink2)] whitespace-pre-wrap min-h-[1.4em]">
-            {streamingText || "…"}
-            <span className="inline-block w-[2px] h-[13px] bg-[var(--acc)] ml-0.5 align-text-bottom animate-pulse" />
-          </div>
-        </StageWrap>
-      )}
     </div>
   );
 }

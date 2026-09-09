@@ -31,9 +31,9 @@ import FaceShapePicker from "@/components/FaceShapePicker";
 import AnswerPills from "@/components/AnswerPills";
 import { TOPIC_PILLS } from "@/components/pill-options";
 import RecommendationCard from "@/components/RecommendationCard";
-import MachineryPanel, { LiveMachineryPanel } from "@/components/MachineryPanel";
+import MachineryPanel from "@/components/MachineryPanel";
 import { parseFrameBlurb } from "@/components/conversation-types";
-import type { ConversationState, TurnResult, Slots, RecommendedFrame, LiveStageEvent } from "@/components/conversation-types";
+import type { ConversationState, TurnResult, RecommendedFrame, LiveStageEvent } from "@/components/conversation-types";
 
 import straightforwardFixture from "@/lib/conversation/fixtures/straightforward.json";
 import intentionalGapFixture from "@/lib/conversation/fixtures/intentional-gap.json";
@@ -80,13 +80,6 @@ const FALLBACK_REASON_LABELS: Record<string, string> = {
  * no enum to offer pills for, as a lighter-weight nudge instead.
  */
 const STARTER_PROMPTS = ["Glasses for office work", "Sunglasses for driving", "Reading glasses", "Not sure yet"];
-
-function cumulativeSlotsAt(history: ConversationState["history"], index: number, finalSlots: Slots): Slots {
-  if (index === history.length - 1) return finalSlots;
-  let acc: Slots = {};
-  for (let i = 0; i <= index; i++) acc = { ...acc, ...history[i].extractedPartial };
-  return acc;
-}
 
 export interface EvalOneLiner {
   groundednessMin: number;
@@ -268,13 +261,18 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
       : undefined;
   const replayExhausted = Boolean(replayScenario) && replayStep >= (replayScenario?.turns.length ?? 0);
 
-  // Machinery panel now stacks one block per turn, growing with the chat, instead of a
-  // sticky single-turn view with a stepper (decisions.md, 2026-09-04) -- fixed after a live
-  // report that the two visibly described different moments: the panel is independent of
-  // chat scroll position, so scrolling UP to re-read an earlier exchange left the panel still
-  // pinned to the latest turn. Showing every turn's machinery, in the same order the chat
-  // shows them, means there's nothing to keep in sync -- both columns just grow together.
-  // A live turn still gets its own trailing block (LiveMachineryPanel) while in flight.
+  // Machinery panel is a single live instrument, not a per-turn log (decisions.md, 2026-09-09) --
+  // the 2026-09-04 stacked-block design (one full six-stage block appended per turn) turned into
+  // seven copies of "Read the conversation" by turn seven. MachineryPanel itself now renders
+  // once and updates in place -- see that file for the stage 1 (cumulative)/stages 2-6 (per-turn)
+  // split and the stepper. Two real layout bugs surfaced investigating the live report that the
+  // panel was rendering below the chat: (1) the two-column grid below only engaged above 1061px,
+  // lowered here so it holds on an ordinary laptop window; (2) `<aside>` was missing `min-w-0` --
+  // a grid item's default min-width is its content's max-content size, and the SQL stage's <pre>
+  // (a single unbroken line, `overflow-x-auto` on the <pre> itself doesn't help its GRID PARENT)
+  // was forcing the aside's column wide enough to crush the chat column into a one-word-per-line
+  // sliver the instant a recommendation turn added that stage -- reproduced and confirmed fixed
+  // with a real multi-turn run at 1000px, between the old and new breakpoints.
   const isLiveTurn = loading && !inReplay;
 
   const showingDemo = started && state;
@@ -282,7 +280,7 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
   return (
     <div className={`${serif.variable} ${sans.variable} ${mono.variable}`} style={{ fontFamily: "var(--font-sans)" }}>
       {showingDemo ? (
-        <div className="grid grid-cols-1 min-[1061px]:grid-cols-[1.3fr_1fr] gap-3.5 p-3.5 items-start">
+        <div className="grid grid-cols-1 min-[880px]:grid-cols-[1.3fr_1fr] gap-3.5 p-3.5 items-start">
           <section className="min-w-0 px-2 min-[600px]:px-4 pt-3 pb-2">
             <div className="pb-4 mb-5 border-b border-[var(--line2)]">
               <h1 className="text-[24px] leading-tight text-[var(--ink)] tracking-tight m-0" style={{ fontFamily: "var(--font-serif)", fontWeight: 500 }}>
@@ -528,43 +526,21 @@ export default function ConversationDemo({ evalOneLiner }: { evalOneLiner: EvalO
             </div>
           </section>
 
-          {/* Machinery panel (decisions.md, 2026-09-04): a recessed surface (--sunk, inset
+          {/* Machinery panel (decisions.md, 2026-09-09): a recessed surface (--sunk, inset
               shadow) alongside the chat -- what's in it is evidence, not code, so it's styled
-              as a light panel of real cards, not a dark terminal log. No longer sticky/single-
-              turn: it stacks one block per turn, in the same order the chat shows them, and
-              grows exactly as the chat grows -- fixed after a live report that a sticky
-              "current turn only" panel visibly described a different moment than whatever the
-              reader had scrolled up to re-read in the chat column. A turn in flight gets its
-              own trailing block (LiveMachineryPanel) while it's still generating. */}
-          <aside className="bg-[var(--sunk)] rounded-[14px] shadow-[var(--shadow-in)] p-4">
+              as a light panel of real cards, not a dark terminal log. A single live instrument,
+              not a per-turn log: MachineryPanel owns its own turn stepper internally and updates
+              in place, defaulting to whichever turn is current (including one still generating). */}
+          <aside className="min-w-0 bg-[var(--sunk)] rounded-[14px] shadow-[var(--shadow-in)] p-4">
             <div className="px-0.5 pb-3">
               <h2 className="text-[13.5px] font-semibold text-[var(--ink)] m-0">How this is built</h2>
               <p className="text-[11.5px] text-[var(--ink3)] mt-1 mb-0">
-                One block per turn, in step with the conversation on the left.
+                Follows the current turn as the conversation moves — step back to see how an
+                earlier one worked.
               </p>
             </div>
 
-            {state.history.map((entry, i) => (
-              <div key={entry.turnIndex} className="mb-3">
-                <div className="text-[10.5px] font-semibold text-[var(--ink3)] uppercase tracking-wide px-0.5 mb-1.5">
-                  Turn {i + 1}
-                </div>
-                <MachineryPanel entry={entry} cumulativeSlots={cumulativeSlotsAt(state.history, i, state.slots)} />
-              </div>
-            ))}
-
-            {isLiveTurn && (
-              <div className="mb-1">
-                <div className="text-[10.5px] font-semibold text-[var(--acc)] uppercase tracking-wide px-0.5 mb-1.5">
-                  Turn {state.history.length + 1} · live
-                </div>
-                <LiveMachineryPanel stages={liveStages} generating={loading} streamingText={streamingText} />
-              </div>
-            )}
-
-            {state.history.length === 0 && !isLiveTurn && (
-              <div className="text-[12.5px] text-[var(--ink3)] px-0.5">Nothing to show yet.</div>
-            )}
+            <MachineryPanel history={state.history} finalSlots={state.slots} isLiveTurn={isLiveTurn} liveStages={liveStages} streamingText={streamingText} />
           </aside>
         </div>
       ) : (

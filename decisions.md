@@ -4579,3 +4579,97 @@ group counts, both minimal-pair case IDs, a real quoted answer fragment
 cases)", "Last run 4 September 2026", the 89-100%/75-88%/85-85/2-3 score
 cards, and the `/baseline` "It scores 0/3" link -- then stopped the
 spare server.
+
+## 2026-09-09 · Machinery panel rebuilt as a single live instrument; two real layout bugs found and fixed
+
+Live report: "the chat worked great at every turn until the recommendations
+showed up and the layout changed." The 2026-09-04 design rendered one full
+six-stage `MachineryPanel` block per history entry, stacked in the aside --
+by turn seven that's seven copies of "Read the conversation" a reader has to
+diff by eye. Explicit instruction: stop treating it as a per-turn transcript
+and rebuild it as one instrument that updates in place, split along the
+seam that actually exists in the data -- stage 1 (slots) is genuinely
+cumulative and never resets across a conversation; stages 2-6 (rules, SQL,
+advice, timing, cost) describe exactly one turn and nothing else.
+
+### What changed (`app/components/MachineryPanel.tsx`, fully rewritten)
+
+- **Stage 1 is now one persistent card**, not a copy per turn. It shows the
+  cumulative slots as of whichever turn is currently being viewed, and
+  briefly tints (`--acc-lt`, fading via a 700ms CSS transition after 2.6s --
+  verified with a live Playwright run: solid `rgb(228,240,241)` immediately
+  after a turn lands, `rgba(..., 0.016)` three seconds later) whichever
+  fields are new or changed relative to the turn before. The tinted-row
+  reset uses `key={turnKey}` on `SlotsStageCard` from the caller (a fresh
+  mount naturally restarts `highlightOn` at its initial `true`) rather than
+  an unconditional `setState` inside a `useEffect`, which `eslint-plugin-
+  react-hooks`'s `set-state-in-effect` rule correctly flagged as an avoidable
+  extra render pass.
+- **Stages 2-6 replace wholesale on turn change**, keyed by fixed per-stage
+  identity (rules=2, sql=3, advice=4, timing=5, cost=6) rather than array
+  position, so a stage keeps the same number whether or not it's present on
+  a given turn. On an ask-turn, stages 3/4/6 (sql/advice/cost) simply don't
+  exist in the array -- no six-box placeholder grid, matching what actually
+  ran. Live-in-flight rendering keeps its own positional numbering (stages
+  arrive in a fixed server-side order, so position and identity coincide)
+  so the existing "Writing the reply" fill-the-gap behavior is unchanged.
+- **A small stepper is back** (removed 2026-09-04 in favor of the now-
+  abandoned stacked-block design; reintroduced here on purpose, this time
+  keyed to an explicit "Turn N" label so there's no ambiguity about which
+  moment is on screen). `following` (auto-track latest) vs a manually
+  stepped-to turn is adjusted during render off an `isLiveTurn` prop
+  comparison -- React's documented pattern for state that mirrors a prop but
+  can be locally overridden -- rather than a `useEffect`, for the same
+  reason as above. A new turn starting generation always snaps back to
+  following it, so "the default view is always the current turn" holds even
+  mid-review; a "Jump to latest" link appears whenever it doesn't.
+- **The summary line's phrasing is generated from the model-call ratio**
+  instead of a fixed "Only N of them call a model" template, which read
+  backwards once N was a majority (the live report's own worked example:
+  "6 stages ran this turn. Only 4 of them call a model" -- confirmed for
+  real on a live recommendation turn during verification, now reads "Most
+  of them call a model").
+
+### Two real layout bugs, found by reproducing rather than guessing
+
+The live report's screenshot didn't match either theory tried first
+(overflow from the SQL `<pre>`'s unbroken line; `RecommendationCard`'s
+flex-wrap minimums) -- both were checked with a real Playwright run at
+375px in light and dark and showed zero horizontal overflow. Rather than
+keep guessing, drove a real multi-turn conversation through the actual dev
+server at 1000px (deliberately between the old and new breakpoints) and
+screenshotted it, which showed the actual failure directly: the chat
+column crushed to a one-word-per-line sliver the instant the recommendation
+turn added the SQL stage. Root causes, both in `ConversationDemo.tsx`:
+
+1. The two-column grid (`grid-cols-1 min-[1061px]:grid-cols-[1.3fr_1fr]`)
+   only engaged above 1061px -- narrower than a lot of ordinary windowed
+   (non-maximized) laptop browsers, so the panel spent much of its life
+   stacked full-width below an ever-growing chat column. Lowered to 880px.
+2. `<section>` already had `min-w-0`; `<aside>` didn't. A grid item's
+   default min-width is its content's max-content size, and the SQL
+   stage's `<pre>` -- one genuinely unbreakable line, `overflow-x-auto` on
+   the `<pre>` itself doesn't constrain its GRID PARENT's track sizing --
+   was forcing the aside's `1fr` track wide enough to crush the `1.3fr`
+   chat track the moment a recommendation turn added that stage. This is
+   almost certainly the actual mechanism behind the original report, not
+   the breakpoint alone: earlier turns have no `<pre>` in the panel at all,
+   so nothing forced the columns apart until the stage that introduces one
+   showed up -- exactly "worked fine until the recommendation showed up."
+
+### Verification
+
+`npx tsc --noEmit`, `eslint` on both changed files, and `npm run build`
+all clean. Live-verified with Playwright (installed locally via `npm
+install --no-save`, removed afterward) driving the real dev server through
+actual multi-turn conversations -- not fixture data: confirmed exactly one
+"Read the conversation" card exists in the DOM across four real turns
+(`slotsCardCount: 1`), confirmed the aside's `left` offset stays fixed at
+566px through the recommendation turn at 1000px (versus jumping to 83px
+pre-fix on the same real run), confirmed stepping back through turns 3→2→1
+shows 3 stage cards on each ask-turn (not 6) with the turn label and total
+cost/timing genuinely changing per turn, confirmed "Jump to latest" returns
+to turn 4, and confirmed the highlight fade timing above. All screenshots,
+the Playwright package, and the throwaway verification scripts were removed
+after use -- nothing this round was committed to the repo except the two
+real source files.
