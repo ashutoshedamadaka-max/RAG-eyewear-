@@ -4832,3 +4832,14 @@ screenshots at desktop light, desktop dark, and mobile widths directly --
 legible at every size, no clipped or blank regions, both themes correct.
 Playwright and every debug/verification script and screenshot were removed
 after use.
+
+## 2026-09-09 · /how-it-works section order: the architecture diagram now comes before the slider
+
+Reordered on request: "The whole path, end to end" (the architecture
+diagram) now sits directly after the hero/fork section and before "The
+problem, in one slider," instead of after it. The diagram's own intro
+copy ("the same fork the two cards above describe") already only refers
+back to the hero section, so it reads correctly either way -- no copy
+changes needed, purely a section-order swap in
+`app/app/how-it-works/page.tsx`. `npx tsc --noEmit`, `eslint`, and `npm
+run build` all clean.

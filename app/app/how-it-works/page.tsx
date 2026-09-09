@@ -192,6 +192,19 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
+        {/* ---- architecture diagram ---- */}
+        <section className="mb-16">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">The whole path, end to end</p>
+          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            One message in, one diagram out
+          </h2>
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            Every box below is a real stage the code actually runs, in order — the same fork the
+            two cards above describe, now traced from the first message to the finished answer.
+          </p>
+          <ArchitectureDiagram />
+        </section>
+
         {/* ---- the failure, shown ---- */}
         <section className="mb-16">
           <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">The problem, in one slider</p>
@@ -263,19 +276,6 @@ export default function HowItWorksPage() {
               It&apos;s still running, if you want to see it.
             </Link>
           </p>
-        </section>
-
-        {/* ---- architecture diagram ---- */}
-        <section className="mb-16">
-          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">The whole path, end to end</p>
-          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
-            One message in, one diagram out
-          </h2>
-          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
-            Every box below is a real stage the code actually runs, in order — the same fork the
-            two cards above describe, now traced from the first message to the finished answer.
-          </p>
-          <ArchitectureDiagram />
         </section>
 
         {/* ---- pipeline ---- */}
