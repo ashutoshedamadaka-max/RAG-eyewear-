@@ -4673,3 +4673,47 @@ to turn 4, and confirmed the highlight fade timing above. All screenshots,
 the Playwright package, and the throwaway verification scripts were removed
 after use -- nothing this round was committed to the repo except the two
 real source files.
+
+## 2026-09-09 · "View all questions" popup on each golden-set card
+
+Ask: a link on the golden-set cards that opens a popup showing every
+question in that set, easy to read. Added `loadGoldenSetQuestions()` to
+`app/lib/eval-reports.ts`, reading the same three committed golden files
+(`judge_validation.json`, `conversation.json`, `refusal.json`) the cards'
+own counts already come from, and a `GoldenSetModal` in
+`EvalsPageClient.tsx` wired to a new "View all questions →" link on each
+card.
+
+The three sets don't share a shape, so the popup doesn't force one:
+`judge_validation.json` and `refusal.json` cases each have a real
+customer-facing `query` string, rendered as a serif quote with a tag pill
+(real transcript/constructed, or the refusal category) and, for refusal
+cases, the real `expected_behavior` text underneath. `conversation.json`
+cases have no single query -- they're scripted multi-turn exchanges -- so
+those instead lead with a truncated one-line gist of the case's real
+`description` and render the actual `turns` array as a small indented
+mini-script, which is a closer match to "the golden set questions" for a
+conversation-shaped set than paraphrasing it into a single line would be.
+`physical.json` wasn't wired up -- it isn't rendered as a card in this
+grid (see the footnote paragraph below the three cards), and the ask was
+specifically about "a card."
+
+Modal styling reuses the page's existing tokens throughout (`--shell`,
+`--block`, `--line`, `--acc`, `--acc-lt`, the serif font stack for quoted
+text) rather than introducing new ones. Escape key and backdrop click both
+close it; background scroll is locked while open via `document.body.style.
+overflow` in the modal's own effect, reverted on close.
+
+### Verification
+
+`npx tsc --noEmit`, `eslint`, and `npm run build` all clean. Live-verified
+with Playwright against a production server: all three "View all
+questions" buttons found and clickable; the judge modal contains the real
+case id `real-0-rimless-strong-rx` and its real query text; the
+conversation modal contains a real turn line ("Not sure about my face
+shape, let's skip that."); the refusal modal contains the real
+`floaters-symptom` case and both a `Safety interrupt` and a `Constraint
+violation` tag; Escape and a backdrop click each closed the dialog
+(confirmed via `role="dialog"` count dropping to 0). Screenshots of all
+three popups reviewed directly -- clean, readable, on-theme. Playwright
+and all screenshots/scripts removed after use.

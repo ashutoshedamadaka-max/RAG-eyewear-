@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { loadEvalSummary, loadGoldenCaseCounts, loadCaseMatrix } from "@/lib/eval-reports";
+import { loadEvalSummary, loadGoldenCaseCounts, loadCaseMatrix, loadGoldenSetQuestions } from "@/lib/eval-reports";
 import EvalsPageClient from "@/components/EvalsPageClient";
 
 export const metadata: Metadata = {
@@ -11,6 +11,7 @@ export default function EvalsPage() {
   const summary = loadEvalSummary();
   const goldenCounts = loadGoldenCaseCounts();
   const caseMatrix = loadCaseMatrix();
+  const goldenQuestions = loadGoldenSetQuestions();
 
-  return <EvalsPageClient summary={summary} goldenCounts={goldenCounts} caseMatrix={caseMatrix} />;
+  return <EvalsPageClient summary={summary} goldenCounts={goldenCounts} caseMatrix={caseMatrix} goldenQuestions={goldenQuestions} />;
 }

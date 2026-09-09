@@ -174,6 +174,82 @@ export function loadCaseMatrix(): CaseMatrixRow[] {
   });
 }
 
+export interface GoldenQuestion {
+  id: string;
+  /** The customer-facing question or scenario this case is built around. For a case with no
+      single query (conversation.json's multi-turn scripts; physical.json's threshold-only cases),
+      this is a short description of what's being tested instead. */
+  prompt: string;
+  /** Extra context worth showing alongside the prompt -- expected_behavior for refusal.json, a
+      one-line note for a physical.json/refusal.json case that has one. */
+  detail?: string;
+  /** conversation.json only: the full turn-by-turn script, since a single `prompt` line can't
+      represent a multi-turn case. */
+  turns?: string[];
+  /** A short category label -- judge_validation.json's source (real transcript/constructed),
+      refusal.json's four categories, physical.json's three. */
+  tag?: string;
+}
+
+export interface GoldenSetQuestions {
+  judgeValidation: GoldenQuestion[];
+  conversation: GoldenQuestion[];
+  refusal: GoldenQuestion[];
+}
+
+const JUDGE_SOURCE_LABEL: Record<string, string> = {
+  real_pipeline_run: "real transcript",
+  constructed: "constructed",
+};
+
+const REFUSAL_CATEGORY_LABEL: Record<string, string> = {
+  safety_interrupt_cases: "Safety interrupt",
+  constraint_violation_cases: "Constraint violation",
+  assumption_surfacing_cases: "Assumption surfacing",
+  persona_constraint_conflict_cases: "Persona vs. constraint",
+};
+
+/** Backs the "view all questions" popup on each golden-set card (decisions.md, 2026-09-09) --
+    reads the same three committed golden files the counts on those cards already come from, so
+    the list a reader sees can never drift from what's actually in the set. Every case in
+    judge_validation.json and refusal.json has a real customer-facing `query`; conversation.json's
+    cases don't (they're scripted multi-turn exchanges), so those surface their real `turns`
+    array instead of a fabricated single-line question. */
+export function loadGoldenSetQuestions(): GoldenSetQuestions {
+  let judgeValidation: GoldenQuestion[] = [];
+  try {
+    const golden = readGolden<{ cases: { id: string; source: string; query: string }[] }>("judge_validation.json");
+    judgeValidation = golden.cases.map((c) => ({ id: c.id, prompt: c.query, tag: JUDGE_SOURCE_LABEL[c.source] ?? c.source }));
+  } catch {
+    judgeValidation = [];
+  }
+
+  let conversation: GoldenQuestion[] = [];
+  try {
+    const golden = readGolden<{ cases: { id: string; description: string; turns: string[] }[] }>("conversation.json");
+    conversation = golden.cases.map((c) => ({ id: c.id, prompt: c.description, turns: c.turns }));
+  } catch {
+    conversation = [];
+  }
+
+  let refusal: GoldenQuestion[] = [];
+  try {
+    const golden = readGolden<Record<string, { id: string; query?: string; expected_behavior?: string }[] | string>>("refusal.json");
+    for (const [key, cases] of Object.entries(golden)) {
+      if (!Array.isArray(cases)) continue;
+      const tag = REFUSAL_CATEGORY_LABEL[key] ?? key;
+      for (const c of cases) {
+        if (!c.query) continue;
+        refusal.push({ id: c.id, prompt: c.query, detail: c.expected_behavior, tag });
+      }
+    }
+  } catch {
+    refusal = [];
+  }
+
+  return { judgeValidation, conversation, refusal };
+}
+
 export function loadGoldenCaseCounts() {
   function safeCount(file: string): number {
     try {

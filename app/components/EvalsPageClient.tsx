@@ -9,9 +9,9 @@
 // app/lib/eval-reports.ts#loadCaseMatrix) and passed down as props, so
 // the matrix can never silently drift from what a fresh
 // `npm run validate-judges` would actually show.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { EvalSummary, CaseMatrixRow } from "@/lib/eval-reports";
+import type { EvalSummary, CaseMatrixRow, GoldenQuestion, GoldenSetQuestions } from "@/lib/eval-reports";
 
 function formatDate(iso: string): string {
   if (!iso) return "not yet run";
@@ -41,6 +41,97 @@ function Cell({ v, disagree }: { v: string | undefined; disagree?: boolean }) {
 
 function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n).trimEnd() + "…" : s;
+}
+
+/** The "view all questions" popup on each golden-set card (decisions.md, 2026-09-09) -- every
+    case shown is real, loaded server-side via loadGoldenSetQuestions() from the same committed
+    JSON the card's own count comes from. conversation.json's cases have no single query (they're
+    scripted multi-turn exchanges), so those render the real `turns` script instead of a
+    paraphrased one-liner; the other two sets render their real `query` field as a quote. */
+function GoldenSetModal({ title, filename, questions, onClose }: { title: string; filename: string; questions: GoldenQuestion[]; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-center overflow-y-auto p-4 min-[640px]:p-8"
+      style={{ background: "rgba(10, 16, 17, 0.5)" }}
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="bg-[var(--shell)] border border-[var(--line)] rounded-[16px] shadow-[var(--shadow)] max-w-[640px] w-full h-fit my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-[var(--line)]">
+          <div>
+            <h3 className="text-[15px] font-semibold text-[var(--ink)] m-0">{title}</h3>
+            <p className="font-mono text-[11.5px] text-[var(--ink3)] mt-1 mb-0">
+              {filename} · {questions.length} case{questions.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex-none w-[26px] h-[26px] rounded-full flex items-center justify-center text-[15px] leading-none text-[var(--ink3)] hover:text-[var(--ink)] hover:bg-[var(--sunk)] transition-colors"
+          >
+            ×
+          </button>
+        </div>
+        <div className="px-5 py-2 max-h-[68vh] overflow-y-auto">
+          {questions.length === 0 && <p className="text-[13px] text-[var(--ink3)] py-4">No cases found.</p>}
+          {questions.map((q) => (
+            <div key={q.id} className="py-3.5 border-b border-[var(--line2)] last:border-b-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <span className="font-mono text-[10.5px] text-[var(--ink3)]">{q.id}</span>
+                {q.tag && (
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: "var(--acc-lt)", color: "var(--acc)" }}>
+                    {q.tag}
+                  </span>
+                )}
+              </div>
+              {q.turns ? (
+                <>
+                  <p className="text-[12px] leading-relaxed text-[var(--ink3)] mb-2 mt-0">{truncate(q.prompt, 170)}</p>
+                  <div className="grid gap-1.5">
+                    {q.turns.map((t, i) => (
+                      <p
+                        key={i}
+                        className="text-[13.5px] leading-relaxed text-[var(--ink)] m-0 pl-3 py-0.5 border-l-2 border-[var(--line)]"
+                        style={{ fontFamily: "var(--font-serif, inherit)" }}
+                      >
+                        {t}
+                      </p>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[14.5px] leading-relaxed text-[var(--ink)] m-0" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+                    &ldquo;{q.prompt}&rdquo;
+                  </p>
+                  {q.detail && <p className="text-[12px] leading-relaxed text-[var(--ink3)] mt-1.5 mb-0">{q.detail}</p>}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const HELD_OUT = [
@@ -148,14 +239,17 @@ export default function EvalsPageClient({
   summary,
   goldenCounts,
   caseMatrix,
+  goldenQuestions,
 }: {
   summary: EvalSummary;
   goldenCounts: { conversation: number; judgeValidation: number; refusal: Record<string, number>; physical: Record<string, number> };
   caseMatrix: CaseMatrixRow[];
+  goldenQuestions: GoldenSetQuestions;
 }) {
   const negativeId = "constructed-hedging-fail-convention-stated-as-requirement";
   const positiveId = "constructed-hedging-pass-convention-correctly-hedged";
   const [openId, setOpenId] = useState<string>(negativeId);
+  const [openGoldenSet, setOpenGoldenSet] = useState<"judge" | "conversation" | "refusal" | null>(null);
 
   const negative = caseMatrix.find((c) => c.id === negativeId);
   const positive = caseMatrix.find((c) => c.id === positiveId);
@@ -509,9 +603,12 @@ export default function EvalsPageClient({
                 {goldenCounts.judgeValidation}
                 <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases</small>
               </div>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-0">
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
                 Hand-labelled transcripts, real and constructed. The only set a judge grades.
               </p>
+              <button onClick={() => setOpenGoldenSet("judge")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
+                View all questions →
+              </button>
             </div>
             <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
               <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">conversation.json</h4>
@@ -523,12 +620,18 @@ export default function EvalsPageClient({
                 Scripted multi-turn conversations, graded against the resulting state.
               </p>
               {summary.conversation && summary.conversation.total > 0 && (
-                <div className="flex flex-wrap gap-[3px] mt-2.5">
+                <div className="flex flex-wrap gap-[3px] mt-2.5 mb-2.5">
                   {Array.from({ length: summary.conversation.total }).map((_, i) => (
                     <i key={i} className="w-[9px] h-[9px] rounded-[2px] inline-block" style={{ background: "var(--ok)" }} />
                   ))}
                 </div>
               )}
+              <button
+                onClick={() => setOpenGoldenSet("conversation")}
+                className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]"
+              >
+                View all questions →
+              </button>
             </div>
             <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
               <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">refusal.json</h4>
@@ -536,9 +639,12 @@ export default function EvalsPageClient({
                 {refusalTotal}
                 <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases · {Object.keys(goldenCounts.refusal).length} categories</small>
               </div>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-0">
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
                 Safety interrupts, and catalogue combinations built to be unsatisfiable.
               </p>
+              <button onClick={() => setOpenGoldenSet("refusal")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
+                View all questions →
+              </button>
             </div>
           </div>
           <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
@@ -581,6 +687,16 @@ export default function EvalsPageClient({
           </Link>
         </div>
       </div>
+
+      {openGoldenSet === "judge" && (
+        <GoldenSetModal title="judge_validation.json" filename="evals/golden/judge_validation.json" questions={goldenQuestions.judgeValidation} onClose={() => setOpenGoldenSet(null)} />
+      )}
+      {openGoldenSet === "conversation" && (
+        <GoldenSetModal title="conversation.json" filename="evals/golden/conversation.json" questions={goldenQuestions.conversation} onClose={() => setOpenGoldenSet(null)} />
+      )}
+      {openGoldenSet === "refusal" && (
+        <GoldenSetModal title="refusal.json" filename="evals/golden/refusal.json" questions={goldenQuestions.refusal} onClose={() => setOpenGoldenSet(null)} />
+      )}
     </div>
   );
 }
