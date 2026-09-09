@@ -4499,3 +4499,83 @@ snapshot by construction -- client state, not a bug). Machinery panel
 prominence restoration and the stacked-list rewrite both re-verified
 against `npx tsc --noEmit`/`npm run build` independently before being
 combined.
+
+## 2026-09-09 · /evals rebuilt against a supplied prototype, every number wired to real data
+
+Supplied `evals-page-v2.jsx` -- a richer interactive design (score cards
+with judge/deterministic "how" badges, a 3-card primer, a judge-vs-code
+"fork," a minimal-pair callout, an 18-row interactive case matrix, held-
+out-vs-in-sample range bars, golden-set cards with a dot visualization,
+a findings section, footer) -- with the instruction to rebuild `/evals`
+against it. Same rule as `/how-it-works` (2026-09-04): the prototype is
+a visual spec, not code to copy. It hand-typed all 18 case-matrix rows,
+the minimal-pair quotes, and the finding count to demonstrate the UI;
+none of that was carried over as literal data.
+
+### What's real now that wasn't hand-typed
+
+- **The 18-row case matrix**: added `loadCaseMatrix()` to
+  `app/lib/eval-reports.ts`, merging `judge_validation.json`'s real
+  hand-authored cases (id, source, the actual generated `answer` text,
+  and `label_reasoning` -- the hand-labeller's own real notes on why
+  the case exists) with the latest committed `judge-validation-*.json`
+  report's real per-dimension verdicts (hand label, judge label, agree/
+  disagree, judge's real reasoning string). Verified via a throwaway
+  `app/scripts/smoketest-matrix.ts` (deleted after use) before wiring
+  it into the page: 18 rows, 9 `real_pipeline_run` + 9 `constructed`,
+  real quoted text confirmed present for both minimal-pair hedging
+  cases. A fresh `npm run validate-judges` regenerates the report this
+  reads from, so the matrix can't silently drift from what the harness
+  actually finds -- it was never a second, parallel list to keep in
+  sync by hand.
+- **The minimal pair**: the two hedging cases
+  (`constructed-hedging-fail-convention-stated-as-requirement` /
+  `...-pass-convention-correctly-hedged`) now quote their real generated
+  answer text pulled from `loadCaseMatrix()`, not paraphrased or
+  invented dialogue.
+- **Score cards, golden-set counts, dot visualization**: unchanged data
+  sources from the existing `loadEvalSummary()`/`loadGoldenCaseCounts()`
+  (89-100% groundedness, 75-88% citation accuracy, 85/85 conversation
+  checks, 2/3 gap-handling with the known intentional-gap closure
+  flagged, on the 2026-09-04 run) -- reused, not recomputed, since
+  nothing about those numbers needed to change for this rebuild.
+- **Held-out vs in-sample bars**: kept as the existing hardcoded
+  17-case/6-case historical numbers (82-88%/80-93% in-sample vs
+  83-100%/83-100% held-out) -- this data predates the report-JSON
+  pipeline and was never persisted as a re-runnable artifact, so, as
+  before, it's disclosed as a dated historical fact rather than dressed
+  up as live.
+- **Findings section**: fixed a real bug found while reading the old
+  page's own text -- it said "Four findings, pulled from the project's
+  decision log" while rendering five `<div>` blocks. Corrected to "Five
+  findings" and kept all five (ground-truth circularity, the same
+  circularity one level up, "documented != implemented" x4, a model
+  upgrade trading compliance for fluency, the intentional gap closed by
+  catalogue churn).
+
+### Structure
+
+Followed the established server/client split (`/` -> page.tsx +
+ConversationDemo.tsx): `app/app/evals/page.tsx` is now a thin server
+component calling `loadEvalSummary()`, `loadGoldenCaseCounts()`,
+`loadCaseMatrix()` and passing plain-object props to a new
+`app/components/EvalsPageClient.tsx`, which owns the one piece of real
+interactivity the prototype needed -- click-to-select case-matrix rows,
+showing that row's real `labelReasoning` in a detail panel (defaults to
+the negative hedging case open, not empty). Rebuilt with this project's
+existing CSS-variable theme tokens throughout (`var(--ink)`, `var(--acc)`,
+`var(--ok)`, `var(--warn)`, `var(--sunk)`, `var(--block)`, ...) rather
+than the prototype's own hardcoded hex values, matching every prior
+prototype-to-page rebuild this project has done.
+
+### Verification
+
+`npx tsc --noEmit` and `npm run build` both clean, `/evals` prerenders
+as static content. Live-verified against a production server on a spare
+port (`next start -p 3100`, curled `/evals`): confirmed real values in
+the rendered HTML -- 18 total cases, 9 real-pipeline + 9 constructed
+group counts, both minimal-pair case IDs, a real quoted answer fragment
+("Nira Series 863"), the corrected "Five findings" text, "held-out (6
+cases)", "Last run 4 September 2026", the 89-100%/75-88%/85-85/2-3 score
+cards, and the `/baseline` "It scores 0/3" link -- then stopped the
+spare server.

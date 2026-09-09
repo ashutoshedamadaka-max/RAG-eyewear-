@@ -130,6 +130,50 @@ export function loadEvalSummary(): EvalSummary {
   };
 }
 
+export interface CaseMatrixRow {
+  id: string;
+  source: string;
+  /** The real generated (or hand-constructed) answer text this case grades -- lets a page quote
+      the actual sentence being judged instead of paraphrasing it. */
+  answer: string;
+  /** The hand-labeller's own reasoning for this case, straight from judge_validation.json -- real,
+      committed text, never generated for display, since it already exists and already IS the "why
+      does this case matter" answer. */
+  labelReasoning: string;
+  dimensions: Partial<
+    Record<"groundedness" | "citation_accuracy" | "hedging_match", { hand: string; judge: string; agrees: boolean; judgeReasoning: string }>
+  >;
+}
+
+/** /evals' interactive case matrix (decisions.md, 2026-09-09): merges judge_validation.json's
+    real hand-authored cases with the LATEST judge report's real per-dimension verdicts -- the
+    prototype this was built against hand-typed 18 rows to demonstrate this UI pattern; here the
+    same 18 rows are the actual committed test data, so the matrix can never silently drift from
+    what a fresh `npm run validate-judges` would show. */
+export function loadCaseMatrix(): CaseMatrixRow[] {
+  let goldenCases: { id: string; source: string; answer: string; label_reasoning: string }[] = [];
+  try {
+    const golden = readGolden<{ cases: { id: string; source: string; answer: string; label_reasoning: string }[] }>("judge_validation.json");
+    goldenCases = golden.cases;
+  } catch {
+    goldenCases = [];
+  }
+
+  const judgeFiles = listFiles("judge-validation-");
+  const latestJudge = judgeFiles.length > 0 ? readReport<JudgeReport>(judgeFiles[judgeFiles.length - 1]) : null;
+  const judgeById = new Map((latestJudge?.cases ?? []).map((c) => [c.id, c]));
+
+  return goldenCases.map((gc) => {
+    const jc = judgeById.get(gc.id);
+    const dims: CaseMatrixRow["dimensions"] = {};
+    (["groundedness", "citation_accuracy", "hedging_match"] as const).forEach((dim) => {
+      const d = jc?.[dim] as { hand: string; judge: string; agrees: boolean; reasoning: string } | undefined;
+      if (d) dims[dim] = { hand: d.hand, judge: d.judge, agrees: d.agrees, judgeReasoning: d.reasoning };
+    });
+    return { id: gc.id, source: gc.source, answer: gc.answer, labelReasoning: gc.label_reasoning, dimensions: dims };
+  });
+}
+
 export function loadGoldenCaseCounts() {
   function safeCount(file: string): number {
     try {
