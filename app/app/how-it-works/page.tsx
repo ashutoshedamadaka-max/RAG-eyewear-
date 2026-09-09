@@ -264,6 +264,25 @@ export default function HowItWorksPage() {
           </p>
         </section>
 
+        {/* ---- architecture diagram ---- */}
+        <section className="mb-16">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">The whole path, end to end</p>
+          <h2 className="text-[24px] leading-[1.24] tracking-tight m-0 mb-2.5 max-w-[24ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            One message in, one diagram out
+          </h2>
+          <p className="text-[16px] leading-relaxed text-[var(--ink2)] m-0 mb-6 max-w-[56ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
+            Every box below is a real stage the code actually runs, in order — the same fork the
+            two cards above describe, now traced from the first message to the finished answer.
+          </p>
+          <div className="rounded-[14px] border border-[var(--line)] shadow-[var(--shadow)] overflow-hidden bg-white">
+            <img
+              src="/architecture-diagram.svg"
+              alt="Diagram: a user message is read for what the turn added, merged into cumulative slot state, turned into constraints, then forks into two mechanisms — a SQL query against the 101-frame catalogue (never embedded) and a cosine-similarity retrieval against the tagged advice corpus (never queried with SQL) — before both halves are written into one answer, with every stage logged to the machinery trace shown live in the demo."
+              className="w-full h-auto block"
+            />
+          </div>
+        </section>
+
         {/* ---- pipeline ---- */}
         <section className="mb-16">
           <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">Every turn that recommends something</p>
