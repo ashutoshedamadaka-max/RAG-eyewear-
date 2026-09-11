@@ -4843,3 +4843,52 @@ back to the hero section, so it reads correctly either way -- no copy
 changes needed, purely a section-order swap in
 `app/app/how-it-works/page.tsx`. `npx tsc --noEmit`, `eslint`, and `npm
 run build` all clean.
+
+## 2026-09-11 · /evals: section reorder, a real RangeBar overflow bug, and case-matrix simplification
+
+Three requested changes to `EvalsPageClient.tsx`.
+
+**Section order**: "Three golden sets, graded three ways" now comes right
+after the score cards, before "Which check goes where" (previously it sat
+near the bottom, after the case matrix and held-out section) -- a pure
+reorder, same content, same props.
+
+**RangeBar was actually broken, not just plain**: the held-out-vs-in-
+sample bars rendered their percentage label INSIDE a fill segment sized
+to the range itself. For a narrow range (groundedness in-sample, 82-88,
+six points) the segment was too narrow to hold "82–88%" and the text
+wrapped mid-number; for a zero-width range (hedging_match in-sample,
+100-100) the segment's own `left:100%` pushed the ENTIRE label past the
+track's right edge, rendering as a clipped "10" instead of "100%". Both
+are genuine layout bugs, not a copy/sizing preference -- confirmed via
+screenshot before and after. Fixed by separating the two roles the old
+markup conflated: the track now shows the range as a pure proportional
+fill (clamped so it can never start past the point where it would
+overflow), and the label is a separate fixed element beside the track,
+sized by the label's own text rather than by how wide the range happens
+to be -- so it can never wrap or clip regardless of range width.
+
+**Case matrix simplified**: removed the click-to-expand reasoning panel
+and the "Read a column, not just a row..." paragraph below the legend,
+keeping the legend itself (pass/fail/dimension-doesn't-apply/judge-
+disagrees) as the section's closing element. Since the reasoning panel
+was the only consumer of the matrix's click state, removed that state
+entirely (`openId`/`setOpenId`/`selected`) rather than leaving rows
+clickable with no visible effect -- rows are now plain non-interactive
+`div`s, not buttons. Also dropped `disagreementCount` (only used in the
+removed paragraph) and the case-matrix intro's "Tap any row to see the
+real hand-labeller's notes" sentence, since that's no longer true.
+
+### Verification
+
+`npx tsc --noEmit`, `eslint`, and `npm run build` all clean. Live-verified
+with Playwright against a production server: confirmed the new section
+order via the page's own eyebrow labels; confirmed the case matrix no
+longer contains "Tap any row" or "Read a column, not just a row" text
+while the legend's "judge disagrees with hand label" line still does;
+confirmed clicking a case row now renders zero detail-panel elements
+(previously one); and reviewed a screenshot of the fixed RangeBar --
+every one of the six bars (three dimensions x in-sample/held-out) shows
+its full label legibly beside a proportional track, including the
+previously-broken 82-88% and 100% cases. Playwright and the verification
+scripts/screenshots were removed after use.

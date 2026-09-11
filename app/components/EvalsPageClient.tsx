@@ -140,17 +140,25 @@ const HELD_OUT = [
   { dim: "hedging_match", inSample: [100, 100] as const, heldOut: [100, 100] as const },
 ];
 
+/** A narrow range (e.g. 82-88, six points) can't fit its own label ("82–88%") inside a
+    proportionally-sized fill segment -- the label used to be rendered INSIDE that segment and
+    would wrap or spill past the track's edge for any range under ~15 points, and for a 0-width
+    range (lo===hi===100) the segment's own `left:100%` pushed it off the track entirely. Fixed
+    by separating the two: the track shows the range purely as a proportional fill (a fixed
+    visual minimum width so it stays visible even at 0 points, clamped so it can never start past
+    the point where it would overflow the track), and the label is always its own fixed-width
+    element next to the track, so it's never constrained by how wide the range happens to be. */
 function RangeBar({ range }: { range: readonly [number, number] }) {
   const [lo, hi] = range;
-  const width = Math.max(hi - lo, 11);
+  const fillWidth = Math.max(hi - lo, 4);
+  const fillLeft = Math.min(lo, 100 - fillWidth);
+  const label = lo === hi ? `${lo}%` : `${lo}–${hi}%`;
   return (
-    <div className="relative h-[30px] bg-[var(--block)] border border-[var(--line)] rounded-[7px]">
-      <b
-        className="absolute top-0 bottom-0 bg-[var(--acc-lt)] border border-[var(--acc)] rounded-[5px] flex items-center justify-center text-[10.5px] font-medium text-[var(--acc)] tabular-nums"
-        style={{ left: `${lo}%`, width: `${width}%` }}
-      >
-        {lo === hi ? `${lo}%` : `${lo}–${hi}%`}
-      </b>
+    <div className="flex items-center gap-3">
+      <div className="relative h-[10px] flex-1 bg-[var(--block)] border border-[var(--line)] rounded-full overflow-hidden">
+        <div className="absolute top-0 bottom-0 bg-[var(--acc)] rounded-full" style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }} />
+      </div>
+      <span className="text-[12px] font-medium text-[var(--acc)] tabular-nums whitespace-nowrap flex-none min-w-[62px] text-right">{label}</span>
     </div>
   );
 }
@@ -248,19 +256,12 @@ export default function EvalsPageClient({
 }) {
   const negativeId = "constructed-hedging-fail-convention-stated-as-requirement";
   const positiveId = "constructed-hedging-pass-convention-correctly-hedged";
-  const [openId, setOpenId] = useState<string>(negativeId);
   const [openGoldenSet, setOpenGoldenSet] = useState<"judge" | "conversation" | "refusal" | null>(null);
 
   const negative = caseMatrix.find((c) => c.id === negativeId);
   const positive = caseMatrix.find((c) => c.id === positiveId);
-  const selected = caseMatrix.find((c) => c.id === openId);
   const real = caseMatrix.filter((c) => c.source === "real_pipeline_run");
   const constructed = caseMatrix.filter((c) => c.source !== "real_pipeline_run");
-
-  const disagreementCount = caseMatrix.reduce(
-    (n, c) => n + Object.values(c.dimensions).filter((d) => d && !d.agrees).length,
-    0
-  );
 
   const refusalTotal = Object.values(goldenCounts.refusal).reduce((a, b) => a + b, 0);
   const physicalTotal = Object.values(goldenCounts.physical).reduce((a, b) => a + b, 0);
@@ -374,6 +375,74 @@ export default function EvalsPageClient({
           </p>
         </section>
 
+        {/* ---- golden sets ---- */}
+        <section className="mb-14">
+          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">Three golden sets, graded three ways</p>
+          <h2 className="text-[22px] leading-[1.24] tracking-tight m-0 mb-4 max-w-[28ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
+            They fail differently, so an average would hide what matters
+          </h2>
+          <div className="grid grid-cols-1 min-[700px]:grid-cols-3 gap-2.5">
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
+              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">judge_validation.json</h4>
+              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
+                {goldenCounts.judgeValidation}
+                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases</small>
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
+                Hand-labelled transcripts, real and constructed. The only set a judge grades.
+              </p>
+              <button onClick={() => setOpenGoldenSet("judge")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
+                View all questions →
+              </button>
+            </div>
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
+              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">conversation.json</h4>
+              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
+                {goldenCounts.conversation}
+                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases · {summary.conversation?.total ?? 0} checks</small>
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
+                Scripted multi-turn conversations, graded against the resulting state.
+              </p>
+              {summary.conversation && summary.conversation.total > 0 && (
+                <div className="flex flex-wrap gap-[3px] mt-2.5 mb-2.5">
+                  {Array.from({ length: summary.conversation.total }).map((_, i) => (
+                    <i key={i} className="w-[9px] h-[9px] rounded-[2px] inline-block" style={{ background: "var(--ok)" }} />
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setOpenGoldenSet("conversation")}
+                className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]"
+              >
+                View all questions →
+              </button>
+            </div>
+            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
+              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">refusal.json</h4>
+              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
+                {refusalTotal}
+                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases · {Object.keys(goldenCounts.refusal).length} categories</small>
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
+                Safety interrupts, and catalogue combinations built to be unsatisfiable.
+              </p>
+              <button onClick={() => setOpenGoldenSet("refusal")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
+                View all questions →
+              </button>
+            </div>
+          </div>
+          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
+            <code className="font-mono text-[12px] bg-[var(--sunk)] px-1.5 py-0.5 rounded">physical.json</code> also exists (
+            {physicalTotal} cases: lens-index recommendation, minimum progressive B-height, frame-width/PD
+            interaction) but isn&apos;t part of the four-card dashboard above — a lower-profile
+            harness, disclosed here rather than quietly left out. A fourth planned set,{" "}
+            <b className="text-[var(--ink)] font-semibold">style fit, was never built</b> — it needs
+            an optician&apos;s judgement to grade correctly, and that dependency was never resolved
+            into actual cases. Said plainly rather than implied by omission.
+          </p>
+        </section>
+
         {/* ---- fork: judged vs deterministic ---- */}
         <section className="mb-14">
           <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">Which check goes where</p>
@@ -484,8 +553,7 @@ export default function EvalsPageClient({
           <p className="text-[15px] leading-relaxed text-[var(--ink2)] m-0 mb-5 max-w-[58ch]" style={{ fontFamily: "var(--font-serif, inherit)" }}>
             {real.length} real transcripts, {constructed.length} constructed specifically to test
             failure detection — a set built only from real runs would be all-green by accident and
-            couldn&apos;t show whether the judge can spot a failure at all. Tap any row to see the
-            real hand-labeller&apos;s notes on why it&apos;s there.
+            couldn&apos;t show whether the judge can spot a failure at all.
           </p>
 
           <div className="bg-[var(--sunk)] rounded-[14px] p-5 shadow-[var(--shadow-in)]">
@@ -503,28 +571,18 @@ export default function EvalsPageClient({
               <div key={group.label}>
                 <p className="text-[10.5px] font-medium text-[var(--ink3)] tracking-wide pt-3.5 pb-1.5 m-0">{group.label}</p>
                 {group.rows.map((c) => (
-                  <button
+                  <div
                     key={c.id}
-                    onClick={() => setOpenId(c.id)}
-                    aria-pressed={openId === c.id}
-                    className="w-full text-left grid grid-cols-[1fr_60px_60px_60px] min-[500px]:grid-cols-[1fr_74px_74px_74px] gap-2 items-center py-1 border-b border-[var(--line2)] transition-colors hover:bg-[var(--block)]"
-                    style={{ background: openId === c.id ? "var(--block)" : "transparent" }}
+                    className="grid grid-cols-[1fr_60px_60px_60px] min-[500px]:grid-cols-[1fr_74px_74px_74px] gap-2 items-center py-1 border-b border-[var(--line2)]"
                   >
                     <span className="font-mono text-[11.5px] text-[var(--ink2)] truncate">{c.id}</span>
                     <Cell v={c.dimensions.groundedness?.hand} disagree={c.dimensions.groundedness && !c.dimensions.groundedness.agrees} />
                     <Cell v={c.dimensions.citation_accuracy?.hand} disagree={c.dimensions.citation_accuracy && !c.dimensions.citation_accuracy.agrees} />
                     <Cell v={c.dimensions.hedging_match?.hand} disagree={c.dimensions.hedging_match && !c.dimensions.hedging_match.agrees} />
-                  </button>
+                  </div>
                 ))}
               </div>
             ))}
-
-            {selected && (
-              <div className="bg-[var(--block)] border border-[var(--line)] rounded-[11px] px-4.5 py-4 mt-3.5">
-                <h5 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0 mb-2">{selected.id}</h5>
-                <p className="text-[13.5px] leading-relaxed text-[var(--ink2)] m-0">{selected.labelReasoning}</p>
-              </div>
-            )}
 
             <div className="flex gap-3.5 flex-wrap mt-3.5">
               <span className="flex items-center gap-1.5 text-[11.5px] text-[var(--ink3)]">
@@ -545,14 +603,6 @@ export default function EvalsPageClient({
               </span>
             </div>
           </div>
-          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
-            Read a column, not just a row: <b className="text-[var(--ink)] font-semibold">the same case can pass one dimension and fail another</b> —
-            right fact, wrong bracket number — which is exactly why groundedness and citation
-            accuracy are graded separately instead of averaged into one score. The dashed outlines
-            are {disagreementCount} place{disagreementCount === 1 ? "" : "s"}, on the latest run, the
-            judge still disagrees with a human label — reported as-is, not filtered, since run-to-run
-            judge variance (temperature 1) means the exact set shifts between runs.
-          </p>
         </section>
 
         {/* ---- held-out ---- */}
@@ -587,74 +637,6 @@ export default function EvalsPageClient({
             so this reads as &ldquo;consistent with the in-sample range,&rdquo; not a tighter number.{" "}
             <b className="text-[var(--ink)] font-semibold">Landing inside or slightly above the in-sample range is what generalisation looks like:</b>{" "}
             the revision held on material it never saw.
-          </p>
-        </section>
-
-        {/* ---- golden sets ---- */}
-        <section className="mb-14">
-          <p className="text-[11.5px] font-medium text-[var(--acc)] tracking-wide uppercase m-0 mb-2.5">Three golden sets, graded three ways</p>
-          <h2 className="text-[22px] leading-[1.24] tracking-tight m-0 mb-4 max-w-[28ch]" style={{ fontFamily: "var(--font-serif, inherit)", fontWeight: 500 }}>
-            They fail differently, so an average would hide what matters
-          </h2>
-          <div className="grid grid-cols-1 min-[700px]:grid-cols-3 gap-2.5">
-            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
-              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">judge_validation.json</h4>
-              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
-                {goldenCounts.judgeValidation}
-                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases</small>
-              </div>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
-                Hand-labelled transcripts, real and constructed. The only set a judge grades.
-              </p>
-              <button onClick={() => setOpenGoldenSet("judge")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
-                View all questions →
-              </button>
-            </div>
-            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
-              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">conversation.json</h4>
-              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
-                {goldenCounts.conversation}
-                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases · {summary.conversation?.total ?? 0} checks</small>
-              </div>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
-                Scripted multi-turn conversations, graded against the resulting state.
-              </p>
-              {summary.conversation && summary.conversation.total > 0 && (
-                <div className="flex flex-wrap gap-[3px] mt-2.5 mb-2.5">
-                  {Array.from({ length: summary.conversation.total }).map((_, i) => (
-                    <i key={i} className="w-[9px] h-[9px] rounded-[2px] inline-block" style={{ background: "var(--ok)" }} />
-                  ))}
-                </div>
-              )}
-              <button
-                onClick={() => setOpenGoldenSet("conversation")}
-                className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]"
-              >
-                View all questions →
-              </button>
-            </div>
-            <div className="bg-[var(--block)] border border-[var(--line)] rounded-[12px] px-4 py-4">
-              <h4 className="font-mono text-[12.5px] font-semibold text-[var(--ink)] m-0">refusal.json</h4>
-              <div className="text-[20px] font-semibold tabular-nums text-[var(--ink)] mt-2">
-                {refusalTotal}
-                <small className="text-[12px] font-normal text-[var(--ink3)] ml-1.5">cases · {Object.keys(goldenCounts.refusal).length} categories</small>
-              </div>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink2)] mt-2.5 mb-2.5">
-                Safety interrupts, and catalogue combinations built to be unsatisfiable.
-              </p>
-              <button onClick={() => setOpenGoldenSet("refusal")} className="block text-[12px] font-medium text-[var(--acc)] border-b border-[var(--acc-lt)]">
-                View all questions →
-              </button>
-            </div>
-          </div>
-          <p className="text-[13px] leading-relaxed text-[var(--ink3)] mt-3.5 max-w-[62ch]">
-            <code className="font-mono text-[12px] bg-[var(--sunk)] px-1.5 py-0.5 rounded">physical.json</code> also exists (
-            {physicalTotal} cases: lens-index recommendation, minimum progressive B-height, frame-width/PD
-            interaction) but isn&apos;t part of the four-card dashboard above — a lower-profile
-            harness, disclosed here rather than quietly left out. A fourth planned set,{" "}
-            <b className="text-[var(--ink)] font-semibold">style fit, was never built</b> — it needs
-            an optician&apos;s judgement to grade correctly, and that dependency was never resolved
-            into actual cases. Said plainly rather than implied by omission.
           </p>
         </section>
 
